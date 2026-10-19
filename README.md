@@ -80,10 +80,10 @@ docker compose down -v && docker compose up --build -d
 
 ## 🧑‍💻 Разработка без Docker
 
-Для бэкенда нужны **Java 21**, **Maven 3.9+** и PostgreSQL **с расширением PostGIS** — обычный PostgreSQL не подойдёт (миграция выполняет `CREATE EXTENSION postgis`). Проще всего поднять только базу из compose:
+Для бэкенда нужны **Java 21**, **Maven 3.9+** и PostgreSQL **с расширением PostGIS** — обычный PostgreSQL не подойдёт (миграция выполняет `CREATE EXTENSION postgis`). Проще всего поднять только базу (и необязательный Redis для кэша карты) из compose:
 
 ```bash
-docker compose up -d postgres
+docker compose up -d postgres redis
 ```
 
 ```bash
@@ -111,6 +111,8 @@ Vite проксирует запросы `/api` на `http://localhost:8080`. К
 | `VITE_2GIS_STYLE_ID`, `VITE_2GIS_STYLE_ID_DARK` | Сборка фронтенда | пусто (стандартный стиль 2GIS) |
 | `VITE_API_URL` | Фронтенд | `/api/v1` (nginx в Docker, Vite в dev) |
 | `SPRING_DATASOURCE_URL` / `_USERNAME` / `_PASSWORD` | Backend | `jdbc:postgresql://localhost:5432/sportikus`, `sportikus_user`, `sportikus_password` |
+| `REDIS_HOST` / `REDIS_PORT` | Backend | `localhost`, `6379` — Redis с кэшем карты (без него сайт работает, но медленнее) |
+| `MAP_CACHE_ENABLED` | Backend | `true` — кэш списка мероприятий для карты |
 | `JWT_SECRET` | Backend | значение для разработки — **замените в реальном окружении** |
 | `UPLOAD_DIR` | Backend | `uploads` (в Docker — `/app/uploads`, volume `profile_uploads`) |
 | `ROUTERAI_API_KEY` | Backend (автопроверка) | пусто — работает только фильтр слов, сомнительное помечается ⚠ |

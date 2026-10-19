@@ -73,6 +73,33 @@ export function eventStatus(event: SportEvent): EventStatusView {
   };
 }
 
+/** Статус мест текстом: «Свободно 8 из 20» / «Осталось 1 из 10» / «Мест нет». */
+export function seatText(event: Pick<SportEvent, 'capacity' | 'confirmedCount'>): string {
+  const left = spotsLeft(event);
+  if (left === 0) return 'Мест нет';
+  return `${left <= 2 ? 'Осталось' : 'Свободно'} ${left} из ${event.capacity}`;
+}
+
+/** Главное действие по событию: запись, заявка, «мест нет» или уже записан. */
+export function eventAction(event: SportEvent): { label: string; cls: string; joinable: boolean } {
+  if (isMine(event))
+    return {
+      label: event.myParticipation?.status === 'PENDING' ? 'Заявка отправлена' : 'Вы записаны ✓',
+      cls: 'bg-brand-tint text-brand-ink',
+      joinable: false,
+    };
+  if (isFull(event)) return { label: 'Мест нет', cls: 'bg-surface-2 text-muted', joinable: false };
+  return {
+    label: event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться',
+    cls: 'bg-brand text-on-brand hover:bg-brand-hover',
+    joinable: true,
+  };
+}
+
+/** Цена коротко: «Бесплатно» / «500 ₽». */
+export const priceLabel = (event: Pick<SportEvent, 'price'>) =>
+  event.price ? `${event.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно';
+
 /** «Бесплатно» / «Платно · 500 ₽». */
 export const accessLabel = (event: Pick<SportEvent, 'price'>) =>
   event.price ? `Платно · ${event.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно';
@@ -119,6 +146,18 @@ export function startLabel(event: Pick<SportEvent, 'startTime' | 'endTime'>): st
   if (diff === 0) return time(d);
   if (diff === 1) return `Завтра, ${time(d)}`;
   return `${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '')}, ${time(d)}`;
+}
+
+/** Колонка времени в ряду списка: «Сейчас / до 20:00», «19:30 / сегодня», «11:00 / сб, 24 окт». */
+export function rowTime(event: Pick<SportEvent, 'startTime' | 'endTime'>): { big: string; small: string } {
+  if (isLive(event)) return { big: 'Сейчас', small: `до ${time(new Date(event.endTime))}` };
+  const d = new Date(event.startTime);
+  const diff = dayDiff(d);
+  if (diff === 0) return { big: time(d), small: 'сегодня' };
+  if (diff === 1) return { big: time(d), small: 'завтра' };
+  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', '');
+  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '');
+  return { big: time(d), small: `${wd}, ${day}` };
 }
 
 /** «Сегодня, 19:00» / «Завтра, 19:00» / «24 октября, 19:00». */

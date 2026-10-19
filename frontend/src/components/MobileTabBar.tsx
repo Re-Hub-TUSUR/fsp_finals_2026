@@ -15,8 +15,8 @@ export const MobileTabBar: React.FC = () => {
     <Link
       to={to}
       aria-current={active ? 'page' : undefined}
-      className={`flex-1 h-12 flex flex-col items-center justify-center gap-1 text-[11px] font-semibold ${
-        active ? 'text-brand-ink' : 'text-muted'
+      className={`flex-1 h-[58px] flex flex-col items-center justify-center gap-[3px] text-xs font-bold ${
+        active ? 'text-ink' : 'text-muted'
       }`}
     >
       {icon}
@@ -27,16 +27,16 @@ export const MobileTabBar: React.FC = () => {
   return (
     <nav
       aria-label="Основная навигация"
-      className="md:hidden shrink-0 bg-white border-t border-line flex items-start px-1 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] relative z-40"
+      className="md:hidden shrink-0 bg-card border-t border-line-2 flex items-start px-1.5 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] relative z-40"
     >
       {tab('/', 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList)}
-      {tab('/?view=list', 'Список', <List className="w-6 h-6" />, isList)}
+      {tab('/?view=list', 'Лента', <List className="w-6 h-6" />, isList)}
       {!isAdmin && (
-        <div className="flex-1 flex justify-center pt-0.5">
+        <div className="flex-1 flex justify-center pt-1">
           <Link
             to="/events/new"
             aria-label="Создать событие"
-            className="w-[52px] h-11 rounded-2xl bg-brand text-on-brand flex items-center justify-center shadow-[0_6px_16px_color-mix(in_oklab,var(--color-brand)_40%,transparent)]"
+            className="w-[54px] h-[46px] rounded-xl bg-brand text-on-brand flex items-center justify-center"
           >
             <Plus className="w-6 h-6" strokeWidth={2.4} />
           </Link>

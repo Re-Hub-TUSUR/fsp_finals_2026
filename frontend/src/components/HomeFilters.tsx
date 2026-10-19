@@ -4,7 +4,7 @@ import type { JoinMode, SkillLevel, Sport } from '../types';
 import { SKILL_LABELS } from '../utils/format';
 import { dayKey, keyToDate, sameWhen, whenLabel, whenPresets, type When } from '../utils/eventView';
 import { Modal } from './Modal';
-import { Chip, SectionLabel, Segmented, Toggle } from './ui';
+import { SectionLabel, Toggle } from './ui';
 
 export type Radius = '1' | '3' | '5' | '10' | 'all';
 
@@ -71,7 +71,7 @@ const Popover: React.FC<{
       {trigger}
       {open && (
         <div
-          className="anim-drop absolute top-[calc(100%+8px)] left-0 z-50 origin-top-left bg-white border border-line rounded-[20px] shadow-[0_18px_48px_rgba(6,12,30,0.22)]"
+          className="anim-fade absolute top-[calc(100%+8px)] left-0 z-50 bg-card border border-line-2 rounded-xl shadow-[0_4px_16px_rgba(20,30,45,0.14)]"
           style={{ width }}
         >
           {children}
@@ -81,10 +81,60 @@ const Popover: React.FC<{
   );
 };
 
-const barButton = (open: boolean) =>
-  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] border border-line rounded-xl text-sm text-ink whitespace-nowrap transition-colors ${
-    open ? 'bg-surface' : 'bg-white hover:bg-surface'
-  }`;
+// Изменённый фильтр выделяется рамкой цвета текста, открытый — фоном (макет «Карта и Лента»)
+const barButton = (open: boolean, active = false) =>
+  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] rounded-[10px] text-[15px] text-ink whitespace-nowrap transition-colors ${
+    active ? 'border-2 border-ink' : 'border border-line-2'
+  } ${open || active ? 'bg-surface' : 'bg-card hover:bg-surface'}`;
+
+/** Прямоугольный чип-пресет (вместо «таблетки» Chip). */
+const PresetChip: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
+  <button
+    type="button"
+    aria-pressed={active}
+    onClick={onClick}
+    className={`h-9 px-3 rounded-lg border text-sm font-semibold whitespace-nowrap transition-colors ${
+      active ? 'bg-ink border-ink text-page' : 'bg-card border-line-2 text-ink hover:bg-surface'
+    }`}
+  >
+    {children}
+  </button>
+);
+
+/** Сегментированный выбор в шите «Фильтры». */
+function Seg<T extends string>({
+  value,
+  options,
+  onChange,
+  label,
+}: {
+  value: T;
+  options: { value: T; label: string }[];
+  onChange: (value: T) => void;
+  label: string;
+}) {
+  return (
+    <div role="radiogroup" aria-label={label} className="flex gap-[3px] p-[3px] bg-surface rounded-[10px]">
+      {options.map((o) => {
+        const on = o.value === value;
+        return (
+          <button
+            key={o.value}
+            type="button"
+            role="radio"
+            aria-checked={on}
+            onClick={() => onChange(o.value)}
+            className={`flex-1 min-w-0 h-[42px] px-1 rounded-lg text-sm sm:text-[15px] font-semibold truncate transition-colors ${
+              on ? 'bg-card text-ink shadow-[0_1px_3px_rgba(10,20,45,0.18)]' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {o.label}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
 
 /* ---------- Радиус ---------- */
 
@@ -104,12 +154,12 @@ export const RadiusList: React.FC<{
           role="option"
           aria-selected={on}
           onClick={() => onChange(o.value)}
-          className={`h-11 px-3 flex items-center gap-2.5 rounded-xl text-sm font-semibold text-ink text-left ${
+          className={`h-11 px-2.5 flex items-center gap-2.5 rounded-lg text-base font-semibold text-ink text-left ${
             on ? 'bg-surface' : 'hover:bg-surface/60'
           }`}
         >
           <span className="flex-1">{o.label}</span>
-          <span className="text-[13px] font-medium text-muted">{counts[o.value]}</span>
+          <span className="text-sm font-medium text-muted">{counts[o.value]}</span>
           <span className="w-[18px] flex text-brand-ink">{on && <Check className="w-[18px] h-[18px]" />}</span>
         </button>
       );
@@ -143,8 +193,8 @@ export const SportList: React.FC<{
               type="button"
               aria-pressed={on}
               onClick={() => toggle(s.slug)}
-              className={`h-10 px-3 flex items-center gap-2 rounded-xl text-sm font-semibold text-left transition-colors ${
-                on ? 'bg-ink text-white' : 'text-ink hover:bg-surface'
+              className={`h-[42px] px-3 flex items-center gap-1.5 rounded-lg text-[15px] font-semibold text-left transition-colors ${
+                on ? 'bg-ink text-page' : 'text-ink hover:bg-surface'
               }`}
             >
               <span className="flex-1 truncate">{s.name}</span>
@@ -157,7 +207,7 @@ export const SportList: React.FC<{
         <button
           type="button"
           onClick={() => onChange([])}
-          className="h-9 rounded-xl text-sm font-semibold text-brand-ink hover:bg-surface transition-colors"
+          className="h-10 rounded-lg text-[15px] font-bold text-brand-ink underline underline-offset-[3px] hover:bg-surface transition-colors"
         >
           Сбросить выбор
         </button>
@@ -198,18 +248,18 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
   };
 
   return (
-    <div className="flex flex-col gap-2 p-3 rounded-[18px] bg-surface">
+    <div className="flex flex-col gap-2 p-2.5 rounded-[10px] bg-surface">
       <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setOffset((o) => Math.max(0, o - 1))}
           disabled={offset === 0}
           aria-label="Предыдущий месяц"
-          className="w-10 h-10 rounded-xl bg-white text-ink disabled:text-line flex items-center justify-center"
+          className="w-10 h-10 rounded-lg bg-card text-ink disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronLeft className="w-[18px] h-[18px]" />
         </button>
-        <span className="text-[15px] font-bold text-ink">
+        <span className="text-base font-bold text-ink">
           {MONTHS[first.getMonth()]} {first.getFullYear()}
         </span>
         <button
@@ -217,17 +267,17 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
           onClick={() => setOffset((o) => Math.min(2, o + 1))}
           disabled={offset === 2}
           aria-label="Следующий месяц"
-          className="w-10 h-10 rounded-xl bg-white text-ink disabled:text-line flex items-center justify-center"
+          className="w-10 h-10 rounded-lg bg-card text-ink disabled:opacity-40 flex items-center justify-center"
         >
           <ChevronRight className="w-[18px] h-[18px]" />
         </button>
       </div>
-      <div className="grid grid-cols-7 text-[11px] font-semibold text-muted text-center">
+      <div className="grid grid-cols-7 text-[13px] font-semibold text-muted text-center">
         {WEEKDAYS.map((d) => (
           <span key={d}>{d}</span>
         ))}
       </div>
-      <div className="grid grid-cols-7 gap-y-1">
+      <div className="grid grid-cols-7 gap-y-0.5">
         {Array.from({ length: lead }, (_, i) => (
           <span key={`l${i}`} />
         ))}
@@ -236,7 +286,7 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
           const past = k < today;
           const end = k === a || k === b;
           const inRange = a != null && b != null && k > a && k < b;
-          const radius = end && a !== b ? (k === a ? 'rounded-l-xl' : 'rounded-r-xl') : end ? 'rounded-xl' : '';
+          const radius = end && a !== b ? (k === a ? 'rounded-l-[10px]' : 'rounded-r-[10px]') : end ? 'rounded-[10px]' : '';
           return (
             <button
               key={k}
@@ -245,21 +295,21 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
               onClick={() => pick(k)}
               aria-pressed={end || inRange}
               aria-label={keyToDate(k).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-              className={`relative h-10 text-sm ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} ${
-                end ? 'bg-ink text-white' : inRange ? 'bg-surface-2 text-ink' : past ? 'text-muted/50' : 'text-ink hover:bg-white'
+              className={`relative h-10 text-[15px] ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} ${
+                end ? 'bg-ink text-page' : inRange ? 'bg-surface-2 text-ink' : past ? 'text-muted/50' : 'text-ink hover:bg-card'
               }`}
             >
               {i + 1}
               {eventDays.has(k) && (
                 <span
-                  className={`absolute bottom-[5px] left-1/2 -ml-0.5 w-1 h-1 rounded-full ${end ? 'bg-white' : 'bg-brand'}`}
+                  className={`absolute bottom-[5px] left-1/2 -ml-0.5 w-1 h-1 rounded-full ${end ? 'bg-page' : 'bg-brand'}`}
                 />
               )}
             </button>
           );
         })}
       </div>
-      <span className="text-xs leading-snug font-medium text-muted">
+      <span className="text-[13px] leading-snug font-medium text-muted">
         {a == null
           ? 'Выберите дату или интервал: первое нажатие — начало, второе — конец'
           : `Выбрано: ${whenLabel(when)}. Точкой отмечены дни с событиями`}
@@ -276,9 +326,9 @@ export const WhenPicker: React.FC<{ when: When; eventDays: Set<number>; onChange
   <div className="flex flex-col gap-3">
     <div className="flex flex-wrap gap-1.5">
       {whenPresets().map((p) => (
-        <Chip key={p.label} size="sm" active={sameWhen(p.when, when)} onClick={() => onChange(p.when)}>
+        <PresetChip key={p.label} active={sameWhen(p.when, when)} onClick={() => onChange(p.when)}>
           {p.label}
-        </Chip>
+        </PresetChip>
       ))}
     </div>
     <Calendar when={when} eventDays={eventDays} onChange={onChange} />
@@ -297,7 +347,7 @@ export const FilterIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
 
 export const CountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
   n > 0 ? (
-    <span className={`min-w-5 h-5 px-1.5 rounded-full bg-ink text-white text-[11px] font-bold leading-5 text-center ${className}`}>
+    <span className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-ink text-page text-[13px] font-bold leading-[22px] text-center ${className}`}>
       {n}
     </span>
   ) : null;
@@ -313,19 +363,22 @@ export const FilterBar: React.FC<{
   resultCount: number;
   onOpenFilters: () => void;
   canUseRadius: boolean;
-}> = ({ filters, onChange, sports, radiusCounts, eventDays, resultCount, onOpenFilters, canUseRadius }) => {
+  /** Что отличается от значений по умолчанию: рамка у кнопки и «Сбросить всё» */
+  changed: { radius: boolean; when: boolean; sport: boolean; any: boolean };
+  onResetAll: () => void;
+}> = ({ filters, onChange, sports, radiusCounts, eventDays, resultCount, onOpenFilters, canUseRadius, changed, onResetAll }) => {
   const [pop, setPop] = useState<'radius' | 'when' | 'sport' | null>(null);
   const close = () => setPop(null);
 
   return (
-    <div className="relative z-30 shrink-0 h-16 px-6 flex items-center gap-2.5 bg-white border-b border-line">
+    <div className="relative z-30 shrink-0 h-[60px] px-6 flex items-center gap-2 bg-card border-b border-line-2">
       <Popover
         open={pop === 'radius'}
         onClose={close}
         width={260}
         trigger={
-          <button type="button" onClick={() => setPop(pop === 'radius' ? null : 'radius')} className={barButton(pop === 'radius')}>
-            <LocateFixed className="w-[18px] h-[18px] text-muted" />
+          <button type="button" onClick={() => setPop(pop === 'radius' ? null : 'radius')} className={barButton(pop === 'radius', changed.radius)}>
+            <LocateFixed className="w-[18px] h-[18px]" />
             <span className="text-muted">Радиус</span>
             <span className="font-bold">{radiusValue(filters.radius)}</span>
             <ChevronDown className="w-4 h-4 text-muted" />
@@ -333,7 +386,7 @@ export const FilterBar: React.FC<{
         }
       >
         {!canUseRadius && (
-          <p className="px-4 pt-3 text-xs text-muted leading-snug">
+          <p className="px-4 pt-3 text-[13px] text-muted leading-snug">
             Радиус считается от вашей геопозиции или от домашнего города из профиля.
           </p>
         )}
@@ -352,8 +405,8 @@ export const FilterBar: React.FC<{
         onClose={close}
         width={340}
         trigger={
-          <button type="button" onClick={() => setPop(pop === 'when' ? null : 'when')} className={barButton(pop === 'when')}>
-            <CalendarDays className="w-[18px] h-[18px] text-muted" />
+          <button type="button" onClick={() => setPop(pop === 'when' ? null : 'when')} className={barButton(pop === 'when', changed.when)}>
+            <CalendarDays className="w-[18px] h-[18px]" />
             <span className="text-muted">Когда</span>
             <span className="font-bold">{whenLabel(filters.when)}</span>
             <ChevronDown className="w-4 h-4 text-muted" />
@@ -365,23 +418,23 @@ export const FilterBar: React.FC<{
           <button
             type="button"
             onClick={close}
-            className="h-11 rounded-[14px] bg-brand text-on-brand text-[15px] font-bold hover:bg-brand-hover"
+            className="h-[46px] rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover"
           >
             {resultCount ? `Показать ${resultCount}` : 'Нет подходящих событий'}
           </button>
         </div>
       </Popover>
 
-      <span className="shrink-0 w-px h-6 bg-line mx-1" />
+      <span className="shrink-0 w-px h-6 bg-line-2 mx-1" />
 
       <Popover
         open={pop === 'sport'}
         onClose={close}
         width={320}
         trigger={
-          <button type="button" onClick={() => setPop(pop === 'sport' ? null : 'sport')} className={barButton(pop === 'sport')}>
+          <button type="button" onClick={() => setPop(pop === 'sport' ? null : 'sport')} className={barButton(pop === 'sport', changed.sport)}>
             <span className="text-muted">Спорт</span>
-            <span className="font-bold max-w-[140px] truncate">{sportsLabel(filters.sports, sports)}</span>
+            <span className="font-bold max-w-[150px] truncate">{sportsLabel(filters.sports, sports)}</span>
             <ChevronDown className={`w-4 h-4 text-muted transition-transform ${pop === 'sport' ? 'rotate-180' : ''}`} />
           </button>
         }
@@ -391,7 +444,17 @@ export const FilterBar: React.FC<{
 
       <div className="flex-1" />
 
-      <button type="button" onClick={onOpenFilters} className={`${barButton(false)} font-semibold`}>
+      {changed.any && (
+        <button
+          type="button"
+          onClick={onResetAll}
+          className="h-10 px-2.5 text-[15px] font-bold text-brand-ink underline underline-offset-[3px] hover:text-ink"
+        >
+          Сбросить всё
+        </button>
+      )}
+
+      <button type="button" onClick={onOpenFilters} className={`${barButton(false, extraFilterCount(filters) > 0)} gap-2 font-semibold`}>
         <FilterIcon size={18} />
         Фильтры
         <CountBadge n={extraFilterCount(filters)} />
@@ -418,7 +481,7 @@ export const FiltersSheet: React.FC<{
       title="Фильтры"
       onClose={onClose}
       headerAction={
-        <button type="button" onClick={onReset} className="h-10 px-3 rounded-xl text-[15px] font-semibold text-brand-ink hover:bg-surface">
+        <button type="button" onClick={onReset} className="h-10 px-2.5 text-base font-bold text-brand-ink underline underline-offset-[3px] hover:text-ink">
           Сбросить
         </button>
       }
@@ -433,7 +496,7 @@ export const FiltersSheet: React.FC<{
         {!compact && (
           <div className="flex flex-col gap-2.5">
             <SectionLabel>Радиус от вас</SectionLabel>
-            <Segmented
+            <Seg
               label="Радиус"
               value={filters.radius}
               onChange={(radius) => onChange({ radius })}
@@ -443,7 +506,7 @@ export const FiltersSheet: React.FC<{
         )}
         <div className="flex flex-col gap-2.5">
           <SectionLabel>Уровень</SectionLabel>
-          <Segmented
+          <Seg
             label="Уровень"
             value={filters.skill || 'all'}
             onChange={(v) => onChange({ skill: v === 'all' ? '' : (v as SkillLevel) })}
@@ -455,7 +518,7 @@ export const FiltersSheet: React.FC<{
         </div>
         <div className="flex flex-col gap-2.5">
           <SectionLabel>Запись</SectionLabel>
-          <Segmented
+          <Seg
             label="Запись"
             value={filters.joinMode || 'all'}
             onChange={(v) => onChange({ joinMode: v === 'all' ? '' : (v as JoinMode) })}
@@ -477,7 +540,7 @@ export const FiltersSheet: React.FC<{
         <button
           type="button"
           onClick={onClose}
-          className="h-14 rounded-[18px] bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors"
+          className="h-[52px] rounded-xl bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors"
         >
           {resultCount ? `Показать ${resultCount}` : 'Нет подходящих событий'}
         </button>

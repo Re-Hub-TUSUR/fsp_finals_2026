@@ -9,6 +9,9 @@ import ru.sportikus.event.repository.EventGeoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
+import ru.sportikus.event.cache.MapCache;
+import ru.sportikus.event.cache.MapCacheInvalidator;
+import ru.sportikus.event.cache.MapCacheKey;
 import ru.sportikus.event.dto.CreateEventRequest;
 import ru.sportikus.event.dto.EventFilter;
 import ru.sportikus.event.dto.EventResponse;
@@ -60,6 +63,8 @@ public class EventService {
     private final EventGeoRepository geoRepository;
     private final CityRepository cityRepository;
     private final EventModerationService moderationService;
+    private final MapCache mapCache;
+    private final MapCacheInvalidator mapCacheInvalidator;
 
     // ------------------------------------------------------------------ чтение
 
@@ -68,7 +73,28 @@ public class EventService {
     private static final double MAX_RADIUS_KM = 300;
 
     @Transactional(readOnly = true)
-    public List<EventResponse> catalog(EventFilter filter, Optional<AuthUser> viewer) {
+    public List<EventResponse> catalog(EventFilter requested, Optional<AuthUser> viewer) {
+        // Список без данных пользователя кэшируется (Redis), друзья/своя заявка/права подмешиваются на каждый запрос
+        EventFilter filter = MapCacheKey.normalize(requested);
+        List<EventResponse> base = null;
+        boolean cacheable = MapCacheKey.cacheable(filter);
+        String key = null;
+        long version = -1;
+        if (cacheable) {
+            key = MapCacheKey.of(filter);
+            version = mapCache.version();
+            base = mapCache.get(version, key).orElse(null);
+        }
+        if (base == null) {
+            base = loadCatalog(filter);
+            if (cacheable) {
+                mapCache.put(version, key, base);
+            }
+        }
+        return mapper.withViewer(base, viewer.map(AuthUser::id).orElse(null));
+    }
+
+    private List<EventResponse> loadCatalog(EventFilter filter) {
         Specification<Event> spec = EventSpecs.catalog(filter, Instant.now());
         if (filter.lat() != null && filter.lng() != null) {
             double radius = Math.min(filter.radiusKm() == null ? 50 : filter.radiusKm(), MAX_RADIUS_KM);
@@ -80,7 +106,7 @@ public class EventService {
         }
         List<Event> events = eventRepository.findAll(spec, PageRequest.of(0, CATALOG_LIMIT, Sort.by("startTime")))
                 .getContent();
-        return mapper.toList(events, viewer.map(AuthUser::id).orElse(null), false);
+        return mapper.toList(events, null, false);
     }
 
     /** Карточка доступна по прямой ссылке и для снятых с публикации мероприятий (с указанием причины). */
@@ -168,7 +194,9 @@ public class EventService {
         // и после коммита уходит на проверку ИИ — см. EventController#create
         moderationService.screen(event);
 
-        return mapper.toDetails(eventRepository.save(event), auth.id());
+        Event saved = eventRepository.save(event);
+        mapCacheInvalidator.mapDataChanged();
+        return mapper.toDetails(saved, auth.id());
     }
 
     @Transactional
@@ -188,6 +216,7 @@ public class EventService {
             throw ApiException.conflict("Снятое или отменённое мероприятие нельзя завершить");
         }
         event.setStatus(ru.sportikus.event.model.EventStatus.ARCHIVED);
+        mapCacheInvalidator.mapDataChanged();
         return mapper.toDetails(event, auth.id());
     }
 

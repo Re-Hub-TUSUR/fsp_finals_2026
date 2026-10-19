@@ -1,18 +1,20 @@
 import type { SportEvent } from '../types';
-import { initials, isFull, isHot, isLive, isMine, startLabel } from '../utils/eventView';
+import { sportIconPath } from '../utils/sportIcons';
+import { isFull, isHot, isLive, isMine, startLabel } from '../utils/eventView';
 
 /**
- * HTML-метки поверх карты 2GIS (стили — .sp-pin* в index.css), по референсу редизайна.
- * В центре — фото или инициалы организатора, кольцо в цвет фона отделяет метку от подложки.
- * Спутник справа сверху несёт один статус: мало мест (огонёк) или идёт сейчас (точка + пульс).
- * Выбрана — заливка акцентом и подпись; кластер — акцентный круг со счётчиком; мест нет — серая.
+ * HTML-метки поверх карты 2GIS (стили — .sp-pin* в index.css), по макету «Карта и Лента».
+ * В центре — пиктограмма спорта, кольцо в цвет фона отделяет метку от подложки.
+ * Спутник справа сверху несёт один статус: мало мест (огонёк) или идёт сейчас (точка), без пульсации.
+ * Выбрана — заливка акцентом и подпись; кластер — акцентный круг со счётчиком; мест нет — приглушена.
  */
 
 export const PIN_SIZE = 44;
-export const PIN_SIZE_SELECTED = 48;
+export const PIN_SIZE_HOVER = 48;
+export const PIN_SIZE_SELECTED = 52;
 
 const FLAME =
-  '<svg width="11" height="11" viewBox="0 0 24 24" fill="#fff"><path d="M12 1.5c1.2 3.8 6 6.4 6 12a6 6 0 0 1-12 0c0-2.7 1.3-4.6 2.8-5.7.1 2 1.1 3.3 2.4 3.8-.3-3.6.1-7.4.8-10.1z"/></svg>';
+  '<svg width="10" height="10" viewBox="0 0 24 24" fill="#0e1116"><path d="M12 1.5c1.2 3.8 6 6.4 6 12a6 6 0 0 1-12 0c0-2.7 1.3-4.6 2.8-5.7.1 2 1.1 3.3 2.4 3.8-.3-3.6.1-7.4.8-10.1z"/></svg>';
 const CHECK =
   '<svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
@@ -25,25 +27,24 @@ function element(html: string): HTMLElement {
   return el.firstElementChild as HTMLElement;
 }
 
-export function pinElement(event: SportEvent, selected: boolean): HTMLElement {
-  const live = isLive(event);
-  const size = selected ? PIN_SIZE_SELECTED : PIN_SIZE;
-  const face =
-    event.organizerAvatar
-      ? `<img src="${escapeHtml(event.organizerAvatar)}" alt="" />`
-      : escapeHtml(initials(event.organizerName));
+const sportSvg = (name: string, size: number) =>
+  `<svg width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="${sportIconPath(name)}"/></svg>`;
 
+export const pinSize = (selected: boolean, hovered = false) =>
+  selected ? PIN_SIZE_SELECTED : hovered ? PIN_SIZE_HOVER : PIN_SIZE;
+
+export function pinElement(event: SportEvent, selected: boolean, hovered = false): HTMLElement {
+  const size = pinSize(selected, hovered);
   const badge = isHot(event)
     ? `<span class="sp-pin-badge sp-pin-badge--hot">${FLAME}</span>`
-    : live
-      ? '<span class="sp-pin-badge sp-pin-badge--live"><i></i></span>'
+    : isLive(event)
+      ? '<span class="sp-pin-badge sp-pin-badge--live"></span>'
       : '';
 
   return element(`
-    <div class="sp-pin${selected ? ' is-selected' : ''}${isFull(event) ? ' is-full' : ''}" style="width:${size}px;height:${size}px"
+    <div class="sp-pin${selected ? ' is-selected' : ''}${hovered ? ' is-hovered' : ''}${isFull(event) ? ' is-full' : ''}" style="width:${size}px;height:${size}px"
          role="button" aria-label="${escapeHtml(event.title)}">
-      ${live ? '<span class="sp-pin-pulse"></span>' : ''}
-      <span class="sp-pin-face">${face}</span>
+      <span class="sp-pin-face">${sportSvg(event.sport.name, Math.round(size * 0.46))}</span>
       ${badge}
       ${isMine(event) ? `<span class="sp-pin-badge sp-pin-badge--mine">${CHECK}</span>` : ''}
       ${selected ? `<span class="sp-pin-caption">${escapeHtml(`${startLabel(event)} · ${event.sport.name}`)}</span>` : ''}
@@ -60,14 +61,13 @@ export function clusterElement(events: SportEvent[]): HTMLElement {
   const live = events.some((e) => isLive(e));
   return element(`
     <div class="sp-pin sp-cluster" style="width:${size}px;height:${size}px" role="button" aria-label="${n} мероприятий">
-      ${live ? '<span class="sp-pin-pulse"></span>' : ''}
       <span class="sp-pin-face" style="font-size:${n > 9 ? 15 : 17}px">${n}</span>
-      ${events.some(isHot) ? `<span class="sp-pin-badge sp-pin-badge--hot">${FLAME}</span>` : ''}
+      ${events.some(isHot) ? `<span class="sp-pin-badge sp-pin-badge--hot">${FLAME}</span>` : live ? '<span class="sp-pin-badge sp-pin-badge--live"></span>' : ''}
     </div>`);
 }
 
 export const ME_SIZE = 18;
 
 export function meElement(): HTMLElement {
-  return element('<div class="sp-me" aria-label="Вы здесь"><span class="sp-me-halo"></span><span class="sp-me-dot"></span></div>');
+  return element('<div class="sp-me" aria-label="Вы здесь"><span class="sp-me-dot"></span></div>');
 }

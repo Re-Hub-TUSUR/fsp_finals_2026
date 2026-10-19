@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, LocateFixed, Loader2, Search, SearchX, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, List, LocateFixed, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
 import type { City, RecommendationItem, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
-import { CarouselCard, CompactCard, CoverCard } from '../components/HomeCards';
+import { CoverCard, EventRow } from '../components/HomeCards';
+import { MapSheet, type SheetState } from '../components/MapSheet';
 import { EventDetailPanel } from '../components/EventDetailPanel';
 import {
   CountBadge,
@@ -11,6 +12,7 @@ import {
   FilterBar,
   FilterIcon,
   FiltersSheet,
+  extraFilterCount,
   RADIUS_OPTIONS,
   RadiusList,
   SportList,
@@ -21,7 +23,12 @@ import {
   type Radius,
 } from '../components/HomeFilters';
 import { Modal } from '../components/Modal';
-import { Chip } from '../components/ui';
+import {
+  readEventsSnapshot,
+  snapshotKey,
+  writeEventsSnapshot,
+  type SnapshotQuery,
+} from '../utils/eventsSnapshot';
 import { catalogApi, citiesApi, eventsApi, recommendationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -34,6 +41,7 @@ import {
   isLive,
   matchesWhen,
   plural,
+  whenLabel,
   type LatLng,
 } from '../utils/eventView';
 
@@ -67,6 +75,10 @@ export const HomePage: React.FC = () => {
   const [reloadTick, setReloadTick] = useState(0);
   const [recs, setRecs] = useState<RecommendationItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [hoveredId, setHoveredId] = useState<number | null>(null);
+  // Десктоп: список у карты можно свернуть; мобильный: шторка над картой
+  const [panelClosed, setPanelClosed] = useState(false);
+  const [sheet, setSheet] = useState<SheetState>('peek');
   const [detailId, setDetailId] = useState<number | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   // Каталог доступен и без ключа карты; после инициализации 2ГИС уточнит область.
@@ -75,7 +87,7 @@ export const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const listColRef = useRef<HTMLDivElement>(null);
-  const carouselRef = useRef<HTMLDivElement>(null);
+  const sheetListRef = useRef<HTMLDivElement>(null);
 
   // Точка отсчёта радиуса и расстояний: геопозиция, иначе домашняя точка из профиля
   const origin = useMemo<LatLng | null>(
@@ -144,6 +156,21 @@ export const HomePage: React.FC = () => {
     if (!ready) return;
     let cancelled = false;
     setLoading(true);
+    // Снимок прошлой загрузки: пины появляются сразу, запрос ниже обновит их актуальными данными
+    const snapshot: SnapshotQuery = {
+      userId: currentUser?.id,
+      lat: fetchCenter.lat,
+      lng: fetchCenter.lng,
+      radiusKm: fetchRadius,
+      sports: filters.sports,
+      skill: filters.skill || undefined,
+      joinMode: filters.joinMode || undefined,
+    };
+    const snapshotId = debouncedQuery ? null : snapshotKey(snapshot);
+    if (snapshotId) {
+      const cached = readEventsSnapshot(snapshotId);
+      if (cached) setEvents((prev) => (prev.length ? prev : cached));
+    }
     eventsApi
       .list({
         // Без радиуса каталог ограничен видимой областью карты — в масштабе страны иначе не обойтись
@@ -159,6 +186,7 @@ export const HomePage: React.FC = () => {
         if (cancelled) return;
         setEvents(list);
         setError(null);
+        if (snapshotId) writeEventsSnapshot(snapshotId, list);
       })
       .catch((e) => !cancelled && setError(errorMessage(e, 'Не удалось загрузить мероприятия')))
       .finally(() => !cancelled && setLoading(false));
@@ -267,16 +295,21 @@ export const HomePage: React.FC = () => {
     [recs, q],
   );
 
-  // Синхронизация выбора: прокручиваем колонку (десктоп) и карусель (мобильный) к выбранной карточке
+  // Синхронизация выбора: прокручиваем список у карты (десктоп) и в шторке (мобильный) к выбранному ряду
   useEffect(() => {
     if (selectedId == null) return;
-    const col = listColRef.current;
-    const colEl = col?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
-    if (col && colEl) col.scrollTo({ top: colEl.offsetTop - 16, behavior: 'smooth' });
-    const car = carouselRef.current;
-    const carEl = car?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
-    if (car && carEl) car.scrollTo({ left: carEl.offsetLeft - 12, behavior: 'smooth' });
+    for (const box of [listColRef.current, sheetListRef.current]) {
+      const el = box?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
+      if (box && el && (el.offsetTop < box.scrollTop || el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight))
+        box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' });
+    }
   }, [selectedId]);
+
+  // Выбор метки на мобильном сворачивает шторку до карточки события
+  const pickOnMap = (event: SportEvent | null) => {
+    setSelectedId(event?.id ?? null);
+    if (event) setSheet('peek');
+  };
 
   const locate = () =>
     navigator.geolocation?.getCurrentPosition(
@@ -291,10 +324,18 @@ export const HomePage: React.FC = () => {
     patchFilters(patch);
   };
 
+  const defaultRadius: Radius = origin ? '5' : 'all';
   const resetFilters = () => {
     radiusTouched.current = true;
-    setFilters({ ...DEFAULT_FILTERS, radius: origin ? '5' : 'all' });
+    setFilters({ ...DEFAULT_FILTERS, radius: defaultRadius });
   };
+  const changed = {
+    radius: filters.radius !== defaultRadius,
+    when: filters.when.kind !== 'all',
+    sport: filters.sports.length > 0,
+    any: false,
+  };
+  changed.any = changed.radius || changed.when || changed.sport || extraFilterCount(filters) > 0;
 
   const openDetail = (event: SportEvent) => {
     setSelectedId(event.id);
@@ -313,29 +354,34 @@ export const HomePage: React.FC = () => {
   const resultLine = `${visible.length} ${evWord(visible.length)} ${
     radiusOn ? `в радиусе ${filters.radius} км` : view === 'list' ? 'в городе' : 'в этой области'
   }`;
+  const panelTitle = view === 'list' ? 'Лента событий' : 'Рядом с вами';
 
   const empty = !loading && visible.length === 0 && (
     <div className="flex flex-col items-center text-center gap-2 py-14 px-6">
       <SearchX className="w-10 h-10 text-muted opacity-60" />
-      <span className="text-lg font-bold text-ink">Ничего не нашлось</span>
-      <span className="text-sm text-muted max-w-sm">
+      <span className="text-xl font-bold text-ink">Ничего не нашлось</span>
+      <span className="text-[15px] text-muted max-w-[300px]">
         {radiusOn
           ? `В радиусе ${filters.radius} км нет подходящих событий. Попробуйте расширить радиус или сбросить фильтры.`
           : 'Попробуйте изменить запрос или сбросить фильтры.'}
       </span>
-      <button type="button" onClick={widen} className="mt-2 h-11 px-5 rounded-[14px] bg-ink text-white text-[15px] font-semibold">
+      <button type="button" onClick={widen} className="mt-2 h-[46px] px-5 rounded-[10px] bg-ink text-page text-base font-bold">
         {radiusOn && nextRadius ? (nextRadius === 'all' ? 'Искать без ограничения' : `Искать в ${nextRadius} км`) : 'Сбросить фильтры'}
       </button>
     </div>
   );
 
-  /* ---------- Мобильная шапка: поиск, фильтры, радиус, чипы ---------- */
+  /* ---------- Мобильная шапка: поиск, фильтры, чипы Радиус / Спорт / Когда ---------- */
+  const mobChip = (on: boolean) =>
+    `shrink-0 h-[42px] flex items-center rounded-[10px] text-ink text-[15px] font-bold whitespace-nowrap ${
+      on ? 'border-2 border-ink bg-surface' : 'border border-line-2 bg-card'
+    }`;
   const mobileHeader = (floating: boolean) => (
-    <div className="lg:hidden flex flex-col gap-2 pt-3 pb-2.5">
+    <div className="lg:hidden flex flex-col pt-2">
       <div className="flex gap-2 px-3">
         <label
-          className={`flex-1 min-w-0 h-12 flex items-center gap-2.5 pl-3.5 pr-1.5 rounded-2xl bg-white border border-line text-muted focus-within:ring-2 focus-within:ring-brand/40 ${
-            floating ? 'shadow-card' : ''
+          className={`flex-1 min-w-0 h-[50px] flex items-center gap-2.5 pl-3.5 pr-1.5 rounded-xl bg-card border border-line-2 text-muted focus-within:border-ink ${
+            floating ? 'shadow-[0_4px_16px_rgba(20,30,45,0.14)]' : ''
           }`}
         >
           <Search className="w-5 h-5 shrink-0" />
@@ -345,14 +391,14 @@ export const HomePage: React.FC = () => {
             placeholder="Спорт, место или клуб"
             value={q}
             onChange={(e) => setParam('q', e.target.value || null)}
-            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-medium text-ink placeholder:text-muted"
+            className="flex-1 min-w-0 bg-transparent outline-none text-base font-medium text-ink placeholder:text-muted"
           />
           {q && (
             <button
               type="button"
               onClick={() => setParam('q', null)}
               aria-label="Очистить"
-              className="shrink-0 w-9 h-9 rounded-xl bg-surface text-ink flex items-center justify-center"
+              className="shrink-0 w-[38px] h-[38px] rounded-lg bg-surface text-ink flex items-center justify-center"
             >
               <X className="w-4 h-4" />
             </button>
@@ -362,32 +408,94 @@ export const HomePage: React.FC = () => {
           type="button"
           onClick={() => setFiltersOpen(true)}
           aria-label="Фильтры"
-          className={`relative w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl bg-white border border-line text-ink ${
-            floating ? 'shadow-card' : ''
+          className={`relative w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-ink ${
+            floating ? 'shadow-[0_4px_16px_rgba(20,30,45,0.14)]' : ''
           }`}
         >
-          <FilterIcon />
+          <FilterIcon size={22} />
           <CountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
         </button>
       </div>
-      <div className="flex gap-1.5 px-3 overflow-x-auto no-scrollbar">
-        <button
-          type="button"
-          onClick={() => setRadiusSheetOpen(true)}
-          className={`shrink-0 h-9 pl-[11px] pr-2.5 flex items-center gap-1.5 rounded-full border border-line bg-white text-ink text-sm font-bold whitespace-nowrap ${
-            floating ? 'shadow-[0_2px_8px_rgba(10,20,45,0.10)]' : ''
-          }`}
-        >
-          <LocateFixed className="w-4 h-4" />
+      <div className="flex gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
+        <button type="button" onClick={() => setRadiusSheetOpen(true)} className={`${mobChip(changed.radius)} gap-[7px] pl-3 pr-2.5`}>
+          <LocateFixed className="w-[17px] h-[17px]" />
           {radiusValue(filters.radius)}
           <ChevronDown className="w-4 h-4 text-muted" />
         </button>
-        <Chip floating={floating} active={filters.sports.length > 0} onClick={() => setSportSheetOpen(true)}>
+        <button type="button" onClick={() => setSportSheetOpen(true)} className={`${mobChip(changed.sport)} px-3.5`}>
           {sportsLabel(filters.sports, sports)}
-        </Chip>
+        </button>
+        <button type="button" onClick={() => setFiltersOpen(true)} className={`${mobChip(changed.when)} px-3.5`}>
+          {whenLabel(filters.when)}
+        </button>
       </div>
     </div>
   );
+
+  const errorBox = error && (
+    <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-[10px] text-red-800 text-sm">
+      {error}
+    </div>
+  );
+
+  /* ---------- Секции Ленты ---------- */
+  const sectionHead = (title: string, n: number, live = false, sub?: string) => (
+    <div className="flex items-baseline gap-2.5 pb-1.5 lg:pb-2 border-b-2 border-ink">
+      {live && <span className="self-center w-2.5 h-2.5 rounded-full bg-brand" />}
+      <span className="text-xl lg:text-[22px] font-bold text-ink">{title}</span>
+      <span className="text-[15px] lg:text-base font-semibold text-muted">{n}</span>
+      {sub && <span className="hidden lg:inline text-sm text-muted ml-1">{sub}</span>}
+    </div>
+  );
+  const grid = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-3 lg:gap-4';
+
+  const feed = (
+    <div className="max-w-[1400px] px-3 lg:px-8 pt-1.5 lg:pt-6 pb-10 flex flex-col gap-6 lg:gap-8">
+      <div className="lg:hidden px-1 pt-1.5 flex items-center gap-2.5">
+        <div className="flex-1 min-w-0 flex flex-col">
+          <span className="text-2xl font-bold text-ink">Лента событий</span>
+          <span className="text-sm font-medium text-muted flex items-center gap-2">
+            {resultLine}
+            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+          </span>
+        </div>
+        <button
+          type="button"
+          onClick={() => setParam('view', null)}
+          className="shrink-0 h-[42px] px-3.5 rounded-[10px] bg-brand text-on-brand text-[15px] font-bold"
+        >
+          На карте
+        </button>
+      </div>
+      {errorBox}
+
+      {recItems.length > 0 && (
+        <div className="flex flex-col gap-2.5 lg:gap-3">
+          {sectionHead('Рекомендации для вас', recItems.length)}
+          <div className={grid}>
+            {recItems.map((r) => (
+              <CoverCard key={r.event.id} event={r.event} me={origin} active={r.event.id === detailId} onOpen={() => openDetail(r.event)} />
+            ))}
+          </div>
+        </div>
+      )}
+
+      {empty}
+
+      {sections.map((sec) => (
+        <div key={sec.key} className="flex flex-col gap-2.5 lg:gap-3">
+          {sectionHead(sec.title, sec.items.length, sec.live, sec.sub)}
+          <div className={grid}>
+            {sec.items.map(({ e }) => (
+              <CoverCard key={e.id} event={e} me={origin} active={e.id === detailId} onOpen={() => openDetail(e)} />
+            ))}
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+
+  const desktopMode = view === 'list' ? 'feed' : panelClosed ? 'closed' : 'list';
 
   return (
     <div className="h-full flex flex-col">
@@ -401,117 +509,140 @@ export const HomePage: React.FC = () => {
           resultCount={visible.length}
           onOpenFilters={() => setFiltersOpen(true)}
           canUseRadius={!!origin}
+          changed={changed}
+          onResetAll={() => {
+            resetFilters();
+            setParam('q', null);
+          }}
         />
       </div>
 
-      <div className="relative flex-1 min-h-0">
-        {/* ---------- Карта ---------- */}
-        <section className={`${view === 'map' ? '' : 'hidden'} absolute inset-0 lg:left-[420px]`}>
+      <div className="relative flex-1 min-h-0 overflow-hidden">
+        {/* ---------- Карта: на десктопе всегда под панелью, на мобильном — только в режиме карты ---------- */}
+        <section className={`${view === 'map' ? '' : 'hidden lg:block'} absolute inset-0`}>
           <BlinkMap
             events={visibleEvents}
             center={selectedCityCenter}
             selectedEvent={selectedEvent}
-            onSelectEvent={(e) => setSelectedId(e?.id ?? null)}
+            hoveredId={hoveredId}
+            onSelectEvent={pickOnMap}
             me={me}
             onLocate={setMe}
-            // Скрытая карта (режим «Список») сообщает вырожденную область — её не учитываем
+            // Карта под Лентой сообщает область, которую не видно, — её не учитываем
             onViewportChange={(v) => view === 'map' && setViewport(v)}
             onMore={openDetail}
-            showCard={isDesktop()}
+            showCard={view === 'map' && isDesktop()}
             radius={radiusOn && origin ? { center: origin, km: Number(filters.radius) } : null}
-            controlsClassName="top-[124px] right-3 lg:top-4 lg:right-4"
-            cardClassName="bottom-3 lg:bottom-4"
+            controlsClassName="top-[128px] right-3 lg:top-4 lg:right-4"
+            cardClassName={`bottom-4 ${desktopMode === 'list' ? 'lg:left-[456px]' : ''}`}
           />
-          {loading && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-white shadow-card border border-line rounded-full px-3 py-1.5 text-sm text-muted items-center gap-2">
+          {loading && view === 'map' && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-card border border-line-2 rounded-lg px-3 py-1.5 text-sm text-muted items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
             </div>
           )}
         </section>
 
-        {/* Колонка событий слева от карты (десктоп) */}
-        {view === 'map' && (
-          <div
-            ref={listColRef}
-            className="hidden lg:flex absolute left-0 top-0 bottom-0 w-[420px] flex-col gap-2.5 p-4 overflow-y-auto bg-page border-r border-line"
+        {/* Список скрыт — кнопка вернуть его (десктоп) */}
+        {desktopMode === 'closed' && (
+          <button
+            type="button"
+            onClick={() => setPanelClosed(false)}
+            className="hidden lg:flex absolute left-4 top-4 z-[21] h-12 pl-3.5 pr-[18px] items-center gap-2.5 rounded-[10px] border border-line-2 bg-card shadow-[0_4px_16px_rgba(20,30,45,0.14)] text-ink text-base font-bold"
           >
-            <span className="px-1 text-[13px] font-semibold text-muted">{resultLine}</span>
-            {error && <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">{error}</div>}
-            {visible.map(({ e }) => (
-              <CompactCard key={e.id} event={e} me={origin} active={e.id === selectedId} onPick={() => setSelectedId(e.id)} />
-            ))}
-            {empty}
-          </div>
+            <List className="w-5 h-5" strokeWidth={2.2} />
+            Список · {visible.length}
+          </button>
         )}
 
-        {/* Мобильная карта: поиск сверху, карусель снизу */}
+        {/* ---------- Панель: список у карты / Лента (десктоп), Лента на весь экран (мобильный) ---------- */}
+        <div
+          className={`${view === 'list' ? 'flex' : 'hidden lg:flex'} absolute inset-0 z-20 flex-col bg-page overflow-hidden lg:right-auto lg:border-r lg:border-line-2 lg:transition-[width,transform] lg:duration-300 lg:ease-[cubic-bezier(.2,.8,.2,1)] ${
+            desktopMode === 'feed' ? 'lg:w-full' : 'lg:w-[440px]'
+          } ${desktopMode === 'closed' ? 'lg:-translate-x-full' : ''}`}
+        >
+          {view === 'list' && <div className="lg:hidden shrink-0 bg-page">{mobileHeader(false)}</div>}
+
+          <div className="hidden lg:flex shrink-0 px-5 py-3.5 items-center gap-2.5 bg-card border-b border-line-2">
+            <div className="flex-1 min-w-0 flex flex-col">
+              <span className="text-xl font-bold text-ink">{panelTitle}</span>
+              <span className="text-sm font-medium text-muted flex items-center gap-2">
+                {resultLine}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              </span>
+            </div>
+            {desktopMode === 'feed' ? (
+              <button
+                type="button"
+                onClick={() => setParam('view', null)}
+                className="shrink-0 h-10 px-3.5 rounded-[10px] bg-brand text-on-brand text-[15px] font-bold hover:bg-brand-hover"
+              >
+                На карте
+              </button>
+            ) : (
+              <>
+                <button
+                  type="button"
+                  onClick={() => setParam('view', 'list')}
+                  className="shrink-0 h-10 px-3 flex items-center gap-2 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold hover:bg-surface"
+                >
+                  <Maximize2 className="w-[17px] h-[17px]" />
+                  Лента
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPanelClosed(true)}
+                  aria-label="Скрыть список"
+                  className="shrink-0 w-10 h-10 rounded-[10px] bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
+                >
+                  <ChevronLeft className="w-5 h-5" strokeWidth={2.4} />
+                </button>
+              </>
+            )}
+          </div>
+
+          {desktopMode === 'feed' || view === 'list' ? (
+            <div className="flex-1 min-h-0 overflow-y-auto">{feed}</div>
+          ) : (
+            <div ref={listColRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col bg-card">
+              {errorBox && <div className="p-4">{errorBox}</div>}
+              {visible.map(({ e }) => (
+                <EventRow
+                  key={e.id}
+                  event={e}
+                  me={origin}
+                  active={e.id === selectedId}
+                  onPick={() => setSelectedId(e.id)}
+                  onHover={(h) => setHoveredId(h ? e.id : null)}
+                />
+              ))}
+              {empty}
+            </div>
+          )}
+        </div>
+
+        {/* ---------- Мобильная карта: поиск и чипы сверху, шторка снизу ---------- */}
         {view === 'map' && (
           <>
             <div className="lg:hidden absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-page via-page/70 to-transparent">
               {mobileHeader(true)}
             </div>
-            <div
-              ref={carouselRef}
-              className="lg:hidden absolute inset-x-0 bottom-3 z-20 flex gap-2 px-3 overflow-x-auto no-scrollbar snap-x snap-proximity scroll-pl-3"
-            >
-              {visible.map(({ e }) => (
-                <CarouselCard
-                  key={e.id}
-                  event={e}
-                  active={e.id === selectedId}
-                  onPick={() => setSelectedId(e.id)}
-                  onMore={() => openDetail(e)}
-                />
-              ))}
-            </div>
+            <MapSheet
+              state={sheet}
+              onStateChange={setSheet}
+              events={visibleEvents}
+              selected={selectedEvent}
+              me={origin}
+              title={panelTitle}
+              sub={resultLine}
+              onPick={(e) => setSelectedId(e.id)}
+              onClearSelection={() => setSelectedId(null)}
+              onMore={openDetail}
+              onOpenFeed={() => setParam('view', 'list')}
+              empty={empty}
+              listRef={sheetListRef}
+            />
           </>
-        )}
-
-        {/* ---------- Список ---------- */}
-        {view === 'list' && (
-          <div className="absolute inset-0 overflow-y-auto bg-page">
-            <div className="lg:hidden sticky top-0 z-20 bg-page">{mobileHeader(false)}</div>
-            <div className="max-w-[1360px] mx-auto px-3 lg:px-6 pt-2 lg:pt-5 pb-10 flex flex-col gap-7">
-              <div className="px-1 flex items-center gap-2 text-[15px] font-semibold text-muted">
-                {resultLine}
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              </div>
-              {error && <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">{error}</div>}
-
-              {recItems.length > 0 && (
-                <div className="flex flex-col gap-3">
-                  <span className="px-1 text-[19px] font-extrabold tracking-[-0.02em] text-ink">Рекомендации для вас</span>
-                  <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x -mx-3 px-3 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible">
-                    {recItems.map((r) => (
-                      <div key={r.event.id} className="shrink-0 w-[300px] lg:w-auto snap-start">
-                        <CoverCard event={r.event} me={origin} onOpen={() => openDetail(r.event)} />
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              {empty}
-
-              {sections.map((sec) => (
-                <div key={sec.key} className="flex flex-col gap-3">
-                  <div className="px-1 flex items-center gap-2 flex-wrap">
-                    {sec.live && (
-                      <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-brand)_25%,transparent)]" />
-                    )}
-                    <span className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">{sec.title}</span>
-                    <span className="text-[15px] font-semibold text-muted">{sec.items.length}</span>
-                    {sec.sub && <span className="hidden lg:inline text-sm text-muted ml-1">{sec.sub}</span>}
-                  </div>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3 lg:gap-4">
-                    {sec.items.map(({ e }) => (
-                      <CoverCard key={e.id} event={e} me={origin} active={e.id === detailId} onOpen={() => openDetail(e)} />
-                    ))}
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
         )}
 
         {/* ---------- Панель события ---------- */}

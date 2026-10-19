@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.admin.dto.AdminOrgDto;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.event.dto.EventResponse;
+import ru.sportikus.event.cache.MapCacheInvalidator;
 import ru.sportikus.event.model.Event;
 import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.repository.EventRepository;
@@ -25,6 +26,7 @@ public class AdminService {
     private final OrganizationRepository organizationRepository;
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
+    private final MapCacheInvalidator mapCacheInvalidator;
 
     @Transactional(readOnly = true)
     public List<AdminOrgDto> organizations(String status) {
@@ -64,6 +66,7 @@ public class AdminService {
         Event event = findEvent(id);
         event.setStatus(EventStatus.UNPUBLISHED);
         event.setUnpublishReason(reason.trim());
+        mapCacheInvalidator.mapDataChanged();
         return eventMapper.toDetails(event, null, true);
     }
 
@@ -73,6 +76,7 @@ public class AdminService {
         Event event = findEvent(id);
         event.setStatus(EventStatus.PUBLISHED);
         event.setUnpublishReason(null);
+        mapCacheInvalidator.mapDataChanged();
         if (event.getModerationStatus() != ModerationStatus.CLEAN) {
             markReviewed(event);
         }

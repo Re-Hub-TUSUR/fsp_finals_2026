@@ -5,6 +5,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
+import ru.sportikus.event.cache.MapCacheInvalidator;
 import ru.sportikus.event.model.Event;
 import ru.sportikus.event.repository.EventRepository;
 
@@ -24,6 +25,7 @@ public class ModerationJobs {
     private final EventRepository eventRepository;
     private final EventModerationService moderationService;
     private final ModerationProperties props;
+    private final MapCacheInvalidator mapCacheInvalidator;
 
     @Scheduled(fixedDelayString = "PT1M", initialDelayString = "PT45S")
     public void finishStuckReviews() {
@@ -35,6 +37,7 @@ public class ModerationJobs {
         for (Event event : stuck) {
             try {
                 moderationService.review(event.getId());
+                mapCacheInvalidator.mapDataChanged();
             } catch (RuntimeException e) {
                 log.warn("Could not finish moderation of event {}: {}", event.getId(), e.getMessage());
             }

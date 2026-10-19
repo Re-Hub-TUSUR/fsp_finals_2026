@@ -1,15 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import type { SportEvent } from '../types';
 import { toLngLat, useMapgl, type LngLat } from '../lib/mapgl';
-import {
-  PIN_SIZE,
-  PIN_SIZE_SELECTED,
-  ME_SIZE,
-  clusterElement,
-  clusterSize,
-  meElement,
-  pinElement,
-} from '../lib/mapPins';
+import { ME_SIZE, clusterElement, clusterSize, meElement, pinElement, pinSize } from '../lib/mapPins';
 import { distanceKm, type LatLng } from '../utils/eventView';
 import { useTheme } from '../context/ThemeContext';
 import { MapFallback } from './MapFallback';
@@ -23,6 +15,8 @@ export interface MapViewport extends LatLng {
 interface BlinkMapProps {
   events: SportEvent[];
   selectedEvent: SportEvent | null;
+  /** Событие под курсором в списке — метка чуть крупнее */
+  hoveredId?: number | null;
   onSelectEvent: (event: SportEvent | null) => void;
   /** Где пользователь (для «я здесь» и расстояний) */
   me: LatLng | null;
@@ -32,7 +26,7 @@ interface BlinkMapProps {
   controlsClassName?: string;
   /** Отступ карточки выбранного события снизу (на мобильном — над нижней навигацией) */
   cardClassName?: string;
-  /** Показывать мини-карточку выбранного события (на мобильном её заменяет карусель) */
+  /** Показывать мини-карточку выбранного события (на мобильном её заменяет шторка) */
   showCard?: boolean;
   /** «Подробнее» в мини-карточке — открыть панель события */
   onMore?: (event: SportEvent) => void;
@@ -65,9 +59,10 @@ interface Group {
   selected: boolean;
 }
 
-const groupClass = 'flex flex-col bg-white border border-line rounded-2xl shadow-card overflow-hidden';
+const groupClass =
+  'flex flex-col bg-card border border-line-2 rounded-[10px] shadow-[0_4px_16px_rgba(20,30,45,0.14)] overflow-hidden';
 const ctrlButton =
-  'w-12 h-12 flex items-center justify-center text-ink hover:bg-surface transition-colors disabled:opacity-60 [&+&]:border-t [&+&]:border-line';
+  'w-[46px] h-[46px] flex items-center justify-center text-ink hover:bg-surface transition-colors disabled:opacity-60 [&+&]:border-t [&+&]:border-line-2';
 
 const LocateIcon = () => (
   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
@@ -80,6 +75,7 @@ const LocateIcon = () => (
 export const BlinkMap: React.FC<BlinkMapProps> = ({
   events,
   selectedEvent,
+  hoveredId = null,
   onSelectEvent,
   me,
   onLocate,
@@ -234,7 +230,8 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
 
     for (const event of events) {
       const [x, y] = map.project(toLngLat(event.lat, event.lng));
-      const selected = event.id === selectedId;
+      // Выбранную и подсвеченную метку не прячем в кластер
+      const selected = event.id === selectedId || event.id === hoveredId;
       const group =
         radius && !selected ? groups.find((g) => !g.selected && Math.hypot(g.x - x, g.y - y) < radius) : undefined;
       if (group) group.items.push(event);
@@ -244,8 +241,10 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
     const markers = groups.map((group) => {
       if (group.items.length === 1) {
         const event = group.items[0];
-        const size = group.selected ? PIN_SIZE_SELECTED : PIN_SIZE;
-        const html = pinElement(event, group.selected);
+        const isSelected = event.id === selectedId;
+        const isHovered = !isSelected && event.id === hoveredId;
+        const size = pinSize(isSelected, isHovered);
+        const html = pinElement(event, isSelected, isHovered);
         html.addEventListener('click', () => {
           lastPinClick.current = Date.now();
           onSelectRef.current(event);
@@ -255,7 +254,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
           html,
           anchor: [size / 2, size / 2],
           interactive: true,
-          zIndex: group.selected ? 3 : 2,
+          zIndex: isSelected ? 4 : isHovered ? 3 : 2,
         });
       }
 
@@ -280,7 +279,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
     });
 
     return () => markers.forEach((m) => m.destroy());
-  }, [instance, events, selectedId, viewTick]);
+  }, [instance, events, selectedId, hoveredId, viewTick]);
 
   // Точка «Вы здесь»
   useEffect(() => {
@@ -384,7 +383,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
       {notice && (
         <div
           role="status"
-          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-ink text-white text-sm font-medium rounded-full px-3.5 py-2 shadow-card"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-ink text-page text-sm font-medium rounded-lg px-3.5 py-2"
         >
           {notice}
         </div>
@@ -396,7 +395,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
           me={me}
           onClose={() => onSelectEvent(null)}
           onMore={onMore ? () => onMore(selectedEvent) : undefined}
-          className={`absolute z-30 left-2 right-2 sm:left-4 sm:right-auto sm:w-[380px] ${cardClassName}`}
+          className={`absolute z-30 left-2 right-2 sm:left-4 sm:right-auto sm:w-[400px] ${cardClassName}`}
         />
       )}
     </div>

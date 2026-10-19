@@ -1,28 +1,24 @@
 import React from 'react';
-import { ChevronRight, MapPin } from 'lucide-react';
 import type { SportEvent } from '../types';
 import {
   accessLabel,
   dateFull,
   distanceKm,
+  eventAction,
   eventStatus,
   formatDistance,
+  seatText,
+  priceLabel,
+  rowTime,
   splitAddress,
-  startLabel,
   type LatLng,
 } from '../utils/eventView';
-import { CoverBadge, EventCover, FreeMeter, FriendsAttending, SportIcon, StatusChip } from './EventBits';
+import { CoverBadge, EventCover, FriendsAttending, SeatLine, SportIcon } from './EventBits';
 
-const CalendarIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" aria-hidden="true">
-    <rect x="3" y="5" width="18" height="16" rx="3" />
-    <path d="M3 10h18M8 3v4M16 3v4M8 14h.01M12 14h.01M16 14h.01M8 17.5h.01M12 17.5h.01" />
-  </svg>
-);
+const sportKm = (event: SportEvent, me: LatLng | null) =>
+  me ? `${event.sport.name} · ${formatDistance(distanceKm(me, event))}` : event.sport.name;
 
-const distFrom = (event: SportEvent, me: LatLng | null) => (me ? `${formatDistance(distanceKm(me, event))} от вас` : '');
-
-/** Карточка списка с обложкой (Sportikus Home). */
+/** Карточка Ленты: прежняя обложка + плоское тело из макета «Карта и Лента». */
 export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?: boolean; onOpen: () => void }> = ({
   event,
   me,
@@ -30,12 +26,20 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
   onOpen,
 }) => {
   const place = splitAddress(event.address, event.cityName);
+  const action = eventAction(event);
+  // Запись — через панель события (там анкета организатора и JoinDialog), поэтому обе кнопки открывают её
+  const open = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onOpen();
+  };
   return (
-    <button
-      type="button"
+    <div
+      role="button"
+      tabIndex={0}
       onClick={onOpen}
-      className={`anim-rise w-full flex flex-col text-left rounded-[20px] bg-card overflow-hidden transition-[box-shadow,transform] hover:shadow-card hover:-translate-y-0.5 ring-2 ${
-        active ? 'ring-brand' : 'ring-transparent'
+      onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
+      className={`anim-rise w-full flex flex-col text-left rounded-xl bg-card overflow-hidden cursor-pointer border transition-colors ${
+        active ? 'border-ink' : 'border-line-2 hover:border-ink'
       }`}
     >
       <EventCover event={event}>
@@ -43,106 +47,86 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
         <CoverBadge className="absolute top-3.5 right-3.5">{event.sport.name}</CoverBadge>
         <div className="absolute right-4 bottom-4"><FriendsAttending event={event} dark /></div>
       </EventCover>
-      <div className="w-full px-[18px] pt-3.5 pb-[18px] flex flex-col gap-2">
-        <div className="text-sm leading-tight font-medium text-muted">
-          <span className="whitespace-nowrap">{distFrom(event, me)}</span>
+      <div className="w-full p-4 lg:p-[18px] flex flex-col gap-2">
+        <div className="flex items-center gap-2 text-muted">
+          <SportIcon name={event.sport.name} size={20} />
+          <span className="flex-1 min-w-0 truncate text-sm font-semibold">{sportKm(event, me)}</span>
+          <span className="text-[15px] font-bold text-ink whitespace-nowrap">{priceLabel(event)}</span>
         </div>
-        <span className="text-[21px] leading-tight font-bold tracking-[-0.015em] text-ink">{event.title}</span>
-        <div className="flex items-center gap-2 text-sm font-semibold text-ink mt-0.5">
-          <CalendarIcon />
-          <span>{dateFull(event)}</span>
-        </div>
-        <div className="flex items-start gap-2 mt-1">
-          <MapPin className="w-[18px] h-[18px] text-muted shrink-0" />
-          <div className="min-w-0 flex flex-col gap-[3px]">
-            <span className="text-sm font-medium leading-snug text-ink">{place.main}</span>
-            {place.sub && <span className="text-[13px] font-medium leading-snug text-muted">{place.sub}</span>}
-          </div>
-        </div>
-      </div>
-    </button>
-  );
-};
-
-/** Плашка с пиктограммой спорта, цвет — по статусу. */
-const SportTile: React.FC<{ event: SportEvent; size?: number }> = ({ event, size = 40 }) => {
-  const status = eventStatus(event);
-  const tone = status.special ? status.chip : 'bg-surface text-ink';
-  return (
-    <span className={`shrink-0 rounded-[13px] flex items-center justify-center ${tone}`} style={{ width: size, height: size }}>
-      <SportIcon name={event.sport.name} size={Math.round(size * 0.5)} />
-    </span>
-  );
-};
-
-/** Компактная карточка в колонке рядом с картой (десктоп). */
-export const CompactCard: React.FC<{ event: SportEvent; me: LatLng | null; active: boolean; onPick: () => void }> = ({
-  event,
-  me,
-  active,
-  onPick,
-}) => (
-  <button
-    type="button"
-    data-eid={event.id}
-    onClick={onPick}
-    aria-pressed={active}
-    className={`anim-rise w-full text-left flex gap-3 p-3.5 rounded-[18px] border-[1.5px] transition-colors ${
-      active ? 'bg-brand-tint border-brand' : 'bg-card border-line hover:border-surface-2'
-    }`}
-  >
-    <SportTile event={event} />
-    <div className="flex-1 min-w-0 flex flex-col gap-1">
-      <div className="flex items-center justify-between gap-2">
-        <span className="text-xs font-semibold text-muted truncate">
-          {event.sport.name}
-          {me && ` · ${formatDistance(distanceKm(me, event))}`}
+        <span className="text-[19px] lg:text-xl leading-tight font-bold text-ink">{event.title}</span>
+        <span className="text-[15px] lg:text-base font-semibold text-ink">{dateFull(event)}</span>
+        <span className="text-sm font-medium text-muted">
+          {place.main}
+          {place.sub && `, ${place.sub}`}
         </span>
-        <StatusChip event={event} />
-      </div>
-      <span className="text-base font-bold leading-tight text-ink">{event.title}</span>
-      <span className="text-[13px] font-medium text-muted">{startLabel(event)}</span>
-      <div className="mt-1">
-        <FreeMeter event={event} />
+        <div className="mt-1">
+          <SeatLine event={event} />
+        </div>
+        <div className="flex gap-2 mt-1.5">
+          <button
+            type="button"
+            onClick={open}
+            className="hidden lg:flex flex-1 h-11 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold items-center justify-center hover:bg-surface transition-colors"
+          >
+            Подробнее
+          </button>
+          <button
+            type="button"
+            onClick={open}
+            className={`flex-1 lg:flex-[1.2] h-12 lg:h-11 rounded-[10px] text-base lg:text-[15px] font-bold flex items-center justify-center transition-colors ${action.cls}`}
+          >
+            {action.label}
+          </button>
+        </div>
       </div>
     </div>
-  </button>
-);
+  );
+};
 
-/** Карточка карусели поверх мобильной карты. */
-export const CarouselCard: React.FC<{
+/** Плоский ряд списка рядом с картой (десктоп) и в шторке (мобильный): время слева, статус текстом. */
+export const EventRow: React.FC<{
   event: SportEvent;
+  me: LatLng | null;
   active: boolean;
   onPick: () => void;
-  onMore: () => void;
-}> = ({ event, active, onPick, onMore }) => (
-  <div
-    data-eid={event.id}
-    onClick={onPick}
-    className={`anim-rise shrink-0 w-[290px] snap-start flex items-center gap-3 p-3 rounded-[20px] bg-white border-2 shadow-card cursor-pointer transition-colors ${
-      active ? 'border-brand' : 'border-white'
-    }`}
-  >
-    <SportTile event={event} />
-    <div className="flex-1 min-w-0 flex flex-col gap-1">
-      <span className="text-xs font-semibold text-muted truncate">
-        {startLabel(event)} · {event.sport.name}
-      </span>
-      <span className="text-[15px] font-bold leading-tight text-ink truncate">{event.title}</span>
-      <div className="mt-0.5">
-        <FreeMeter event={event} />
-      </div>
-    </div>
+  onHover?: (hovered: boolean) => void;
+  /** Мобильная шторка: без адреса и полосы мест */
+  compact?: boolean;
+}> = ({ event, me, active, onPick, onHover, compact = false }) => {
+  const t = rowTime(event);
+  return (
     <button
       type="button"
-      onClick={(e) => {
-        e.stopPropagation();
-        onMore();
-      }}
-      aria-label="Подробнее"
-      className="shrink-0 w-11 h-11 rounded-[14px] bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
+      data-eid={event.id}
+      onClick={onPick}
+      onMouseEnter={onHover && (() => onHover(true))}
+      onMouseLeave={onHover && (() => onHover(false))}
+      aria-pressed={active}
+      className={`w-full shrink-0 text-left flex border-b border-line transition-colors ${
+        compact ? 'gap-3.5 px-4 py-3.5' : 'gap-4 px-5 py-4'
+      } ${active ? 'bg-surface shadow-[inset_3px_0_0_var(--color-ink)]' : 'bg-card hover:bg-surface'}`}
     >
-      <ChevronRight className="w-5 h-5" />
+      <div className={`shrink-0 flex flex-col gap-0.5 ${compact ? 'w-[62px]' : 'w-[68px] pt-px'}`}>
+        <span className={`${compact ? 'text-lg' : 'text-xl'} font-bold leading-tight tabular-nums text-ink`}>{t.big}</span>
+        <span className="text-[13px] font-semibold text-muted">{t.small}</span>
+      </div>
+      <div className={`flex-1 min-w-0 flex flex-col ${compact ? 'gap-0.5' : 'gap-[3px]'}`}>
+        <span className="text-sm font-semibold text-muted truncate">{sportKm(event, me)}</span>
+        <span className="text-[17px] font-semibold leading-tight text-ink">{event.title}</span>
+        {!compact && <span className="text-sm font-medium text-muted truncate">{event.address}</span>}
+        {compact ? (
+          <div className="mt-1 flex items-center gap-2.5">
+            <span className={`flex-1 text-sm font-bold ${eventStatus(event).freeInk}`}>{seatText(event)}</span>
+            <span className="text-sm font-semibold text-ink whitespace-nowrap">{priceLabel(event)}</span>
+          </div>
+        ) : (
+          <div className="mt-1.5">
+            <SeatLine event={event} width={72}>
+              <span className="text-sm font-semibold text-ink whitespace-nowrap">{priceLabel(event)}</span>
+            </SeatLine>
+          </div>
+        )}
+      </div>
     </button>
-  </div>
-);
+  );
+};

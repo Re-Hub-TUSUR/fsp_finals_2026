@@ -19,6 +19,8 @@
   --color-ink: #0e1116;
   --color-muted: #5e6670;
   --color-line: #e3e6ea;
+  /* Рамки контролов (фильтры, поиск, кнопки) — по макету «Карта и Лента» */
+  --color-line-2: #a9b1ba;
 
   --color-brand: #0bd68a;
   --color-brand-hover: #07b875;
@@ -65,6 +67,7 @@
   --color-ink: #f2f4f5;
   --color-muted: #9aa0a6;
   --color-line: #373c41;
+  --color-line-2: #6b727a;
 
   --color-brand: #ddf55e;
   --color-brand-hover: #cbe645;
@@ -239,7 +242,8 @@ body {
   display: none;
 }
 
-/* Метки мероприятий поверх карты 2GIS (src/lib/mapPins.ts) — по референсу редизайна.
+/* Метки мероприятий поверх карты 2GIS (src/lib/mapPins.ts) — по макету «Карта и Лента»:
+   плоские круги с пиктограммой спорта, без свечений и пульсации.
    Позиционирует MapGL, поэтому у корня метки нет transform/position-смещений. */
 .sp-pin {
   position: relative;
@@ -251,48 +255,29 @@ body {
   position: absolute;
   inset: 0;
   border-radius: 50%;
-  overflow: hidden;
-  background: var(--color-avatar-bg);
-  color: var(--color-avatar-ink);
+  background: var(--color-card);
+  color: var(--color-ink);
   border: 3px solid var(--color-pin-ring);
-  box-shadow: 0 6px 16px rgba(6, 12, 30, 0.28);
+  box-shadow: 0 2px 8px rgba(6, 12, 30, 0.35);
   display: flex;
   align-items: center;
   justify-content: center;
   font-weight: 700;
   font-size: 14px;
   line-height: 1;
-  letter-spacing: -0.02em;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.sp-pin-face img {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-.sp-pin:hover .sp-pin-face {
-  transform: scale(1.08);
+.sp-pin.is-hovered .sp-pin-face {
+  background: var(--color-surface-2);
 }
 
 .sp-pin.is-selected .sp-pin-face {
   background: var(--color-brand);
   color: var(--color-on-brand);
-  font-size: 16px;
 }
 
 .sp-pin.is-full .sp-pin-face {
-  filter: grayscale(1);
-  opacity: 0.6;
-}
-
-.sp-pin-pulse {
-  position: absolute;
-  inset: -8px;
-  border-radius: 50%;
-  background: var(--color-brand);
-  animation: sp-pulse 1.8s ease-out infinite;
+  opacity: 0.55;
 }
 
 .sp-pin-badge {
@@ -306,7 +291,6 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 2px 6px rgba(6, 12, 30, 0.3);
   color: #fff;
 }
 
@@ -315,14 +299,11 @@ body {
 }
 
 .sp-pin-badge--live {
+  top: -3px;
+  right: -3px;
+  width: 16px;
+  height: 16px;
   background: var(--color-brand);
-}
-
-.sp-pin-badge--live i {
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: var(--color-on-brand);
 }
 
 .sp-pin-badge--mine {
@@ -331,7 +312,7 @@ body {
   bottom: -4px;
   left: -4px;
   background: var(--color-ink);
-  color: var(--color-white);
+  color: var(--color-page);
 }
 
 .sp-pin-caption {
@@ -340,20 +321,18 @@ body {
   left: 50%;
   transform: translateX(-50%);
   white-space: nowrap;
-  background: var(--color-white);
-  color: var(--color-ink);
+  background: var(--color-ink);
+  color: var(--color-page);
   font-weight: 600;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 1;
-  padding: 7px 10px;
-  border-radius: 10px;
-  box-shadow: 0 4px 12px rgba(6, 12, 30, 0.25);
+  padding: 8px 10px;
+  border-radius: 6px;
 }
 
 .sp-cluster .sp-pin-face {
   background: var(--color-brand);
   color: var(--color-on-brand);
-  box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-brand) 24%, transparent), 0 6px 16px rgba(6, 12, 30, 0.28);
 }
 
 .sp-me {
@@ -362,36 +341,11 @@ body {
   height: 18px;
 }
 
-.sp-me-halo {
-  position: absolute;
-  inset: -14px;
-  border-radius: 50%;
-  background: color-mix(in oklab, var(--color-brand) 18%, transparent);
-}
-
 .sp-me-dot {
   position: absolute;
   inset: 0;
   border-radius: 50%;
   background: var(--color-brand);
   border: 3px solid var(--color-pin-ring);
-  box-shadow: 0 2px 8px rgba(6, 12, 30, 0.35);
-}
-
-@keyframes sp-pulse {
-  0% {
-    transform: scale(0.7);
-    opacity: 0.45;
-  }
-  100% {
-    transform: scale(1.9);
-    opacity: 0;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .sp-pin-pulse {
-    animation: none;
-    opacity: 0.22;
-  }
+  box-shadow: 0 1px 6px rgba(6, 12, 30, 0.4);
 }

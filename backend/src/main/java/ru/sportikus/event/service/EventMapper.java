@@ -4,6 +4,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import ru.sportikus.event.dto.EventResponse;
 import ru.sportikus.event.model.Event;
+import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.participation.dto.ParticipationBrief;
 import ru.sportikus.participation.model.Participation;
 import ru.sportikus.participation.model.ParticipationStatus;
@@ -22,6 +23,7 @@ import java.util.stream.Collectors;
 public class EventMapper {
 
     private final ParticipationRepository participationRepository;
+    private final OrganizationRepository organizationRepository;
 
     private record Counts(int confirmed, int pending) {
     }
@@ -45,6 +47,29 @@ public class EventMapper {
         return events.stream()
                 .map(e -> build(e, counts.getOrDefault(e.getId(), new Counts(0, 0)), mine.get(e.getId()),
                         friends.getOrDefault(e.getId(), List.of()), false, viewerId, includePending, includeModeration))
+                .toList();
+    }
+
+    /**
+     * Подмешивает контекст пользователя (друзья, своя заявка, право управлять) в список, построенный для
+     * анонимного просмотра — например, взятый из кэша. Результат совпадает с {@code toList(events, viewerId, false)}.
+     */
+    public List<EventResponse> withViewer(List<EventResponse> base, Long viewerId) {
+        if (viewerId == null || base.isEmpty()) {
+            return base;
+        }
+        List<Long> ids = base.stream().map(EventResponse::id).toList();
+        Map<Long, List<EventResponse.FriendAttendee>> friends = loadFriends(ids, viewerId);
+        Map<Long, Participation> mine = participationRepository.findByUserIdAndEventIdIn(viewerId, ids).stream()
+                .collect(Collectors.toMap(p -> p.getEvent().getId(), p -> p));
+        Long ownedOrgId = organizationRepository.findFirstByOwnerIdOrderByIdAsc(viewerId)
+                .map(o -> o.getId()).orElse(null);
+        return base.stream()
+                .map(e -> e.withViewer(
+                        friends.getOrDefault(e.id(), List.of()),
+                        mine.get(e.id()) == null ? null : ParticipationBrief.from(mine.get(e.id())),
+                        viewerId.equals(e.organizerUserId())
+                                || (ownedOrgId != null && ownedOrgId.equals(e.organizationId()))))
                 .toList();
     }
 

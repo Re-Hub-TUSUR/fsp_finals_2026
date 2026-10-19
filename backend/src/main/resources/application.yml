@@ -9,6 +9,15 @@ spring:
     username: ${SPRING_DATASOURCE_USERNAME:sportikus_user}
     password: ${SPRING_DATASOURCE_PASSWORD:sportikus_password}
     driver-class-name: org.postgresql.Driver
+  # Redis — кэш списка мероприятий для карты. Доступ к нему необязателен: без Redis запросы идут в БД
+  data:
+    redis:
+      host: ${REDIS_HOST:localhost}
+      port: ${REDIS_PORT:6379}
+      timeout: 500ms
+      connect-timeout: 500ms
+      repositories:
+        enabled: false
   jpa:
     hibernate:
       ddl-auto: validate
@@ -59,6 +68,11 @@ app:
 features:
   location-sharing:
     enabled: false
+
+# Кэш карты: список мероприятий без данных пользователя. TTL короткий — события заканчиваются по времени
+map-cache:
+  enabled: ${MAP_CACHE_ENABLED:true}
+  ttl: PT60S
 
 # Рекомендации: веса и лимиты можно менять без пересборки (см. RecommendationProperties)
 recommendations:

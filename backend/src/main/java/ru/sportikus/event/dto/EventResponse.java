@@ -73,6 +73,18 @@ public record EventResponse(
         ModerationInfo moderation
 ) {
 
+    /** Копия с контекстом просматривающего пользователя — для кэшированных, не персональных списков. */
+    public EventResponse withViewer(List<FriendAttendee> friends, ParticipationBrief mine, Boolean manager) {
+        return new EventResponse(
+                id, title, description, sport, template,
+                organizerName, organizerAvatar, byOrganization, organizationId, organizerUserId,
+                startTime, endTime, lat, lng, address, cityName, timeZone,
+                capacity, confirmedCount, joinMode, skillLevel, price, registrationDeadline, minAge, maxAge,
+                requiredEquipment, status, unpublishReason,
+                fields, details, customFields, registrationFields, orgDetails,
+                friends, mine, manager, pendingCount, moderation);
+    }
+
     /** A friend of the current viewer who is confirmed for this event. */
     public record FriendAttendee(Long id, String fullName, String avatarUrl) {
     }

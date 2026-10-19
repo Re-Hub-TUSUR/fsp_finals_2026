@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.sportikus.event.cache.MapCacheInvalidator;
 import ru.sportikus.event.dto.CreateEventRequest;
 import ru.sportikus.event.dto.EventFilter;
 import ru.sportikus.event.dto.EventResponse;
@@ -39,6 +40,7 @@ public class EventController {
 
     private final EventService eventService;
     private final EventModerationService moderationService;
+    private final MapCacheInvalidator mapCacheInvalidator;
 
     @GetMapping
     @Operation(summary = "Каталог опубликованных мероприятий с фильтрами",
@@ -81,6 +83,7 @@ public class EventController {
         if (created.status() == EventStatus.MODERATION) {
             // Этап 2 — вне транзакции создания: пока ждём ИИ, БД не заблокирована
             moderationService.review(created.id());
+            mapCacheInvalidator.mapDataChanged();
             created = eventService.details(created.id(), Optional.of(author));
         }
         return created;

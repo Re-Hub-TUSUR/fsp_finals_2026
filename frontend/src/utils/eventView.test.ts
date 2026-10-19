@@ -3,6 +3,7 @@ import type { SportEvent } from '../types';
 import {
   dayKey,
   distanceKm,
+  eventAction,
   eventStatus,
   formatDistance,
   initials,
@@ -13,7 +14,10 @@ import {
   keyToDate,
   matchesWhen,
   plural,
+  priceLabel,
+  rowTime,
   sameWhen,
+  seatText,
   splitAddress,
   whenLabel,
 } from './eventView';
@@ -216,5 +220,46 @@ describe('whenLabel', () => {
   it('labels "all" and "now"', () => {
     expect(whenLabel({ kind: 'all' })).toBe('Любое время');
     expect(whenLabel({ kind: 'now' })).toBe('Сейчас');
+  });
+});
+
+describe('seatText', () => {
+  it('shows free seats, a warning when few are left, and "Мест нет" when full', () => {
+    expect(seatText(baseEvent({ capacity: 20, confirmedCount: 12 }))).toBe('Свободно 8 из 20');
+    expect(seatText(baseEvent({ capacity: 10, confirmedCount: 9 }))).toBe('Осталось 1 из 10');
+    expect(seatText(baseEvent({ capacity: 10, confirmedCount: 10 }))).toBe('Мест нет');
+  });
+});
+
+describe('eventAction', () => {
+  it('picks the label by join mode, fullness and own participation', () => {
+    expect(eventAction(baseEvent()).label).toBe('Записаться');
+    expect(eventAction(baseEvent({ joinMode: 'APPROVAL' })).label).toBe('Подать заявку');
+    expect(eventAction(baseEvent({ confirmedCount: 10 }))).toMatchObject({ label: 'Мест нет', joinable: false });
+    const mine = baseEvent({ myParticipation: { status: 'PENDING' } as SportEvent['myParticipation'] });
+    expect(eventAction(mine)).toMatchObject({ label: 'Заявка отправлена', joinable: false });
+  });
+});
+
+describe('priceLabel', () => {
+  it('formats free and paid events', () => {
+    expect(priceLabel({ price: 0 })).toBe('Бесплатно');
+    expect(priceLabel({ price: 300 })).toBe('300 ₽');
+  });
+});
+
+describe('rowTime', () => {
+  const at = (ms: number) => new Date(Date.now() + ms).toISOString();
+  it('shows "Сейчас" and the end time for a live event', () => {
+    const t = rowTime({ startTime: at(-60_000), endTime: at(3_600_000) });
+    expect(t.big).toBe('Сейчас');
+    expect(t.small).toMatch(/^до \d{2}:\d{2}$/);
+  });
+  it('shows time and "завтра" for tomorrow', () => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(10, 0, 0, 0);
+    const t = rowTime({ startTime: d.toISOString(), endTime: new Date(d.getTime() + 3_600_000).toISOString() });
+    expect(t).toEqual({ big: '10:00', small: 'завтра' });
   });
 });
