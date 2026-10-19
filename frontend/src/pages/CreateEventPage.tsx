@@ -470,15 +470,23 @@ export const CreateEventPage: React.FC = () => {
                 {(['APPROVAL', 'OPEN'] as JoinMode[]).map((mode) => (
                   <label
                     key={mode}
-                    className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
+                    className={`relative cursor-pointer rounded-xl border p-3.5 transition-all ${
                       joinMode === mode
                         ? 'border-brand bg-brand-tint ring-2 ring-brand/20'
                         : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
+                    {/*
+                      position: relative на label обязателен: input ниже визуально скрыт через
+                      sr-only (position: absolute). Без своего positioned-родителя браузер при
+                      клике/фокусе вычисляет position:absolute относительно вьюпорта (а не этого
+                      label) и прокручивает им весь документ в произвольную точку — страница
+                      выглядит как «побелевшая»/пустая. relative здесь — предотвращает это.
+                    */}
                     <input
                       type="radio"
                       name="joinMode"
+                      value={mode}
                       className="sr-only"
                       checked={joinMode === mode}
                       onChange={() => setJoinMode(mode)}
