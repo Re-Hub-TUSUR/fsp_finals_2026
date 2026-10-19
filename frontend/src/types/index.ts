@@ -25,7 +25,24 @@ export interface Profile {
   kpp?: string;
   status?: OrgStatus;
   canEdit: boolean;
+  friendshipState?: FriendshipState;
   events: SportEvent[];
+}
+
+export type FriendshipState = 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'FRIENDS';
+
+export interface FriendRequest {
+  userId: number;
+  fullName: string;
+  avatarUrl?: string;
+  createdAt: string;
+}
+
+export interface Friend {
+  userId: number;
+  fullName: string;
+  avatarUrl?: string;
+  friendsSince?: string;
 }
 
 export interface Sport {
@@ -147,9 +164,16 @@ export interface SportEvent {
   orgDetails?: OrgDetails;
 
   // контекст текущего пользователя
+  friendsAttending?: FriendAttendee[];
   myParticipation?: ParticipationBrief;
   canManage?: boolean;
   pendingCount?: number;
+}
+
+export interface FriendAttendee {
+  id: number;
+  fullName: string;
+  avatarUrl?: string;
 }
 
 export interface Participation {

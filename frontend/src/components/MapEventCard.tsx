@@ -9,11 +9,13 @@ interface MapEventCardProps {
   event: SportEvent;
   me: LatLng | null;
   onClose: () => void;
+  /** Открыть панель события (на главной); без него кнопки ведут на страницу события */
+  onMore?: () => void;
   className?: string;
 }
 
 /** Карточка выбранного мероприятия поверх карты (мини-карточка из референса). */
-export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, className = '' }) => {
+export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, onMore, className = '' }) => {
   const full = isFull(event);
   const mine = isMine(event);
   const dist = me ? formatDistance(distanceKm(me, event)) : null;
@@ -56,20 +58,41 @@ export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, 
       <EventMeter event={event} />
 
       <div className="flex gap-2">
-        <a
-          href={routeUrl(event.lat, event.lng)}
-          target="_blank"
-          rel="noopener noreferrer"
-          className="flex-1 h-[46px] rounded-[14px] bg-surface text-ink font-semibold text-[15px] flex items-center justify-center hover:bg-surface-2 transition-colors"
-        >
-          Маршрут
-        </a>
-        <Link
-          to={`/events/${event.id}`}
-          className={`flex-[1.4] h-[46px] rounded-[14px] font-bold text-[15px] flex items-center justify-center transition-colors ${action.cls}`}
-        >
-          {action.label}
-        </Link>
+        {onMore ? (
+          <button
+            type="button"
+            onClick={onMore}
+            className="flex-1 h-[46px] rounded-[14px] bg-surface text-ink font-semibold text-[15px] flex items-center justify-center hover:bg-surface-2 transition-colors"
+          >
+            Подробнее
+          </button>
+        ) : (
+          <a
+            href={routeUrl(event.lat, event.lng)}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex-1 h-[46px] rounded-[14px] bg-surface text-ink font-semibold text-[15px] flex items-center justify-center hover:bg-surface-2 transition-colors"
+          >
+            Маршрут
+          </a>
+        )}
+        {onMore && !isMine(event) && !full ? (
+          // Запись — через панель события (там анкета организатора и JoinDialog)
+          <button
+            type="button"
+            onClick={onMore}
+            className={`flex-[1.4] h-[46px] rounded-[14px] font-bold text-[15px] flex items-center justify-center transition-colors ${action.cls}`}
+          >
+            {action.label}
+          </button>
+        ) : (
+          <Link
+            to={`/events/${event.id}`}
+            className={`flex-[1.4] h-[46px] rounded-[14px] font-bold text-[15px] flex items-center justify-center transition-colors ${action.cls}`}
+          >
+            {action.label}
+          </Link>
+        )}
       </div>
     </div>
   );

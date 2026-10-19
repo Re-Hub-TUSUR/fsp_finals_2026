@@ -16,7 +16,8 @@ export const Chip: React.FC<{
     className={`shrink-0 rounded-full border font-semibold whitespace-nowrap transition-colors ${
       size === 'sm' ? 'h-[34px] px-3 text-[13px]' : 'h-9 px-3.5 text-sm'
     } ${floating ? 'shadow-[0_2px_8px_rgba(10,20,45,0.10)]' : ''} ${
-      active ? 'bg-brand border-brand text-on-brand' : 'bg-white border-line text-ink hover:bg-surface'
+      // В Sportikus Home активные чипы «чернильные»: акцент остаётся только за действиями
+      active ? 'bg-ink border-ink text-white' : 'bg-card border-line text-ink hover:bg-surface'
     }`}
   >
     {children}

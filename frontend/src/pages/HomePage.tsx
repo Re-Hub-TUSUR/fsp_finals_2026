@@ -1,69 +1,100 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import type { JoinMode, SkillLevel, Sport, SportEvent } from '../types';
-import { BlinkMap } from '../components/BlinkMap';
-import type { MapViewport } from '../components/BlinkMap';
-import { EventMeter, OrgAvatar } from '../components/EventBits';
+import { ChevronDown, LocateFixed, Loader2, Search, SearchX, X } from 'lucide-react';
+import type { RecommendationItem, Sport, SportEvent } from '../types';
+import { BlinkMap, type MapViewport } from '../components/BlinkMap';
+import { CarouselCard, CompactCard, CoverCard } from '../components/HomeCards';
+import { EventDetailPanel } from '../components/EventDetailPanel';
+import {
+  CountBadge,
+  DEFAULT_FILTERS,
+  FilterBar,
+  FilterIcon,
+  FiltersSheet,
+  RADIUS_OPTIONS,
+  RadiusList,
+  allFilterCount,
+  radiusValue,
+  type HomeFilterState,
+  type Radius,
+} from '../components/HomeFilters';
 import { Modal } from '../components/Modal';
-import { Chip, SectionLabel, Segmented, Toggle } from '../components/ui';
-import { ArrowDownWideNarrow, Loader2, Search, SearchX } from 'lucide-react';
-import { catalogApi, eventsApi } from '../api';
+import { Chip } from '../components/ui';
+import { catalogApi, eventsApi, recommendationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { SKILL_LABELS, spotsLeft } from '../utils/format';
+import { spotsLeft } from '../utils/format';
 import {
-  WHEN_LABELS,
+  DISTANCE_BANDS,
+  dayDiff,
+  dayKey,
   distanceKm,
-  formatDistance,
+  isLive,
   matchesWhen,
-  startLabel,
+  plural,
   type LatLng,
-  type WhenFilter,
 } from '../utils/eventView';
 
-type DistFilter = 'all' | '1' | '3' | '5' | '10';
-type SortMode = 'near' | 'time';
+type Item = { e: SportEvent; km: number | null };
+type Section = { key: string; title: string; sub?: string; live?: boolean; items: Item[] };
 
-const FilterIcon = () => (
-  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
-    <path d="M4 7h9M17 7h3M4 17h3M11 17h9" />
-    <circle cx="15" cy="7" r="2" />
-    <circle cx="9" cy="17" r="2" />
-  </svg>
-);
-
-const pluralEvents = (n: number) => {
-  const m10 = n % 10;
-  const m100 = n % 100;
-  if (m10 === 1 && m100 !== 11) return 'событие';
-  if (m10 >= 2 && m10 <= 4 && (m100 < 12 || m100 > 14)) return 'события';
-  return 'событий';
-};
+const KRASNOYARSK: LatLng = { lat: 56.0153, lng: 92.8932 };
+// В режиме радиуса грузим сразу 10 км — меньшие радиусы и счётчики считаются на клиенте
+const RADIUS_FETCH_KM = 10;
+// «Без ограничения» в списке — весь город
+const CITY_RADIUS_KM = 50;
+const isDesktop = () => window.matchMedia('(min-width: 1024px)').matches;
+const evWord = (n: number) => plural(n, 'событие', 'события', 'событий');
 
 export const HomePage: React.FC = () => {
-  const { currentUser, ready } = useAuth();
+  const { currentUser, ready, preferences } = useAuth();
   const [params, setParams] = useSearchParams();
   const view = params.get('view') === 'list' ? 'list' : 'map';
+  const q = params.get('q') ?? '';
 
   const [sports, setSports] = useState<Sport[]>([]);
-  const [selectedSports, setSelectedSports] = useState<string[]>([]);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [debouncedQuery, setDebouncedQuery] = useState('');
-  const [skill, setSkill] = useState<SkillLevel | ''>('');
-  const [joinMode, setJoinMode] = useState<JoinMode | ''>('');
-  const [when, setWhen] = useState<WhenFilter>('all');
-  const [dist, setDist] = useState<DistFilter>('all');
-  const [onlyFree, setOnlyFree] = useState(false);
-  const [sort, setSort] = useState<SortMode>('near');
+  const [filters, setFilters] = useState<HomeFilterState>(DEFAULT_FILTERS);
+  const radiusTouched = useRef(false);
+  const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [radiusSheetOpen, setRadiusSheetOpen] = useState(false);
 
   const [events, setEvents] = useState<SportEvent[]>([]);
+  const [reloadTick, setReloadTick] = useState(0);
+  const [recs, setRecs] = useState<RecommendationItem[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  const [detailId, setDetailId] = useState<number | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   // Каталог доступен и без ключа карты; после инициализации 2ГИС уточнит область.
-  const [viewport, setViewport] = useState<MapViewport>({ lat: 56.0153, lng: 92.8932, radiusKm: 50 });
+  const [viewport, setViewport] = useState<MapViewport>({ ...KRASNOYARSK, radiusKm: 50 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const listColRef = useRef<HTMLDivElement>(null);
+  const carouselRef = useRef<HTMLDivElement>(null);
+
+  // Точка отсчёта радиуса и расстояний: геопозиция, иначе домашняя точка из профиля
+  const origin = useMemo<LatLng | null>(
+    () =>
+      me ??
+      (preferences?.homeLat != null && preferences?.homeLng != null
+        ? { lat: preferences.homeLat, lng: preferences.homeLng }
+        : null),
+    [me, preferences?.homeLat, preferences?.homeLng],
+  );
+  const radiusOn = filters.radius !== 'all' && !!origin;
+
+  const patchFilters = useCallback((patch: Partial<HomeFilterState>) => {
+    if (patch.radius) radiusTouched.current = true;
+    setFilters((f) => ({ ...f, ...patch }));
+  }, []);
+
+  const setParam = (key: string, value: string | null) => {
+    const p = new URLSearchParams(params);
+    if (value) p.set(key, value);
+    else p.delete(key);
+    setParams(p, { replace: true });
+  };
 
   useEffect(() => {
     catalogApi.sports().then(setSports).catch(() => setSports([]));
@@ -76,18 +107,27 @@ export const HomePage: React.FC = () => {
       .query({ name: 'geolocation' })
       .then((p) => {
         if (p.state === 'granted') {
-          navigator.geolocation.getCurrentPosition((pos) =>
-            setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-          );
+          navigator.geolocation.getCurrentPosition((pos) => setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
         }
       })
       .catch(() => {});
   }, []);
 
+  // Как в макете: когда известна точка отсчёта, по умолчанию ищем в радиусе 5 км
   useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+    if (origin && !radiusTouched.current) setFilters((f) => (f.radius === 'all' ? { ...f, radius: '5' } : f));
+  }, [origin]);
+
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(q.trim()), 300);
     return () => clearTimeout(t);
-  }, [searchQuery]);
+  }, [q]);
+
+  // Область загрузки: радиус от точки отсчёта; без радиуса на карте — видимая область,
+  // в «Списке» (карта скрыта) — город: точка отсчёта или домашний город, иначе Красноярск
+  const cityCenter = origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
+  const fetchCenter = radiusOn && origin ? origin : view === 'list' ? cityCenter : viewport;
+  const fetchRadius = radiusOn ? RADIUS_FETCH_KM : view === 'list' ? CITY_RADIUS_KM : viewport.radiusKm;
 
   useEffect(() => {
     if (!ready) return;
@@ -95,14 +135,14 @@ export const HomePage: React.FC = () => {
     setLoading(true);
     eventsApi
       .list({
-        // Каталог всегда ограничен видимой областью карты — в масштабе страны иначе не обойтись
-        lat: viewport.lat,
-        lng: viewport.lng,
-        radiusKm: viewport.radiusKm,
-        sport: selectedSports,
+        // Без радиуса каталог ограничен видимой областью карты — в масштабе страны иначе не обойтись
+        lat: fetchCenter.lat,
+        lng: fetchCenter.lng,
+        radiusKm: fetchRadius,
+        sport: filters.sports,
         q: debouncedQuery || undefined,
-        skillLevel: skill || undefined,
-        joinMode: joinMode || undefined,
+        skillLevel: filters.skill || undefined,
+        joinMode: filters.joinMode || undefined,
       })
       .then((list) => {
         if (cancelled) return;
@@ -115,294 +155,415 @@ export const HomePage: React.FC = () => {
       cancelled = true;
     };
     // currentUser?.id — чтобы после смены роли обновились статусы «Вы участвуете»
-  }, [ready, viewport, currentUser?.id, selectedSports, debouncedQuery, skill, joinMode]);
+  }, [
+    ready,
+    fetchCenter.lat,
+    fetchCenter.lng,
+    fetchRadius,
+    currentUser?.id,
+    filters.sports,
+    debouncedQuery,
+    filters.skill,
+    filters.joinMode,
+    reloadTick,
+  ]);
 
-  // Фильтры «когда», «расстояние», «свободные места» и сортировка — на клиенте
-  const visible = useMemo(() => {
-    const withDist = events.map((e) => ({ e, km: me ? distanceKm(me, e) : null }));
-    return withDist
-      .filter(({ e }) => matchesWhen(e, when))
-      .filter(({ km }) => dist === 'all' || km == null || km <= Number(dist))
-      .filter(({ e }) => !onlyFree || spotsLeft(e) > 0)
-      .sort((a, b) =>
-        sort === 'near' && a.km != null && b.km != null
-          ? a.km - b.km
-          : new Date(a.e.startTime).getTime() - new Date(b.e.startTime).getTime(),
-      );
-  }, [events, me, when, dist, onlyFree, sort]);
+  // Рекомендации — только в «Списке» и без поискового запроса
+  useEffect(() => {
+    if (!ready || !currentUser || currentUser.role === 'ROLE_ADMIN' || view !== 'list') return;
+    let cancelled = false;
+    recommendationsApi
+      .get({ lat: origin?.lat, lng: origin?.lng, limit: 5 })
+      .then((r) => !cancelled && setRecs(r.items))
+      .catch(() => !cancelled && setRecs([]));
+    return () => {
+      cancelled = true;
+    };
+  }, [ready, currentUser, view, origin, reloadTick]);
+
+  // Клиентские фильтры: «когда», радиус, свободные места, бесплатные
+  const base = useMemo<Item[]>(
+    () =>
+      events
+        .map((e) => ({ e, km: origin ? distanceKm(origin, e) : null }))
+        .filter(({ e }) => matchesWhen(e, filters.when))
+        .filter(({ e }) => !filters.freeOnly || spotsLeft(e) > 0)
+        .filter(({ e }) => !filters.freeCost || !e.price),
+    [events, origin, filters.when, filters.freeOnly, filters.freeCost],
+  );
+
+  const visible = useMemo<Item[]>(() => {
+    const r = radiusOn ? Number(filters.radius) : Infinity;
+    return base
+      .filter(({ km }) => km == null || km <= r)
+      .sort((a, b) => {
+        const live = Number(isLive(b.e)) - Number(isLive(a.e));
+        if (live) return live;
+        if (a.km != null && b.km != null) return a.km - b.km;
+        return new Date(a.e.startTime).getTime() - new Date(b.e.startTime).getTime();
+      });
+  }, [base, radiusOn, filters.radius]);
+
+  const radiusCounts = useMemo(() => {
+    const counts = {} as Record<Radius, number | null>;
+    for (const o of RADIUS_OPTIONS) {
+      counts[o.value] =
+        o.value === 'all'
+          ? radiusOn
+            ? null
+            : base.length
+          : origin
+            ? base.filter(({ km }) => km != null && km <= Number(o.value)).length
+            : null;
+    }
+    return counts;
+  }, [base, origin, radiusOn]);
+
+  const eventDays = useMemo(() => new Set(events.map((e) => dayKey(new Date(e.startTime)))), [events]);
 
   const visibleEvents = useMemo(() => visible.map((v) => v.e), [visible]);
   const selectedEvent = visibleEvents.find((e) => e.id === selectedId) ?? null;
+  const detailEvent =
+    events.find((e) => e.id === detailId) ?? recs.find((r) => r.event.id === detailId)?.event ?? null;
 
-  const filterCount =
-    (skill ? 1 : 0) + (joinMode ? 1 : 0) + (when !== 'all' ? 1 : 0) + (dist !== 'all' ? 1 : 0) + (onlyFree ? 1 : 0);
+  const sections = useMemo<Section[]>(() => {
+    const out: Section[] = [];
+    const live = visible.filter(({ e }) => isLive(e));
+    if (live.length) out.push({ key: 'live', title: 'Идут сейчас', sub: 'Ещё можно присоединиться', live: true, items: live });
+    const rest = visible.filter(({ e }) => !isLive(e));
+    if (origin) {
+      for (const band of DISTANCE_BANDS) {
+        const items = rest.filter(({ km }) => km != null && km >= band.from && km < band.to);
+        if (items.length) out.push({ key: band.title, title: band.title, sub: band.sub, items });
+      }
+    } else {
+      // Без геопозиции группируем по дате
+      const byDay = (pred: (d: number) => boolean) => rest.filter(({ e }) => pred(dayDiff(new Date(e.startTime))));
+      const groups: [string, Item[]][] = [
+        ['Сегодня', byDay((d) => d <= 0)],
+        ['Завтра', byDay((d) => d === 1)],
+        ['Позже', byDay((d) => d > 1)],
+      ];
+      for (const [title, items] of groups) if (items.length) out.push({ key: title, title, items });
+    }
+    return out;
+  }, [visible, origin]);
 
-  const setView = (next: 'map' | 'list') => {
-    const p = new URLSearchParams(params);
-    if (next === 'list') p.set('view', 'list');
-    else p.delete('view');
-    setParams(p, { replace: true });
-  };
-
-  const toggleSport = (slug: string) =>
-    setSelectedSports((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
-
-  const resetFilters = () => {
-    setSelectedSports([]);
-    setSkill('');
-    setJoinMode('');
-    setWhen('all');
-    setDist('all');
-    setOnlyFree(false);
-  };
-
-  const pick = (event: SportEvent) => {
-    setSelectedId(event.id);
-    // На мобильном выбор в списке ведёт на карту с открытой карточкой
-    if (view === 'list' && !window.matchMedia('(min-width: 1024px)').matches) setView('map');
-  };
-
-  const sportChips = (size: 'sm' | 'md', floating = false) => (
-    <>
-      <Chip size={size} floating={floating} active={selectedSports.length === 0} onClick={() => setSelectedSports([])}>
-        Все
-      </Chip>
-      {sports.map((s) => (
-        <Chip
-          key={s.slug}
-          size={size}
-          floating={floating}
-          active={selectedSports.includes(s.slug)}
-          onClick={() => toggleSport(s.slug)}
-        >
-          {s.name}
-        </Chip>
-      ))}
-    </>
+  const recItems = useMemo(
+    () => (q.trim() ? [] : recs.filter((r) => spotsLeft(r.event) > 0).slice(0, 4)),
+    [recs, q],
   );
 
-  const searchRow = (floating: boolean) => (
-    <div className="flex gap-2">
-      <label
-        className={`flex-1 h-12 flex items-center gap-2.5 px-3.5 rounded-2xl text-muted focus-within:ring-2 focus-within:ring-brand/40 transition-shadow ${
-          floating ? 'bg-white border border-line shadow-card' : 'bg-surface'
-        }`}
-      >
-        <Search className="w-5 h-5 shrink-0" />
-        <input
-          type="search"
-          aria-label="Поиск мероприятий"
-          placeholder="Спорт, место или клуб"
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="w-full bg-transparent outline-none text-[15px] font-medium text-ink placeholder:text-muted"
-        />
-      </label>
-      <button
-        type="button"
-        onClick={() => setFiltersOpen(true)}
-        aria-label="Фильтры"
-        className={`relative w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl bg-white border border-line text-ink hover:bg-surface transition-colors ${
-          floating ? 'shadow-card' : ''
-        }`}
-      >
-        <FilterIcon />
-        {filterCount > 0 && (
-          <span className="absolute -top-1.5 -right-1.5 min-w-5 h-5 px-1 rounded-full bg-brand text-on-brand border-2 border-white text-[11px] font-bold leading-4 text-center">
-            {filterCount}
-          </span>
-        )}
+  // Синхронизация выбора: прокручиваем колонку (десктоп) и карусель (мобильный) к выбранной карточке
+  useEffect(() => {
+    if (selectedId == null) return;
+    const col = listColRef.current;
+    const colEl = col?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
+    if (col && colEl) col.scrollTo({ top: colEl.offsetTop - 16, behavior: 'smooth' });
+    const car = carouselRef.current;
+    const carEl = car?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
+    if (car && carEl) car.scrollTo({ left: carEl.offsetLeft - 12, behavior: 'smooth' });
+  }, [selectedId]);
+
+  const locate = () =>
+    navigator.geolocation?.getCurrentPosition(
+      (pos) => setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+      () => {},
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+
+  const changeFilters = (patch: Partial<HomeFilterState>) => {
+    // Радиус без точки отсчёта — сначала спрашиваем геопозицию
+    if (patch.radius && patch.radius !== 'all' && !origin) locate();
+    patchFilters(patch);
+  };
+
+  const resetFilters = () => {
+    radiusTouched.current = true;
+    setFilters({ ...DEFAULT_FILTERS, radius: origin ? '5' : 'all' });
+  };
+
+  const openDetail = (event: SportEvent) => {
+    setSelectedId(event.id);
+    setDetailId(event.id);
+  };
+
+  const nextRadius = RADIUS_OPTIONS[RADIUS_OPTIONS.findIndex((o) => o.value === filters.radius) + 1]?.value;
+  const widen = () => {
+    if (radiusOn && nextRadius) changeFilters({ radius: nextRadius });
+    else {
+      resetFilters();
+      setParam('q', null);
+    }
+  };
+
+  const resultLine = `${visible.length} ${evWord(visible.length)} ${
+    radiusOn ? `в радиусе ${filters.radius} км` : view === 'list' ? 'в городе' : 'в этой области'
+  }`;
+
+  const empty = !loading && visible.length === 0 && (
+    <div className="flex flex-col items-center text-center gap-2 py-14 px-6">
+      <SearchX className="w-10 h-10 text-muted opacity-60" />
+      <span className="text-lg font-bold text-ink">Ничего не нашлось</span>
+      <span className="text-sm text-muted max-w-sm">
+        {radiusOn
+          ? `В радиусе ${filters.radius} км нет подходящих событий. Попробуйте расширить радиус или сбросить фильтры.`
+          : 'Попробуйте изменить запрос или сбросить фильтры.'}
+      </span>
+      <button type="button" onClick={widen} className="mt-2 h-11 px-5 rounded-[14px] bg-ink text-white text-[15px] font-semibold">
+        {radiusOn && nextRadius ? (nextRadius === 'all' ? 'Искать без ограничения' : `Искать в ${nextRadius} км`) : 'Сбросить фильтры'}
       </button>
     </div>
   );
 
-  return (
-    <div className="relative h-full lg:grid lg:grid-cols-[minmax(320px,400px)_minmax(0,1fr)]">
-      {/* Список */}
-      <aside
-        className={`${view === 'list' ? 'flex' : 'hidden'} lg:flex flex-col h-full min-h-0 bg-white lg:border-r border-line`}
-      >
-        <div className="px-4 sm:px-5 pt-5 pb-3 flex flex-col gap-3.5">
-          {searchRow(false)}
-          <div className="flex gap-1.5 overflow-x-auto no-scrollbar lg:flex-wrap -mx-4 px-4 sm:mx-0 sm:px-0">
-            {sportChips('sm')}
-          </div>
-          <div className="flex items-end justify-between gap-3 pt-2">
-            <div>
-              <h1 className="text-[28px] leading-tight font-semibold tracking-[-0.03em] text-ink">Рядом с вами</h1>
-              <p className="text-[13px] font-medium text-muted">
-                {visible.length} {pluralEvents(visible.length)} · Красноярск
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => setSort((s) => (s === 'near' ? 'time' : 'near'))}
-              className="flex items-center gap-1.5 h-9 px-2 -mr-2 rounded-lg text-sm font-medium text-muted hover:text-ink"
-              title={me ? undefined : 'Расстояние появится, когда известна ваша геопозиция'}
-            >
-              {sort === 'near' && me ? 'Ближе' : 'По времени'}
-              <ArrowDownWideNarrow className="w-4 h-4" />
-            </button>
-          </div>
-        </div>
-
-        {error && (
-          <div role="alert" className="mx-4 sm:mx-5 mb-3 p-3 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">
-            {error}
-          </div>
-        )}
-
-        <div className="flex-1 min-h-0 overflow-y-auto px-3 pb-6 flex flex-col gap-2">
-          {loading && events.length === 0 ? (
-            <div className="flex justify-center py-16 text-muted">
-              <Loader2 className="w-7 h-7 animate-spin" />
-            </div>
-          ) : visible.length === 0 ? (
-            <div className="text-center py-16 px-6 text-muted text-sm">
-              <SearchX className="w-10 h-10 mx-auto mb-2 opacity-50" />
-              Ничего не найдено. Попробуйте изменить фильтры.
-            </div>
-          ) : (
-            visible.map(({ e, km }) => {
-              const active = e.id === selectedId;
-              return (
-                <button
-                  key={e.id}
-                  type="button"
-                  onClick={() => pick(e)}
-                  aria-pressed={active}
-                  className={`w-full text-left flex gap-3 p-3 rounded-[18px] border-[1.5px] transition-colors ${
-                    active ? 'bg-brand-tint border-brand' : 'bg-white border-line hover:border-surface-2 hover:bg-surface/60'
-                  }`}
-                >
-                  <OrgAvatar event={e} size={44} active={active} />
-                  <div className="flex-1 min-w-0 flex flex-col gap-[3px]">
-                    <div className="flex justify-between gap-2 text-xs font-semibold text-muted">
-                      <span className="truncate">
-                        {startLabel(e)} · {e.sport.name}
-                      </span>
-                      {km != null && <span className="shrink-0">{formatDistance(km)}</span>}
-                    </div>
-                    <div className="text-base font-semibold leading-tight text-ink">{e.title}</div>
-                    <div className="mt-1">
-                      <EventMeter event={e} compact />
-                    </div>
-                  </div>
-                </button>
-              );
-            })
-          )}
-        </div>
-      </aside>
-
-      {/* Карта */}
-      <section className={`${view === 'map' ? 'block' : 'hidden'} lg:block relative h-full min-h-0`}>
-        <BlinkMap
-          events={visibleEvents}
-          selectedEvent={selectedEvent}
-          onSelectEvent={(e) => setSelectedId(e?.id ?? null)}
-          me={me}
-          onLocate={setMe}
-          onViewportChange={setViewport}
-          controlsClassName="top-[118px] right-3 lg:top-4 lg:right-4"
-          cardClassName="bottom-3 lg:bottom-4"
-        />
-
-        {/* Поиск и чипы поверх карты — только на мобильном */}
-        <div className="lg:hidden pointer-events-none absolute inset-x-0 top-0 h-28 bg-gradient-to-b from-white/85 to-transparent z-10" />
-        <div className="lg:hidden absolute top-3 inset-x-3 z-20">{searchRow(true)}</div>
-        <div className="lg:hidden absolute top-[68px] inset-x-0 z-20 flex gap-2 px-3 overflow-x-auto no-scrollbar">
-          {sportChips('md', true)}
-        </div>
-
-        {loading && (
-          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-white shadow-card border border-line rounded-full px-3 py-1.5 text-sm text-muted items-center gap-2">
-            <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
-          </div>
-        )}
-      </section>
-
-      {filtersOpen && (
-        <Modal
-          title="Фильтры"
-          onClose={() => setFiltersOpen(false)}
-          headerAction={
-            <button
-              type="button"
-              onClick={resetFilters}
-              className="h-10 px-3 rounded-xl text-[15px] font-semibold text-brand-ink hover:bg-surface"
-            >
-              Сбросить
-            </button>
-          }
+  /* ---------- Мобильная шапка: поиск, фильтры, радиус, чипы ---------- */
+  const mobileHeader = (floating: boolean) => (
+    <div className="lg:hidden flex flex-col gap-2 pt-3 pb-2.5">
+      <div className="flex gap-2 px-3">
+        <label
+          className={`flex-1 min-w-0 h-12 flex items-center gap-2.5 pl-3.5 pr-1.5 rounded-2xl bg-white border border-line text-muted focus-within:ring-2 focus-within:ring-brand/40 ${
+            floating ? 'shadow-card' : ''
+          }`}
         >
-          <div className="flex flex-col gap-5">
-            <div className="flex flex-col gap-2.5">
-              <SectionLabel>Вид спорта</SectionLabel>
-              <div className="flex flex-wrap gap-2">{sportChips('md')}</div>
+          <Search className="w-5 h-5 shrink-0" />
+          <input
+            type="search"
+            aria-label="Поиск мероприятий"
+            placeholder="Спорт, место или клуб"
+            value={q}
+            onChange={(e) => setParam('q', e.target.value || null)}
+            className="flex-1 min-w-0 bg-transparent outline-none text-[15px] font-medium text-ink placeholder:text-muted"
+          />
+          {q && (
+            <button
+              type="button"
+              onClick={() => setParam('q', null)}
+              aria-label="Очистить"
+              className="shrink-0 w-9 h-9 rounded-xl bg-surface text-ink flex items-center justify-center"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          )}
+        </label>
+        <button
+          type="button"
+          onClick={() => setFiltersOpen(true)}
+          aria-label="Фильтры"
+          className={`relative w-12 h-12 shrink-0 flex items-center justify-center rounded-2xl bg-white border border-line text-ink ${
+            floating ? 'shadow-card' : ''
+          }`}
+        >
+          <FilterIcon />
+          <CountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
+        </button>
+      </div>
+      <div className="flex gap-1.5 px-3 overflow-x-auto no-scrollbar">
+        <button
+          type="button"
+          onClick={() => setRadiusSheetOpen(true)}
+          className={`shrink-0 h-9 pl-[11px] pr-2.5 flex items-center gap-1.5 rounded-full border border-line bg-white text-ink text-sm font-bold whitespace-nowrap ${
+            floating ? 'shadow-[0_2px_8px_rgba(10,20,45,0.10)]' : ''
+          }`}
+        >
+          <LocateFixed className="w-4 h-4" />
+          {radiusValue(filters.radius)}
+          <ChevronDown className="w-4 h-4 text-muted" />
+        </button>
+        <Chip floating={floating} active={filters.sports.length === 0} onClick={() => changeFilters({ sports: [] })}>
+          Все виды
+        </Chip>
+        {sports.map((s) => (
+          <Chip
+            key={s.slug}
+            floating={floating}
+            active={filters.sports.includes(s.slug)}
+            onClick={() =>
+              changeFilters({
+                sports: filters.sports.includes(s.slug)
+                  ? filters.sports.filter((x) => x !== s.slug)
+                  : [...filters.sports, s.slug],
+              })
+            }
+          >
+            {s.name}
+          </Chip>
+        ))}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="h-full flex flex-col">
+      <div className="hidden lg:block">
+        <FilterBar
+          filters={filters}
+          onChange={changeFilters}
+          sports={sports}
+          radiusCounts={radiusCounts}
+          eventDays={eventDays}
+          resultCount={visible.length}
+          onOpenFilters={() => setFiltersOpen(true)}
+          canUseRadius={!!origin}
+        />
+      </div>
+
+      <div className="relative flex-1 min-h-0">
+        {/* ---------- Карта ---------- */}
+        <section className={`${view === 'map' ? '' : 'hidden'} absolute inset-0 lg:left-[420px]`}>
+          <BlinkMap
+            events={visibleEvents}
+            selectedEvent={selectedEvent}
+            onSelectEvent={(e) => setSelectedId(e?.id ?? null)}
+            me={me}
+            onLocate={setMe}
+            // Скрытая карта (режим «Список») сообщает вырожденную область — её не учитываем
+            onViewportChange={(v) => view === 'map' && setViewport(v)}
+            onMore={openDetail}
+            showCard={isDesktop()}
+            radius={radiusOn && origin ? { center: origin, km: Number(filters.radius) } : null}
+            controlsClassName="top-[124px] right-3 lg:top-4 lg:right-4"
+            cardClassName="bottom-3 lg:bottom-4"
+          />
+          {loading && (
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-white shadow-card border border-line rounded-full px-3 py-1.5 text-sm text-muted items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
             </div>
-            <div className="flex flex-col gap-2.5">
-              <SectionLabel>Когда</SectionLabel>
-              <Segmented
-                label="Когда"
-                value={when}
-                onChange={setWhen}
-                options={(Object.keys(WHEN_LABELS) as WhenFilter[]).map((v) => ({ value: v, label: WHEN_LABELS[v] }))}
-              />
+          )}
+        </section>
+
+        {/* Колонка событий слева от карты (десктоп) */}
+        {view === 'map' && (
+          <div
+            ref={listColRef}
+            className="hidden lg:flex absolute left-0 top-0 bottom-0 w-[420px] flex-col gap-2.5 p-4 overflow-y-auto bg-page border-r border-line"
+          >
+            <span className="px-1 text-[13px] font-semibold text-muted">{resultLine}</span>
+            {error && <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">{error}</div>}
+            {visible.map(({ e }) => (
+              <CompactCard key={e.id} event={e} me={origin} active={e.id === selectedId} onPick={() => setSelectedId(e.id)} />
+            ))}
+            {empty}
+          </div>
+        )}
+
+        {/* Мобильная карта: поиск сверху, карусель снизу */}
+        {view === 'map' && (
+          <>
+            <div className="lg:hidden absolute inset-x-0 top-0 z-20 bg-gradient-to-b from-page via-page/70 to-transparent">
+              {mobileHeader(true)}
             </div>
-            {me && (
-              <div className="flex flex-col gap-2.5">
-                <SectionLabel>Расстояние</SectionLabel>
-                <Segmented
-                  label="Расстояние"
-                  value={dist}
-                  onChange={setDist}
-                  options={[
-                    { value: 'all', label: 'Любое' },
-                    { value: '1', label: '1 км' },
-                    { value: '3', label: '3 км' },
-                    { value: '5', label: '5 км' },
-                    { value: '10', label: '10 км' },
-                  ]}
+            <div
+              ref={carouselRef}
+              className="lg:hidden absolute inset-x-0 bottom-3 z-20 flex gap-2 px-3 overflow-x-auto no-scrollbar snap-x snap-proximity scroll-pl-3"
+            >
+              {visible.map(({ e }) => (
+                <CarouselCard
+                  key={e.id}
+                  event={e}
+                  active={e.id === selectedId}
+                  onPick={() => setSelectedId(e.id)}
+                  onMore={() => openDetail(e)}
+                />
+              ))}
+            </div>
+          </>
+        )}
+
+        {/* ---------- Список ---------- */}
+        {view === 'list' && (
+          <div className="absolute inset-0 overflow-y-auto bg-page">
+            <div className="lg:hidden sticky top-0 z-20 bg-page">{mobileHeader(false)}</div>
+            <div className="max-w-[1360px] mx-auto px-3 lg:px-6 pt-2 lg:pt-5 pb-10 flex flex-col gap-7">
+              <div className="px-1 flex items-center gap-2 text-[15px] font-semibold text-muted">
+                {resultLine}
+                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+              </div>
+              {error && <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-2xl text-red-800 text-sm">{error}</div>}
+
+              {recItems.length > 0 && (
+                <div className="flex flex-col gap-3">
+                  <span className="px-1 text-[19px] font-extrabold tracking-[-0.02em] text-ink">Рекомендации для вас</span>
+                  <div className="flex gap-3 overflow-x-auto no-scrollbar snap-x -mx-3 px-3 lg:mx-0 lg:px-0 lg:grid lg:grid-cols-4 lg:overflow-visible">
+                    {recItems.map((r) => (
+                      <div key={r.event.id} className="shrink-0 w-[300px] lg:w-auto snap-start">
+                        <CoverCard event={r.event} me={origin} onOpen={() => openDetail(r.event)} />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {empty}
+
+              {sections.map((sec) => (
+                <div key={sec.key} className="flex flex-col gap-3">
+                  <div className="px-1 flex items-center gap-2 flex-wrap">
+                    {sec.live && (
+                      <span className="w-2 h-2 rounded-full bg-brand shadow-[0_0_0_4px_color-mix(in_oklab,var(--color-brand)_25%,transparent)]" />
+                    )}
+                    <span className="text-[19px] font-extrabold tracking-[-0.02em] text-ink">{sec.title}</span>
+                    <span className="text-[15px] font-semibold text-muted">{sec.items.length}</span>
+                    {sec.sub && <span className="hidden lg:inline text-sm text-muted ml-1">{sec.sub}</span>}
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(300px,1fr))] gap-3 lg:gap-4">
+                    {sec.items.map(({ e }) => (
+                      <CoverCard key={e.id} event={e} me={origin} active={e.id === detailId} onOpen={() => openDetail(e)} />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* ---------- Панель события ---------- */}
+        {detailEvent && (
+          <>
+            <div
+              className={`fixed inset-0 z-[1400] lg:z-30 bg-[rgba(4,6,10,0.5)] ${view === 'map' ? 'lg:hidden' : 'lg:absolute'}`}
+              onClick={() => setDetailId(null)}
+            />
+            <div className="anim-sheet lg:anim-drawer fixed inset-x-0 bottom-0 top-[10vh] z-[1500] rounded-t-[28px] overflow-hidden flex lg:absolute lg:top-0 lg:bottom-0 lg:left-auto lg:right-0 lg:w-[440px] lg:rounded-none lg:z-40">
+              <div className="flex-1 flex flex-col [&>div]:flex-1 [&>div]:min-h-0">
+                <EventDetailPanel
+                  key={detailEvent.id}
+                  event={detailEvent}
+                  me={origin}
+                  onClose={() => setDetailId(null)}
+                  onChanged={() => setReloadTick((t) => t + 1)}
                 />
               </div>
-            )}
-            <div className="flex flex-col gap-2.5">
-              <SectionLabel>Уровень</SectionLabel>
-              <Segmented
-                label="Уровень"
-                value={skill || 'all'}
-                onChange={(v) => setSkill(v === 'all' ? '' : (v as SkillLevel))}
-                options={[
-                  { value: 'all', label: 'Любой' },
-                  ...(['NOVICE', 'AMATEUR', 'PRO'] as SkillLevel[]).map((s) => ({ value: s, label: SKILL_LABELS[s] })),
-                ]}
-              />
             </div>
-            <div className="flex flex-col gap-2.5">
-              <SectionLabel>Запись</SectionLabel>
-              <Segmented
-                label="Запись"
-                value={joinMode || 'all'}
-                onChange={(v) => setJoinMode(v === 'all' ? '' : (v as JoinMode))}
-                options={[
-                  { value: 'all', label: 'Любая' },
-                  { value: 'OPEN', label: 'Свободная' },
-                  { value: 'APPROVAL', label: 'По заявке' },
-                ]}
-              />
-            </div>
-            <Toggle checked={onlyFree} onChange={setOnlyFree}>
-              Только со свободными местами
-            </Toggle>
-            <button
-              type="button"
-              onClick={() => setFiltersOpen(false)}
-              className="h-14 rounded-[18px] bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors"
-            >
-              Показать {visible.length} {pluralEvents(visible.length)}
-            </button>
-          </div>
+          </>
+        )}
+      </div>
+
+      {filtersOpen && (
+        <FiltersSheet
+          filters={filters}
+          onChange={changeFilters}
+          onReset={resetFilters}
+          onClose={() => setFiltersOpen(false)}
+          sports={sports}
+          eventDays={eventDays}
+          resultCount={visible.length}
+          compact={isDesktop()}
+        />
+      )}
+
+      {radiusSheetOpen && (
+        <Modal title="Радиус от вас" onClose={() => setRadiusSheetOpen(false)}>
+          {!origin && (
+            <p className="mb-2 text-sm text-muted">Радиус считается от вашей геопозиции или от домашнего города из профиля.</p>
+          )}
+          <RadiusList
+            value={filters.radius}
+            counts={radiusCounts}
+            onChange={(radius) => {
+              changeFilters({ radius });
+              setRadiusSheetOpen(false);
+            }}
+          />
         </Modal>
       )}
     </div>

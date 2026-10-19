@@ -62,10 +62,15 @@ public record EventResponse(
         OrgDetails orgDetails,
 
         // --- контекст текущего пользователя ---
+        List<FriendAttendee> friendsAttending,
         ParticipationBrief myParticipation,
         Boolean canManage,
         Integer pendingCount
 ) {
+
+    /** A friend of the current viewer who is confirmed for this event. */
+    public record FriendAttendee(Long id, String fullName, String avatarUrl) {
+    }
 
     public record TemplateRef(Long id, String code, String name, String icon) {
     }

@@ -2,6 +2,7 @@ package ru.sportikus.user.dto;
 
 import com.fasterxml.jackson.annotation.JsonInclude;
 import ru.sportikus.event.dto.EventResponse;
+import ru.sportikus.friendship.dto.FriendshipState;
 
 import java.util.List;
 
@@ -18,6 +19,7 @@ public record ProfileResponse(
         String kpp,
         String status,
         boolean canEdit,
+        FriendshipState friendshipState,
         List<EventResponse> events
 ) {
 }

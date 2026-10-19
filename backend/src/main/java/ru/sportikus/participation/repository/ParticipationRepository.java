@@ -37,6 +37,27 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
 
     List<Participation> findByUserIdAndEventIdIn(Long userId, Collection<Long> eventIds);
 
+    interface FriendAttendee {
+        Long getEventId();
+        Long getUserId();
+        String getFullName();
+        String getAvatarUrl();
+    }
+
+    /** Confirmed participants who are accepted friends of the viewer, fetched for an entire event list. */
+    @Query("""
+            select p.event.id as eventId, p.user.id as userId, p.user.fullName as fullName, p.user.avatarUrl as avatarUrl
+            from Participation p, Friendship f
+            where p.event.id in :eventIds
+              and p.status = ru.sportikus.participation.model.ParticipationStatus.CONFIRMED
+              and f.status = ru.sportikus.friendship.model.FriendshipStatus.ACCEPTED
+              and ((f.requester.id = :viewerId and f.recipient.id = p.user.id)
+                or (f.recipient.id = :viewerId and f.requester.id = p.user.id))
+            order by p.event.id, p.createdAt asc
+            """)
+    List<FriendAttendee> findConfirmedFriendsByEventIds(@Param("viewerId") Long viewerId,
+                                                        @Param("eventIds") Collection<Long> eventIds);
+
     @EntityGraph(attributePaths = "user")
     List<Participation> findByEventIdOrderByCreatedAtAsc(Long eventId);
 

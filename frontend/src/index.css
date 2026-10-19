@@ -32,6 +32,9 @@
   --color-hot-tint: #0bd68a;
   --color-hot-ink: #ffffff;
   --color-flame: #ff7a45;
+  --color-warn-tint: #fff0e8;
+  --color-warn-ink: #b4410f;
+  --color-card: #ffffff;
 
   --color-avatar-bg: #f0f2f5;
   --color-avatar-ink: #1a1e24;
@@ -75,6 +78,9 @@
   --color-hot-tint: #4a2c24;
   --color-hot-ink: #f8b89c;
   --color-flame: #f4a383;
+  --color-warn-tint: #4a2c24;
+  --color-warn-ink: #f8b89c;
+  --color-card: #25292e;
 
   --color-avatar-bg: #2a2e32;
   --color-avatar-ink: #e6e8ea;
@@ -127,6 +133,56 @@ body {
   color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
   transition: background-color 0.25s, color 0.25s;
+}
+
+/* Анимации поповеров, шитов и боковой панели (Sportikus Home) */
+@keyframes sp-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-6px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes sp-sheet {
+  from {
+    transform: translateY(32px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@keyframes sp-drawer {
+  from {
+    transform: translateX(28px);
+    opacity: 0.6;
+  }
+  to {
+    transform: none;
+    opacity: 1;
+  }
+}
+@utility anim-drop {
+  animation: sp-drop 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility anim-sheet {
+  animation: sp-sheet 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
+}
+@utility anim-drawer {
+  animation: sp-drawer 0.24s cubic-bezier(0.2, 0.8, 0.2, 1);
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
 .no-scrollbar {

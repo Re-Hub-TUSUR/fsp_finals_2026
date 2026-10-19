@@ -32,7 +32,19 @@ interface BlinkMapProps {
   controlsClassName?: string;
   /** Отступ карточки выбранного события снизу (на мобильном — над нижней навигацией) */
   cardClassName?: string;
+  /** Показывать мини-карточку выбранного события (на мобильном её заменяет карусель) */
+  showCard?: boolean;
+  /** «Подробнее» в мини-карточке — открыть панель события */
+  onMore?: (event: SportEvent) => void;
+  /** Фильтр «Радиус»: круг вокруг точки отсчёта; при смене карта подстраивается под круг */
+  radius?: { center: LatLng; km: number } | null;
 }
+
+/** Круг радиуса в цвет акцента темы (MapGL принимает только hex) */
+const RADIUS_COLORS = {
+  light: { fill: '#0BD68A1A', stroke: '#0BD68A' },
+  dark: { fill: '#DDF55E1A', stroke: '#DDF55E' },
+};
 
 // Center of Krasnoyarsk ([lng, lat] для 2GIS)
 const KRASNOYARSK_COORDS: LngLat = [92.8932, 56.0153];
@@ -72,6 +84,9 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   onViewportChange,
   controlsClassName = 'top-4 right-4',
   cardClassName = 'bottom-4',
+  showCard = true,
+  onMore,
+  radius = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectEvent);
@@ -103,6 +118,8 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
     const { map } = instance;
     const onMoveEnd = () => {
       setViewTick((t) => t + 1);
+      // Скрытая карта (display: none) не знает своих границ
+      if (!containerRef.current?.clientWidth) return;
       const [lng, lat] = map.getCenter();
       const { southWest, northEast } = map.getBounds();
       const center = { lat, lng };
@@ -126,6 +143,39 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
       map.off('click', onClick);
     };
   }, [instance]);
+
+  // Круг радиуса; при смене радиуса или точки отсчёта показываем круг целиком
+  const radiusKey = radius ? `${radius.km}:${radius.center.lat.toFixed(4)}:${radius.center.lng.toFixed(4)}` : '';
+  useEffect(() => {
+    if (!instance || !radius) return;
+    const colors = RADIUS_COLORS[theme];
+    const circle = new instance.api.Circle(instance.map, {
+      coordinates: toLngLat(radius.center.lat, radius.center.lng),
+      radius: radius.km * 1000,
+      color: colors.fill,
+      strokeColor: colors.stroke,
+      strokeWidth: 2,
+      interactive: false,
+    });
+    return () => circle.destroy();
+    // radius описан ключом radiusKey
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance, radiusKey, theme]);
+
+  useEffect(() => {
+    if (!instance || !radius) return;
+    fitted.current = true;
+    const dLat = radius.km / 110.57;
+    const dLng = radius.km / (111.32 * Math.cos((radius.center.lat * Math.PI) / 180));
+    instance.map.fitBounds(
+      {
+        southWest: [radius.center.lng - dLng, radius.center.lat - dLat],
+        northEast: [radius.center.lng + dLng, radius.center.lat + dLat],
+      },
+      { padding: FIT_PADDING, maxZoom: 16, animation: { duration: 600 } },
+    );
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance, radiusKey]);
 
   // При первой загрузке показываем все мероприятия
   useEffect(() => {
@@ -330,11 +380,12 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
         </div>
       )}
 
-      {selectedEvent && (
+      {showCard && selectedEvent && (
         <MapEventCard
           event={selectedEvent}
           me={me}
           onClose={() => onSelectEvent(null)}
+          onMore={onMore ? () => onMore(selectedEvent) : undefined}
           className={`absolute z-30 left-2 right-2 sm:left-4 sm:right-auto sm:w-[380px] ${cardClassName}`}
         />
       )}

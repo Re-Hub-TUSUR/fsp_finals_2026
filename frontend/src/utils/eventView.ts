@@ -24,12 +24,27 @@ export const isFull = (event: Pick<SportEvent, 'capacity' | 'confirmedCount'>) =
 export const isMine = (event: SportEvent) =>
   event.myParticipation?.status === 'CONFIRMED' || event.myParticipation?.status === 'PENDING';
 
+/** Русская плюрализация: plural(3, 'место', 'места', 'мест') → «места». */
+export function plural(n: number, one: string, few: string, many: string): string {
+  const m10 = n % 10;
+  const m100 = n % 100;
+  if (m10 === 1 && m100 !== 11) return one;
+  if (m10 >= 2 && m10 <= 4 && (m100 < 10 || m100 >= 20)) return few;
+  return many;
+}
+
 export interface EventStatusView {
   label: string;
+  /** Есть ли «особый» статус (мало мест / идёт / мест нет) — обычное событие без чипа */
+  special: boolean;
   /** Классы чипа статуса */
   chip: string;
   /** Класс заливки полосы заполненности */
   bar: string;
+  /** Класс цвета текста «Свободно N» */
+  freeInk: string;
+  /** «Свободно 3» / «Мест нет» */
+  freeShort: string;
   /** Заполненность, 0–100 */
   pct: number;
   live: boolean;
@@ -39,21 +54,58 @@ export function eventStatus(event: SportEvent): EventStatusView {
   const left = spotsLeft(event);
   const pct = event.capacity ? Math.min(100, Math.round((event.confirmedCount / event.capacity) * 100)) : 0;
   const live = isLive(event);
-  if (left === 0) return { label: 'Мест нет', chip: 'bg-surface-2 text-muted', bar: 'bg-muted', pct, live };
-  if (left <= 2) return { label: `Осталось ${left}`, chip: 'bg-hot-tint text-hot-ink', bar: 'bg-hot', pct, live };
-  if (live) return { label: 'Идёт сейчас', chip: 'bg-brand-tint text-brand-ink', bar: 'bg-brand', pct, live };
+  const freeShort = left === 0 ? 'Мест нет' : `Свободно ${left}`;
+  if (left === 0)
+    return { label: 'Мест нет', special: true, chip: 'bg-surface-2 text-muted', bar: 'bg-muted', freeInk: 'text-muted', freeShort, pct, live };
+  if (left <= 2)
+    return { label: `Осталось ${left}`, special: true, chip: 'bg-warn-tint text-warn-ink', bar: 'bg-flame', freeInk: 'text-warn-ink', freeShort, pct, live };
+  if (live)
+    return { label: 'Идёт сейчас', special: true, chip: 'bg-brand-tint text-brand-ink', bar: 'bg-brand', freeInk: 'text-brand-ink', freeShort, pct, live };
   return {
     label: `${event.confirmedCount} из ${event.capacity}`,
+    special: false,
     chip: 'bg-surface text-ink',
     bar: 'bg-brand',
+    freeInk: 'text-brand-ink',
+    freeShort,
     pct,
     live,
   };
 }
 
+/** «Бесплатно» / «Платно · 500 ₽». */
+export const accessLabel = (event: Pick<SportEvent, 'price'>) =>
+  event.price ? `Платно · ${event.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно';
+
+/** «12 мин пешком» / «28 мин на транспорте». */
+export function travelLabel(km: number): string {
+  return km < 2 ? `${Math.max(3, Math.round(km * 13))} мин пешком` : `${Math.round(km * 4 + 8)} мин на транспорте`;
+}
+
+/**
+ * Адрес → основная строка (до первой запятой) и уточнение.
+ * Город в начале адреса («Красноярск, Октябрьский мост, …») не повторяем — он и так виден в шапке.
+ */
+export function splitAddress(address: string, cityName?: string): { main: string; sub: string } {
+  let parts = address.split(/,\s*/).filter(Boolean);
+  const first = parts[0]?.replace(/^г\.\s*/i, '').toLowerCase();
+  const isCity = cityName ? first === cityName.toLowerCase() : /^[a-zа-яё-]+$/i.test(first ?? '');
+  if (parts.length > 1 && isCity) parts = parts.slice(1);
+  return { main: parts[0] ?? address, sub: parts.slice(1).join(', ') };
+}
+
+/** Полосы расстояния для секций списка. */
+export const DISTANCE_BANDS: { from: number; to: number; title: string; sub: string }[] = [
+  { from: 0, to: 1, title: 'До 1 км', sub: 'До 15 минут пешком' },
+  { from: 1, to: 3, title: '1–3 км', sub: '15–40 минут пешком' },
+  { from: 3, to: 5, title: '3–5 км', sub: 'Около 20 минут на транспорте' },
+  { from: 5, to: 10, title: '5–10 км', sub: 'Около 30 минут на транспорте' },
+  { from: 10, to: Infinity, title: 'Дальше 10 км', sub: '' },
+];
+
 const time = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
 
-function dayDiff(d: Date, now = new Date()): number {
+export function dayDiff(d: Date, now = new Date()): number {
   const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
   const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
   return Math.round((a - b) / 86400000);
@@ -93,29 +145,73 @@ export function formatDistance(km: number): string {
   return `${km.toFixed(1).replace('.', ',')} км`;
 }
 
-export type WhenFilter = 'all' | 'now' | 'today' | 'tomorrow' | 'weekend';
-
-export const WHEN_LABELS: Record<WhenFilter, string> = {
-  all: 'Любое',
-  now: 'Сейчас',
-  today: 'Сегодня',
-  tomorrow: 'Завтра',
-  weekend: 'Выходные',
-};
-
-export function matchesWhen(event: SportEvent, when: WhenFilter): boolean {
-  if (when === 'all') return true;
-  if (when === 'now') return isLive(event);
+/** «20 октября, вт · 07:30» / «Идёт сейчас · до 19:00». */
+export function dateFull(event: Pick<SportEvent, 'startTime' | 'endTime'>): string {
+  if (isLive(event)) return `Идёт сейчас · до ${time(new Date(event.endTime))}`;
   const d = new Date(event.startTime);
-  const diff = dayDiff(d);
-  if (when === 'today') return diff === 0 || isLive(event);
-  if (when === 'tomorrow') return diff === 1;
-  // ближайшие суббота и воскресенье
-  const today = new Date().getDay();
-  const toSat = (6 - today + 7) % 7;
-  const satDiff = today === 0 ? -1 : toSat;
-  return diff === satDiff || diff === satDiff + 1;
+  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' });
+  return `${day}, ${wd} · ${time(d)}`;
 }
+
+/** «19:00–20:30». */
+export const timeRange = (event: Pick<SportEvent, 'startTime' | 'endTime'>) =>
+  `${time(new Date(event.startTime))}–${time(new Date(event.endTime))}`;
+
+/** Ключ дня yyyymmdd в локальном времени — для календаря и фильтра «Когда». */
+export const dayKey = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
+export const keyToDate = (k: number) => new Date(Math.floor(k / 10000), (Math.floor(k / 100) % 100) - 1, k % 100);
+
+/** Фильтр «Когда»: любое время, «сейчас» или интервал дней (from..to включительно). */
+export type When = { kind: 'all' } | { kind: 'now' } | { kind: 'range'; from: number; to: number | null };
+
+export function matchesWhen(event: SportEvent, when: When): boolean {
+  if (when.kind === 'all') return true;
+  if (when.kind === 'now') return isLive(event);
+  const from = when.from;
+  const to = when.to ?? when.from;
+  // Идущее сейчас событие попадает в «сегодня»
+  const start = dayKey(new Date(event.startTime));
+  const end = dayKey(new Date(event.endTime));
+  return start <= to && end >= from;
+}
+
+const MONTHS_SHORT = ['янв', 'фев', 'мар', 'апр', 'мая', 'июн', 'июл', 'авг', 'сен', 'окт', 'ноя', 'дек'];
+const fmtKey = (k: number) => `${k % 100} ${MONTHS_SHORT[(Math.floor(k / 100) % 100) - 1]}`;
+
+/** Подпись выбранного «Когда»: «Сейчас», «19 окт», «19–25 окт», «30 окт – 2 ноя». */
+export function whenLabel(when: When): string {
+  if (when.kind === 'all') return 'Любое время';
+  if (when.kind === 'now') return 'Сейчас';
+  const a = when.from;
+  const b = when.to ?? when.from;
+  const today = dayKey(new Date());
+  if (a === b && a === today) return 'Сегодня';
+  if (a === b && a === dayKey(new Date(Date.now() + 86400000))) return 'Завтра';
+  if (a === b) return fmtKey(a);
+  return Math.floor(a / 100) === Math.floor(b / 100) ? `${a % 100}–${fmtKey(b)}` : `${fmtKey(a)} – ${fmtKey(b)}`;
+}
+
+/** Пресеты «Когда» из макета. */
+export function whenPresets(now = new Date()): { label: string; when: When }[] {
+  const today = dayKey(now);
+  const tomorrow = dayKey(new Date(now.getTime() + 86400000));
+  const wd = now.getDay();
+  // Ближайшие выходные; в воскресенье — только сегодня
+  const sat = wd === 0 ? null : dayKey(new Date(now.getTime() + ((6 - wd + 7) % 7) * 86400000));
+  const sun = dayKey(new Date(now.getTime() + ((7 - wd) % 7) * 86400000));
+  return [
+    { label: 'Любое время', when: { kind: 'all' } },
+    { label: 'Сейчас', when: { kind: 'now' } },
+    { label: 'Сегодня', when: { kind: 'range', from: today, to: null } },
+    { label: 'Завтра', when: { kind: 'range', from: tomorrow, to: null } },
+    { label: 'Выходные', when: { kind: 'range', from: sat ?? sun, to: sat ? sun : null } },
+  ];
+}
+
+export const sameWhen = (a: When, b: When) =>
+  a.kind === b.kind &&
+  (a.kind !== 'range' || (b.kind === 'range' && a.from === b.from && (a.to ?? a.from) === (b.to ?? b.from)));
 
 /** Ссылка на построение маршрута в 2GIS. */
 export const routeUrl = (lat: number, lng: number) => `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`;

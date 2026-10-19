@@ -16,6 +16,9 @@ import type {
   User,
   Profile,
   EventComment,
+  FriendRequest,
+  Friend,
+  FriendshipState,
 } from '../types';
 
 export interface EventQuery {
@@ -54,6 +57,15 @@ export const profilesApi = {
     const body = new FormData(); body.append('file', file);
     return api.post<Profile>(`/profiles/organizations/${id}/image`, body).then((r) => r.data);
   },
+};
+
+export const friendsApi = {
+  request: (userId: number) => api.post<{ userId: number; state: FriendshipState }>(`/friends/${userId}`).then((r) => r.data),
+  remove: (userId: number) => api.delete(`/friends/${userId}`),
+  accept: (userId: number) => api.post<{ userId: number; state: FriendshipState }>(`/friends/${userId}/accept`).then((r) => r.data),
+  reject: (userId: number) => api.post(`/friends/${userId}/reject`),
+  incoming: () => api.get<FriendRequest[]>('/me/friend-requests').then((r) => r.data),
+  list: () => api.get<Friend[]>('/me/friends').then((r) => r.data),
 };
 
 export const catalogApi = {

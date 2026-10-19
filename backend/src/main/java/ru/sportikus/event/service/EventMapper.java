@@ -11,6 +11,7 @@ import ru.sportikus.participation.repository.ParticipationRepository;
 import ru.sportikus.sport.dto.SportDto;
 
 import java.util.HashMap;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -32,12 +33,13 @@ public class EventMapper {
         }
         List<Long> ids = events.stream().map(Event::getId).toList();
         Map<Long, Counts> counts = loadCounts(ids);
+        Map<Long, List<EventResponse.FriendAttendee>> friends = loadFriends(ids, viewerId);
         Map<Long, Participation> mine = viewerId == null ? Map.of()
                 : participationRepository.findByUserIdAndEventIdIn(viewerId, ids).stream()
                         .collect(Collectors.toMap(p -> p.getEvent().getId(), p -> p));
         return events.stream()
                 .map(e -> build(e, counts.getOrDefault(e.getId(), new Counts(0, 0)), mine.get(e.getId()),
-                        false, viewerId, includePending))
+                        friends.getOrDefault(e.getId(), List.of()), false, viewerId, includePending))
                 .toList();
     }
 
@@ -46,7 +48,8 @@ public class EventMapper {
         Counts counts = loadCounts(List.of(event.getId())).getOrDefault(event.getId(), new Counts(0, 0));
         Participation mine = viewerId == null ? null
                 : participationRepository.findByEventIdAndUserId(event.getId(), viewerId).orElse(null);
-        return build(event, counts, mine, true, viewerId, false);
+        return build(event, counts, mine, loadFriends(List.of(event.getId()), viewerId).getOrDefault(event.getId(), List.of()),
+                true, viewerId, false);
     }
 
     private Map<Long, Counts> loadCounts(List<Long> ids) {
@@ -64,7 +67,18 @@ public class EventMapper {
         return result;
     }
 
-    private EventResponse build(Event e, Counts counts, Participation mine, boolean detailed,
+    private Map<Long, List<EventResponse.FriendAttendee>> loadFriends(List<Long> ids, Long viewerId) {
+        if (viewerId == null) return Map.of();
+        Map<Long, List<EventResponse.FriendAttendee>> result = new HashMap<>();
+        for (ParticipationRepository.FriendAttendee row : participationRepository.findConfirmedFriendsByEventIds(viewerId, ids)) {
+            result.computeIfAbsent(row.getEventId(), ignored -> new ArrayList<>())
+                    .add(new EventResponse.FriendAttendee(row.getUserId(), row.getFullName(), row.getAvatarUrl()));
+        }
+        return result;
+    }
+
+    private EventResponse build(Event e, Counts counts, Participation mine, List<EventResponse.FriendAttendee> friends,
+                                boolean detailed,
                                 Long viewerId, boolean includePending) {
         boolean byOrg = e.isByOrganization();
         String organizerName = byOrg ? e.getOrganizerOrg().getName() : e.getOrganizerUser().getFullName();
@@ -88,6 +102,7 @@ public class EventMapper {
                 detailed ? e.getCustomFields() : null,
                 detailed ? e.getRegistrationFields() : null,
                 detailed ? e.getOrgDetails() : null,
+                friends,
                 mine == null ? null : ParticipationBrief.from(mine),
                 viewerId == null ? null : manager,
                 manager && (detailed || includePending) ? counts.pending() : null);

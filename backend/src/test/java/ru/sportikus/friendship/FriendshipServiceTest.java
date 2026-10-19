@@ -1,0 +1,75 @@
+package ru.sportikus.friendship;
+
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+import ru.sportikus.common.ApiException;
+import ru.sportikus.friendship.dto.FriendshipState;
+import ru.sportikus.friendship.model.Friendship;
+import ru.sportikus.friendship.model.FriendshipStatus;
+import ru.sportikus.friendship.repository.FriendshipRepository;
+import ru.sportikus.friendship.service.FriendshipService;
+import ru.sportikus.security.AuthUser;
+import ru.sportikus.user.model.User;
+import ru.sportikus.user.repository.UserRepository;
+
+import java.util.Optional;
+
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class FriendshipServiceTest {
+    private static final AuthUser IVAN = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
+    @Mock FriendshipRepository friendships;
+    @Mock UserRepository users;
+    FriendshipService service;
+
+    @BeforeEach
+    void setUp() {
+        service = new FriendshipService(friendships, users);
+        when(users.findById(2L)).thenReturn(Optional.of(User.builder().id(2L).fullName("Ольга").role("ROLE_USER").build()));
+        when(users.getReferenceById(1L)).thenReturn(User.builder().id(1L).fullName("Иван").role("ROLE_USER").build());
+        when(friendships.findBetween(1L, 2L)).thenReturn(Optional.empty());
+    }
+
+    @Test
+    void sendsRequestAndReportsOutgoingState() {
+        assertThat(service.request(IVAN, 2L).state()).isEqualTo(FriendshipState.OUTGOING_PENDING);
+        verify(friendships).save(any(Friendship.class));
+    }
+
+    @Test
+    void blocksSelfDuplicateAndAdminFriendships() {
+        assertThatThrownBy(() -> service.request(IVAN, 1L)).isInstanceOf(ApiException.class);
+        when(friendships.findBetween(1L, 2L)).thenReturn(Optional.of(Friendship.builder().build()));
+        assertThatThrownBy(() -> service.request(IVAN, 2L)).isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> service.request(new AuthUser(6L, "admin@sport.ru", "ROLE_ADMIN"), 2L)).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void acceptsOnlyIncomingPendingRequest() {
+        Friendship request = Friendship.builder()
+                .requester(User.builder().id(2L).build()).recipient(User.builder().id(1L).build())
+                .status(FriendshipStatus.PENDING).build();
+        when(friendships.findBetween(1L, 2L)).thenReturn(Optional.of(request));
+        assertThat(service.accept(IVAN, 2L).state()).isEqualTo(FriendshipState.FRIENDS);
+        assertThat(request.getStatus()).isEqualTo(FriendshipStatus.ACCEPTED);
+        assertThat(request.getAcceptedAt()).isNotNull();
+    }
+
+    @Test
+    void stateDistinguishesIncomingOutgoingAndFriends() {
+        Friendship f = Friendship.builder().requester(User.builder().id(1L).build())
+                .recipient(User.builder().id(2L).build()).status(FriendshipStatus.PENDING).build();
+        when(friendships.findBetween(1L, 2L)).thenReturn(Optional.of(f));
+        assertThat(service.state(1L, 2L)).isEqualTo(FriendshipState.OUTGOING_PENDING);
+        assertThat(service.state(2L, 1L)).isEqualTo(FriendshipState.INCOMING_PENDING);
+        f.setStatus(FriendshipStatus.ACCEPTED);
+        assertThat(service.state(1L, 2L)).isEqualTo(FriendshipState.FRIENDS);
+    }
+}

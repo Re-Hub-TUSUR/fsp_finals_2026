@@ -310,3 +310,18 @@ VALUES
 (23, 12, 'CONFIRMED', NOW()), (29, 14, 'CONFIRMED', NOW()), (29, 13, 'PENDING', NULL),
 (30, 13, 'CONFIRMED', NOW()), (32, 14, 'CONFIRMED', NOW())
 ON CONFLICT (event_id, user_id) DO NOTHING;
+
+-- 11. Демо-друзья: Иван видит знакомые лица на карточках ближайших мероприятий.
+INSERT INTO friendships (requester_id, recipient_id, status, accepted_at)
+SELECT v.requester_id, v.recipient_id, 'ACCEPTED', NOW()
+FROM (VALUES (1::bigint, 2::bigint), (1::bigint, 3::bigint), (1::bigint, 8::bigint),
+             (2::bigint, 9::bigint), (7::bigint, 11::bigint)) AS v(requester_id, recipient_id)
+WHERE NOT EXISTS (
+    SELECT 1 FROM friendships f
+    WHERE LEAST(f.requester_id, f.recipient_id) = LEAST(v.requester_id, v.recipient_id)
+      AND GREATEST(f.requester_id, f.recipient_id) = GREATEST(v.requester_id, v.recipient_id)
+);
+
+INSERT INTO participations (event_id, user_id, status, decided_at)
+VALUES (1, 3, 'CONFIRMED', NOW()), (19, 1, 'CONFIRMED', NOW())
+ON CONFLICT (event_id, user_id) DO NOTHING;
