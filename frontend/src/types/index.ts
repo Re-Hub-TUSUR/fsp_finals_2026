@@ -268,3 +268,17 @@ export interface Recommendations {
   items: RecommendationItem[];
   generatedAt: string;
 }
+
+export interface EventComment {
+  id: number;
+  eventId: number;
+  eventTitle: string;
+  authorId: number;
+  authorName: string;
+  authorRole: Role;
+  authorAvatarUrl?: string;
+  text: string;
+  organizer: boolean;
+  hidden: boolean;
+  createdAt: string;
+}

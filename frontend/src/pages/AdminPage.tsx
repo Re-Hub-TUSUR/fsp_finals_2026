@@ -1,10 +1,10 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, Building2, CheckCircle, Loader2, RotateCcw, ShieldAlert, XCircle } from 'lucide-react';
+import { Ban, Building2, CheckCircle, EyeOff, Loader2, MessageSquare, RotateCcw, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { adminApi } from '../api';
+import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
-import type { AdminOrganization, SportEvent } from '../types';
+import type { AdminOrganization, EventComment, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
 import { inputClass, labelClass } from '../components/FieldInput';
 import { formatShortDateTime } from '../utils/format';
@@ -19,9 +19,10 @@ const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: stri
 
 export const AdminPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
-  const [tab, setTab] = useState<'orgs' | 'events'>('orgs');
+  const [tab, setTab] = useState<'orgs' | 'events' | 'comments'>('orgs');
   const [orgs, setOrgs] = useState<AdminOrganization[]>([]);
   const [events, setEvents] = useState<SportEvent[]>([]);
+  const [comments, setComments] = useState<EventComment[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
@@ -32,9 +33,14 @@ export const AdminPage: React.FC = () => {
 
   const load = useCallback(async () => {
     try {
-      const [o, e] = await Promise.all([adminApi.organizations(), adminApi.events()]);
+      const [o, e, c] = await Promise.all([
+        adminApi.organizations(),
+        adminApi.events(),
+        commentsApi.adminList().catch(() => []),
+      ]);
       setOrgs(o);
       setEvents(e);
+      setComments(c);
       setError(null);
     } catch (err) {
       setError(errorMessage(err));
@@ -103,6 +109,10 @@ export const AdminPage: React.FC = () => {
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
         </button>
+        <button onClick={() => setTab('comments')} className={tabClass(tab === 'comments')}>
+          <MessageSquare className="w-4 h-4" />
+          Комментарии ({comments.length})
+        </button>
       </div>
 
       {error && (
@@ -163,7 +173,7 @@ export const AdminPage: React.FC = () => {
             </div>
           ))}
         </div>
-      ) : (
+      ) : tab === 'events' ? (
         <div className="space-y-3">
           <p className="text-sm text-slate-500">
             Снятое с публикации мероприятие исчезает с карты и из поиска; по прямой ссылке видна причина, запись закрыта.
@@ -206,6 +216,61 @@ export const AdminPage: React.FC = () => {
               )}
             </div>
           ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">
+            Модерация вопросов и сообщений в чатах мероприятий. Скрытые сообщения больше не видны участникам.
+          </p>
+          {comments.length === 0 ? (
+            <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200">
+              Пока нет комментариев
+            </div>
+          ) : (
+            comments.map((cm) => (
+              <div
+                key={cm.id}
+                className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-3 ${
+                  cm.hidden ? 'border-amber-200 bg-amber-50/30' : 'border-slate-200'
+                }`}
+              >
+                <div className="min-w-0 flex-1">
+                  <div className="flex flex-wrap items-center gap-2 mb-1">
+                    <Link
+                      to={`/events/${cm.eventId}`}
+                      className="text-xs font-bold text-brand-ink bg-brand-tint px-2 py-0.5 rounded hover:underline"
+                    >
+                      {cm.eventTitle}
+                    </Link>
+                    <span className="text-xs font-semibold text-slate-800">{cm.authorName}</span>
+                    {cm.organizer && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                        Организатор
+                      </span>
+                    )}
+                    {cm.hidden && (
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                        Скрыто
+                      </span>
+                    )}
+                    <span className="text-xs text-slate-400">{formatShortDateTime(cm.createdAt)}</span>
+                  </div>
+                  <p className={`text-sm mt-1.5 break-words ${cm.hidden ? 'italic text-slate-400' : 'text-slate-800'}`}>
+                    {cm.text}
+                  </p>
+                </div>
+                {!cm.hidden && (
+                  <button
+                    onClick={() => run(() => commentsApi.hide(cm.eventId, cm.id))}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-3 py-2 rounded-xl shrink-0 self-start"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" /> Скрыть
+                  </button>
+                )}
+              </div>
+            ))
+          )}
         </div>
       )}
 

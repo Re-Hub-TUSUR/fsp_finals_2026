@@ -24,6 +24,7 @@ import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { SportEvent } from '../types';
 import { JoinDialog } from '../components/JoinDialog';
+import { EventDiscussion } from '../components/EventDiscussion';
 import { MiniMap } from '../components/MiniMap';
 import { Modal } from '../components/Modal';
 import { displayValue } from '../components/FieldInput';
@@ -450,6 +451,14 @@ export const EventPage: React.FC = () => {
               )}
             </div>
           )}
+          </div>
+
+          <div className="order-3 lg:order-none">
+            <EventDiscussion
+              eventId={event.id}
+              eventTitle={event.title}
+              isEventOrganizer={Boolean(event.canManage)}
+            />
           </div>
         </div>
 

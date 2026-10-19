@@ -55,7 +55,7 @@ public class SecurityConfig {
                 // Публичный каталог: чтение доступно без входа
                 .requestMatchers(HttpMethod.GET,
                     "/api/v1/sports", "/api/v1/templates", "/api/v1/cities", "/api/v1/cities/nearest",
-                    "/api/v1/events", "/api/v1/events/{id}", "/api/v1/events/{id}/ics",
+                    "/api/v1/events", "/api/v1/events/{id}", "/api/v1/events/{id}/ics", "/api/v1/events/{id}/comments",
                     "/api/v1/profiles/users/{id}", "/api/v1/profiles/organizations/{id}").permitAll()
                 .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
                 .anyRequest().authenticated()

@@ -15,6 +15,7 @@ import type {
   SportEvent,
   User,
   Profile,
+  EventComment,
 } from '../types';
 
 export interface EventQuery {
@@ -117,4 +118,15 @@ export const recommendationsApi = {
   feedback: (eventId: number, action: 'CLICK' | 'DISMISS', requestId?: string, position?: number) =>
     api.post('/recommendations/feedback', { eventId, action, requestId, position }),
   undoDismiss: (eventId: number) => api.delete(`/recommendations/feedback/${eventId}`),
+};
+
+export const commentsApi = {
+  forEvent: (eventId: number | string) =>
+    api.get<EventComment[]>(`/events/${eventId}/comments`).then((r) => r.data),
+  create: (eventId: number | string, text: string) =>
+    api.post<EventComment>(`/events/${eventId}/comments`, { text }).then((r) => r.data),
+  hide: (eventId: number | string, commentId: number) =>
+    api.patch<EventComment>(`/events/${eventId}/comments/${commentId}/hide`).then((r) => r.data),
+  adminList: () =>
+    api.get<EventComment[]>('/admin/comments').then((r) => r.data),
 };
