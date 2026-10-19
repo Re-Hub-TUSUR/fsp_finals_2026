@@ -8,15 +8,6 @@ import {
   CalendarPlus,
   CheckCircle2,
   Clock,
-  Cloud,
-  CloudDrizzle,
-  CloudFog,
-  CloudLightning,
-  CloudRain,
-  CloudSnow,
-  CloudSun,
-  Sun,
-  type LucideIcon,
   FileText,
   Globe,
   Loader2,
@@ -38,6 +29,8 @@ import { EventDiscussion } from '../components/EventDiscussion';
 import { TicketModal } from '../components/TicketModal';
 import { CheckInScannerModal } from '../components/CheckInScannerModal';
 import { MiniMap } from '../components/MiniMap';
+import { RouteButton } from '../components/RouteButton';
+import { useEventWeather } from '../components/EventWeather';
 import { Modal } from '../components/Modal';
 import { displayValue } from '../components/FieldInput';
 import {
@@ -53,14 +46,6 @@ import {
   utcLabel,
   spotsLeft,
 } from '../utils/format';
-import {
-  fetchWeather,
-  formatTemp,
-  weatherInfo,
-  weatherVisible,
-  type WeatherKind,
-  type WeatherSummary,
-} from '../utils/weather';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, autoRejectReason, isAutoRejected, needsAdminAttention } from '../utils/moderation';
 
 const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.ReactNode }> = ({ icon, label, children }) => (
@@ -73,40 +58,13 @@ const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.Rea
   </div>
 );
 
-const WEATHER_ICONS: Record<WeatherKind, LucideIcon> = {
-  clear: Sun,
-  partly: CloudSun,
-  cloudy: Cloud,
-  fog: CloudFog,
-  drizzle: CloudDrizzle,
-  rain: CloudRain,
-  snow: CloudSnow,
-  storm: CloudLightning,
-};
-
-/** Прогноз на время мероприятия; если его нет (далеко, прошло, сбой) — ничего не показываем. */
 const WeatherFact: React.FC<{ event: SportEvent }> = ({ event }) => {
-  const [weather, setWeather] = useState<WeatherSummary | null>(null);
-  const visible = weatherVisible(event.startTime, event.endTime);
-  useEffect(() => {
-    if (!visible) return;
-    let cancelled = false;
-    fetchWeather(event.lat, event.lng, new Date(event.startTime), new Date(event.endTime))
-      .then((w) => !cancelled && setWeather(w))
-      .catch(() => !cancelled && setWeather(null));
-    return () => {
-      cancelled = true;
-    };
-  }, [visible, event.lat, event.lng, event.startTime, event.endTime]);
-  if (!visible || !weather) return null;
-  const info = weatherInfo(weather.code);
-  const Icon = WEATHER_ICONS[info.kind];
+  const weather = useEventWeather(event);
+  if (!weather) return null;
   return (
-    <Fact icon={<Icon className="w-5 h-5" />} label="Погода">
-      {info.label}, {formatTemp(weather)}
-      <span className="block text-xs text-slate-500">
-        осадки {Math.round(weather.precipMax)}% · ветер {Math.round(weather.windMax)} м/с
-      </span>
+    <Fact icon={<weather.Icon className="w-5 h-5" />} label="Погода в это время">
+      {weather.title}
+      <span className="block text-xs text-slate-500">{weather.details}</span>
     </Fact>
   );
 };
@@ -458,6 +416,7 @@ export const EventPage: React.FC = () => {
               </Fact>
               <Fact icon={<MapPin className="w-5 h-5" />} label="Где">
                 {event.address}
+                <RouteButton lat={event.lat} lng={event.lng} className="mt-2" />
               </Fact>
               <WeatherFact event={event} />
               <Fact icon={<Banknote className="w-5 h-5" />} label="Стоимость">

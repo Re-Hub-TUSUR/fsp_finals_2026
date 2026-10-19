@@ -254,3 +254,10 @@ export const sameWhen = (a: When, b: When) =>
 
 /** Ссылка на построение маршрута в 2GIS. */
 export const routeUrl = (lat: number, lng: number) => `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`;
+
+/** Построение маршрута до точки в разных картах (2GIS принимает lng,lat; остальные — lat,lng). */
+export const routeLinks = (lat: number, lng: number) => [
+  { id: '2gis', name: '2GIS', url: routeUrl(lat, lng) },
+  { id: 'yandex', name: 'Яндекс Карты', url: `https://yandex.ru/maps/?rtext=~${lat},${lng}&rtt=auto` },
+  { id: 'google', name: 'Google Maps', url: `https://www.google.com/maps/dir/?api=1&destination=${lat},${lng}` },
+];

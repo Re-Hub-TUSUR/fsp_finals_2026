@@ -14,7 +14,6 @@ import {
   formatDistance,
   isFull,
   isLive,
-  routeUrl,
   startLabelLong,
   timeRange,
   travelLabel,
@@ -22,6 +21,8 @@ import {
 } from '../utils/eventView';
 import { CoverBadge, EventCover, OrgAvatar, SeatMeter, SportIcon } from './EventBits';
 import { JoinDialog } from './JoinDialog';
+import { RouteButton } from './RouteButton';
+import { useEventWeather } from './EventWeather';
 
 interface EventDetailPanelProps {
   event: SportEvent;
@@ -51,6 +52,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
   const [loadingJoin, setLoadingJoin] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const weather = useEventWeather(event);
   const status = eventStatus(event);
   const km = me ? distanceKm(me, event) : null;
   const my = event.myParticipation && event.myParticipation.status !== 'CANCELLED' ? event.myParticipation : null;
@@ -165,15 +167,19 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
                 icon={<MapPin className="w-5 h-5" />}
                 title={event.address}
                 sub={
-                  km != null ? (
-                    `${formatDistance(km)} · ${travelLabel(km)}`
-                  ) : (
-                    <a href={routeUrl(event.lat, event.lng)} target="_blank" rel="noopener noreferrer" className="text-brand-ink font-semibold">
-                      Маршрут в 2GIS
-                    </a>
-                  )
+                  <>
+                    {km != null && <div>{`${formatDistance(km)} · ${travelLabel(km)}`}</div>}
+                    <RouteButton lat={event.lat} lng={event.lng} className="mt-1.5" />
+                  </>
                 }
               />
+              {weather && (
+                <Row
+                  icon={<weather.Icon className="w-5 h-5" />}
+                  title={weather.title}
+                  sub={`Погода в это время · ${weather.details}`}
+                />
+              )}
               <Row icon={<Wallet className="w-5 h-5" />} title={formatPrice(event.price)} sub="Стоимость участия" />
             </div>
 

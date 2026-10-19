@@ -15,6 +15,7 @@ import {
   matchesWhen,
   plural,
   priceLabel,
+  routeLinks,
   rowTime,
   sameWhen,
   seatText,
@@ -261,5 +262,14 @@ describe('rowTime', () => {
     d.setHours(10, 0, 0, 0);
     const t = rowTime({ startTime: d.toISOString(), endTime: new Date(d.getTime() + 3_600_000).toISOString() });
     expect(t).toEqual({ big: '10:00', small: 'завтра' });
+  });
+});
+
+describe('routeLinks', () => {
+  it('builds routes to the point with the coordinate order each service expects', () => {
+    const byId = Object.fromEntries(routeLinks(56.01, 92.85).map((l) => [l.id, l.url]));
+    expect(byId['2gis']).toBe('https://2gis.ru/routeSearch/rsType/car/to/92.85,56.01');
+    expect(byId.yandex).toBe('https://yandex.ru/maps/?rtext=~56.01,92.85&rtt=auto');
+    expect(byId.google).toBe('https://www.google.com/maps/dir/?api=1&destination=56.01,92.85');
   });
 });
