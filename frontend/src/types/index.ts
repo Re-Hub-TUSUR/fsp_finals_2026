@@ -54,7 +54,30 @@ export interface Sport {
 
 export type JoinMode = 'OPEN' | 'APPROVAL';
 export type SkillLevel = 'NOVICE' | 'AMATEUR' | 'PRO' | 'ANY';
-export type EventStatus = 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED';
+export type EventStatus = 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'MODERATION' | 'ARCHIVED';
+
+/** Автопроверка мероприятия: фильтр запрещённых тем → при сомнении проверка ИИ. */
+export type ModerationStatus = 'CLEAN' | 'PENDING' | 'FLAGGED' | 'REJECTED' | 'REVIEWED';
+export type ModerationCategory =
+  | 'POLITICS'
+  | 'ALCOHOL'
+  | 'TOBACCO'
+  | 'DRUGS'
+  | 'GAMBLING'
+  | 'DISCRIMINATION'
+  | 'VIOLENCE'
+  | 'ADULT'
+  | 'FRAUD'
+  | 'PROFANITY'
+  | 'TOPIC';
+
+export interface EventModeration {
+  status: ModerationStatus;
+  reason?: string;
+  hits: { category: ModerationCategory; term: string; field: string }[];
+  model?: string;
+  checkedAt?: string;
+}
 export type ParticipationStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
 
 /** Конструктор: описание одного поля формы (поле шаблона или вопрос участнику). */
@@ -168,6 +191,9 @@ export interface SportEvent {
   myParticipation?: ParticipationBrief;
   canManage?: boolean;
   pendingCount?: number;
+
+  /** Результат автопроверки — приходит только администратору. */
+  moderation?: EventModeration;
 }
 
 export interface FriendAttendee {

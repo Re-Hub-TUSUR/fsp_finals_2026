@@ -41,6 +41,7 @@ import {
   utcLabel,
   spotsLeft,
 } from '../utils/format';
+import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, autoRejectReason, isAutoRejected, needsAdminAttention } from '../utils/moderation';
 
 const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.ReactNode }> = ({ icon, label, children }) => (
   <div className="flex items-start gap-3">
@@ -60,6 +61,7 @@ export const EventPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [joinOpen, setJoinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -96,6 +98,20 @@ export const EventPage: React.FC = () => {
     }
   };
 
+  const completeEvent = async () => {
+    if (!event) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      setEvent(await eventsApi.complete(event.id));
+      setCompleteOpen(false);
+    } catch (e) {
+      setActionError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-20 text-slate-400">
@@ -121,7 +137,10 @@ export const EventPage: React.FC = () => {
   const ended = new Date(event.endTime) <= now;
   const closed = ended || registrationClosesAt(event) <= now;
   const full = event.confirmedCount >= event.capacity;
-  const unpublished = event.status !== 'PUBLISHED';
+  const archived = event.status === 'ARCHIVED';
+  const unpublished = event.status !== 'PUBLISHED' && !archived;
+  const onReview = event.status === 'MODERATION';
+  const autoRejected = isAutoRejected(event);
   const ages = formatAges(event.minAge, event.maxAge);
   const filled = Math.min(100, Math.round((event.confirmedCount / event.capacity) * 100));
   const templateFacts = (event.fields ?? [])
@@ -129,13 +148,21 @@ export const EventPage: React.FC = () => {
     .filter((x) => x.text !== null);
 
   const panel = (() => {
+    if (archived) {
+      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.</div>;
+    }
     if (unpublished) {
       return (
-        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-900">
+        <div className={`rounded-xl border p-4 ${onReview ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-red-50 border-red-200 text-red-900'}`}>
           <div className="flex items-center gap-2 font-bold">
-            <ShieldAlert className="w-5 h-5" /> Снято с публикации
+            <ShieldAlert className="w-5 h-5" />{' '}
+            {onReview ? 'Идёт автоматическая проверка' : autoRejected ? 'Не прошло автопроверку' : 'Снято с публикации'}
           </div>
-          <p className="text-sm mt-1">{event.unpublishReason || 'Нарушение правил площадки'}</p>
+          <p className="text-sm mt-1">
+            {onReview
+              ? 'Обычно это несколько секунд — обновите страницу.'
+              : autoRejectReason(event.unpublishReason) || 'Нарушение правил площадки'}
+          </p>
           <p className="text-xs mt-2 opacity-80">Запись недоступна.</p>
         </div>
       );
@@ -164,6 +191,14 @@ export const EventPage: React.FC = () => {
               </span>
             )}
           </Link>
+          {ended && (
+            <button
+              onClick={() => setCompleteOpen(true)}
+              className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white hover:bg-slate-800"
+            >
+              Завершить событие
+            </button>
+          )}
         </div>
       );
     }
@@ -246,11 +281,42 @@ export const EventPage: React.FC = () => {
       </Link>
 
       {unpublished && (
-        <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 flex gap-3">
+        <div
+          className={`mb-5 p-4 rounded-xl border flex gap-3 ${
+            onReview ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-red-50 border-red-200 text-red-900'
+          }`}
+        >
           <ShieldAlert className="w-6 h-6 shrink-0" />
           <div>
-            <b>Мероприятие снято с публикации администратором.</b>
-            <p className="text-sm mt-0.5">Причина: {event.unpublishReason || 'Нарушение правил площадки'}</p>
+            <b>
+              {onReview
+                ? 'Мероприятие проходит автоматическую проверку.'
+                : autoRejected
+                  ? 'Мероприятие не прошло автоматическую проверку.'
+                  : 'Мероприятие снято с публикации администратором.'}
+            </b>
+            {!onReview && (
+              <p className="text-sm mt-0.5">
+                Причина: {autoRejectReason(event.unpublishReason) || 'Нарушение правил площадки'}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Только для администратора: сомнительное мероприятие, которое пропустил ИИ */}
+      {event.moderation && needsAdminAttention(event) && (
+        <div className="mb-5 p-4 rounded-xl bg-amber-50 border border-amber-300 text-amber-950 flex gap-3">
+          <span className="text-xl leading-none shrink-0" aria-hidden="true">{ATTENTION_SYMBOL}</span>
+          <div className="text-sm">
+            <b className="text-base">Автопроверка: требует внимания</b>
+            {event.moderation.reason && <p className="mt-0.5">{event.moderation.reason}</p>}
+            {event.moderation.hits.length > 0 && (
+              <p className="mt-1 opacity-80">
+                Фильтр нашёл:{' '}
+                {event.moderation.hits.map((h) => `«${h.term}» (${MODERATION_CATEGORY_LABELS[h.category]})`).join(', ')}
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -530,6 +596,16 @@ export const EventPage: React.FC = () => {
             >
               {my?.status === 'PENDING' ? 'Отозвать' : 'Отменить участие'}
             </button>
+          </div>
+        </Modal>
+      )}
+      {completeOpen && (
+        <Modal title="Завершить событие?" onClose={() => setCompleteOpen(false)}>
+          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.</p>
+          {actionError && <p className="mt-3 text-sm text-red-700">{actionError}</p>}
+          <div className="mt-5 flex justify-end gap-3">
+            <button type="button" onClick={() => setCompleteOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold">Отмена</button>
+            <button type="button" disabled={busy} onClick={completeEvent} className="rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-50">{busy ? 'Завершение...' : 'Завершить'}</button>
           </div>
         </Modal>
       )}

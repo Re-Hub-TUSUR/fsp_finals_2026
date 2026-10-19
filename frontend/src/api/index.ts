@@ -82,6 +82,7 @@ export const eventsApi = {
       .then((r) => r.data),
   get: (id: number | string) => api.get<SportEvent>(`/events/${id}`).then((r) => r.data),
   create: (payload: CreateEventPayload) => api.post<SportEvent>('/events', payload).then((r) => r.data),
+  complete: (id: number) => api.post<SportEvent>(`/events/${id}/complete`).then((r) => r.data),
   icsUrl: (id: number) => `${api.defaults.baseURL}/events/${id}/ics`,
 };
 
@@ -111,6 +112,9 @@ export const adminApi = {
   unpublish: (id: number, reason: string) =>
     api.post<SportEvent>(`/admin/events/${id}/unpublish`, { reason }).then((r) => r.data),
   publish: (id: number) => api.post<SportEvent>(`/admin/events/${id}/publish`).then((r) => r.data),
+  /** Снять пометку автопроверки ⚠ — администратор посмотрел и оставляет мероприятие. */
+  moderationReviewed: (id: number) =>
+    api.post<SportEvent>(`/admin/events/${id}/moderation/reviewed`).then((r) => r.data),
 };
 
 export const citiesApi = {

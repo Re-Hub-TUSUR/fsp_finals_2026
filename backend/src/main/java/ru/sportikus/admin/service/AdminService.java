@@ -10,9 +10,12 @@ import ru.sportikus.event.model.Event;
 import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventMapper;
+import ru.sportikus.moderation.ModerationStatus;
 import ru.sportikus.organization.model.Organization;
 import ru.sportikus.organization.repository.OrganizationRepository;
 
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
 
 @Service
@@ -47,9 +50,13 @@ public class AdminService {
         return AdminOrgDto.from(org);
     }
 
+    /** Все мероприятия с результатом автопроверки; требующие внимания (⚠) — первыми. */
     @Transactional(readOnly = true)
     public List<EventResponse> events() {
-        return eventMapper.toList(eventRepository.findAllByOrderByStartTimeDesc(), null, false);
+        List<Event> events = eventRepository.findAllByOrderByStartTimeDesc().stream()
+                .sorted(Comparator.comparingInt(AdminService::attentionRank))
+                .toList();
+        return eventMapper.toList(events, null, false, true);
     }
 
     @Transactional
@@ -57,15 +64,45 @@ public class AdminService {
         Event event = findEvent(id);
         event.setStatus(EventStatus.UNPUBLISHED);
         event.setUnpublishReason(reason.trim());
-        return eventMapper.toDetails(event, null);
+        return eventMapper.toDetails(event, null, true);
     }
 
+    /** Вернуть в публикацию. Ручное решение администратора перекрывает автопроверку. */
     @Transactional
     public EventResponse publish(Long id) {
         Event event = findEvent(id);
         event.setStatus(EventStatus.PUBLISHED);
         event.setUnpublishReason(null);
-        return eventMapper.toDetails(event, null);
+        if (event.getModerationStatus() != ModerationStatus.CLEAN) {
+            markReviewed(event);
+        }
+        return eventMapper.toDetails(event, null, true);
+    }
+
+    /** Снять пометку ⚠: администратор посмотрел мероприятие и оставляет его. */
+    @Transactional
+    public EventResponse reviewed(Long id) {
+        Event event = findEvent(id);
+        if (event.getModerationStatus() != ModerationStatus.FLAGGED) {
+            throw ApiException.conflict("Пометку можно снять только с мероприятия, отмеченного автопроверкой");
+        }
+        markReviewed(event);
+        return eventMapper.toDetails(event, null, true);
+    }
+
+    private static void markReviewed(Event event) {
+        event.setModerationStatus(ModerationStatus.REVIEWED);
+        event.setModeratedAt(Instant.now());
+    }
+
+    /** Порядок в списке: помеченные ИИ, отклонённые ИИ, на проверке, остальные. */
+    private static int attentionRank(Event e) {
+        return switch (e.getModerationStatus()) {
+            case FLAGGED -> 0;
+            case REJECTED -> 1;
+            case PENDING -> 2;
+            default -> 3;
+        };
     }
 
     private Organization findOrg(Long id) {

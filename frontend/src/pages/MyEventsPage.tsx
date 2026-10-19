@@ -1,14 +1,15 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Calendar, Loader2, MapPin, PlusCircle } from 'lucide-react';
+import { Archive, Calendar, Loader2, MapPin, PlusCircle } from 'lucide-react';
 import { meApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { formatShortDateTime } from '../utils/format';
+import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
-type Tab = 'participating' | 'organizing';
+type Tab = 'participating' | 'organizing' | 'archive';
 
 export const MyEventsPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
@@ -58,7 +59,12 @@ export const MyEventsPage: React.FC = () => {
     );
   }
 
-  const pendingTotal = managed.reduce((sum, e) => sum + (e.pendingCount ?? 0), 0);
+  const activeParticipations = participations.filter((p) => p.event?.status !== 'ARCHIVED');
+  const activeManaged = managed.filter((e) => e.status !== 'ARCHIVED');
+  const archivedParticipations = participations.filter((p) => p.event?.status === 'ARCHIVED' && p.status === 'CONFIRMED');
+  const archivedManaged = managed.filter((e) => e.status === 'ARCHIVED');
+  const pendingTotal = activeManaged.reduce((sum, e) => sum + (e.pendingCount ?? 0), 0);
+  const archiveTotal = archivedParticipations.length + archivedManaged.length;
 
   return (
     <div className="max-w-4xl mx-auto px-4 py-6">
@@ -74,13 +80,16 @@ export const MyEventsPage: React.FC = () => {
 
       <div className="flex border-b border-slate-200 gap-6 mb-6" role="tablist">
         <TabButton active={tab === 'participating'} onClick={() => setTab('participating')}>
-          Я участвую ({participations.length})
+          Я участвую ({activeParticipations.length})
         </TabButton>
         <TabButton active={tab === 'organizing'} onClick={() => setTab('organizing')}>
-          Я организую ({managed.length})
+          Я организую ({activeManaged.length})
           {pendingTotal > 0 && (
             <span className="ml-2 bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pendingTotal}</span>
           )}
+        </TabButton>
+        <TabButton active={tab === 'archive'} onClick={() => setTab('archive')}>
+          <span className="inline-flex items-center gap-1.5"><Archive className="h-4 w-4" /> Архив ({archiveTotal})</span>
         </TabButton>
       </div>
 
@@ -95,11 +104,11 @@ export const MyEventsPage: React.FC = () => {
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : tab === 'participating' ? (
-        participations.length === 0 ? (
+        activeParticipations.length === 0 ? (
           <Empty text="Вы пока никуда не записались." linkTo="/" linkText="Найти мероприятие" />
         ) : (
           <ul className="space-y-3">
-            {participations.map((p) =>
+            {activeParticipations.map((p) =>
               p.event ? (
                 <li key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
@@ -138,11 +147,11 @@ export const MyEventsPage: React.FC = () => {
             )}
           </ul>
         )
-      ) : managed.length === 0 ? (
+      ) : tab === 'organizing' ? activeManaged.length === 0 ? (
         <Empty text="Вы ещё не создавали мероприятий." linkTo="/events/new" linkText="Создать мероприятие" />
       ) : (
         <ul className="space-y-3">
-          {managed.map((e) => (
+          {activeManaged.map((e) => (
             <li key={e.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
@@ -152,8 +161,14 @@ export const MyEventsPage: React.FC = () => {
                   <div className="text-sm text-slate-600 mt-1">
                     {formatShortDateTime(e.startTime, e.timeZone)} · {e.sport.name} · {e.confirmedCount}/{e.capacity} мест
                   </div>
-                  {e.status !== 'PUBLISHED' && (
-                    <div className="text-sm text-red-700 mt-1">Снято с публикации: {e.unpublishReason}</div>
+                  {e.status === 'MODERATION' ? (
+                    <div className="text-sm text-amber-800 mt-1">Идёт автоматическая проверка…</div>
+                  ) : (
+                    e.status !== 'PUBLISHED' && (
+                      <div className="text-sm text-red-700 mt-1">
+                        {isAutoRejected(e) ? 'Не прошло автопроверку' : 'Снято с публикации'}: {autoRejectReason(e.unpublishReason)}
+                      </div>
+                    )
                   )}
                 </div>
                 <Link
@@ -169,6 +184,23 @@ export const MyEventsPage: React.FC = () => {
             </li>
           ))}
         </ul>
+      ) : archiveTotal === 0 ? (
+        <div className="py-14 text-center text-slate-500">В архиве пока нет завершённых событий.</div>
+      ) : (
+        <div className="space-y-7">
+          {archivedManaged.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-lg font-bold text-slate-900">Я организовал</h2>
+              <ArchiveList events={archivedManaged} />
+            </section>
+          )}
+          {archivedParticipations.length > 0 && (
+            <section>
+              <h2 className="mb-3 text-lg font-bold text-slate-900">Я участвовал</h2>
+              <ArchiveList events={archivedParticipations.flatMap((p) => p.event ? [p.event] : [])} />
+            </section>
+          )}
+        </div>
       )}
     </div>
   );
@@ -189,6 +221,21 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
   >
     {children}
   </button>
+);
+
+const ArchiveList: React.FC<{ events: SportEvent[] }> = ({ events }) => (
+  <ul className="space-y-3">
+    {events.map((event) => (
+      <li key={event.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+        <Link to={`/events/${event.id}`} className="font-bold text-slate-900 hover:text-brand-ink">{event.title}</Link>
+        <div className="mt-1 flex flex-wrap gap-x-3 text-sm text-slate-600">
+          <span>{formatShortDateTime(event.startTime, event.timeZone)}</span>
+          <span>{event.sport.name}</span>
+          <span>{event.address}</span>
+        </div>
+      </li>
+    ))}
+  </ul>
 );
 
 const Empty: React.FC<{ text: string; linkTo: string; linkText: string }> = ({ text, linkTo, linkText }) => (
