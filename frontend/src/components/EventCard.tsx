@@ -20,7 +20,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
   const friendsVisible = friends.slice(0, 3);
 
   return (
-    <div className="anim-rise group flex flex-col justify-between rounded-[22px] bg-card border border-line-2 overflow-hidden shadow-sm hover:shadow-md transition-[box-shadow,border-color] hover:border-ink/50">
+    <div className="anim-rise group flex flex-col justify-between rounded-[22px] bg-card border border-line-2 overflow-hidden shadow-sm hover:shadow-md transition-[box-shadow,border-color] hover:border-brand/40">
       {/* Фото обложка */}
       <div className="relative h-[180px] sm:h-[190px] w-full bg-slate-800 overflow-hidden shrink-0">
         <img

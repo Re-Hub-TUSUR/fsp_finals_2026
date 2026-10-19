@@ -148,7 +148,7 @@ export const RecommendedPage: React.FC = () => {
     <div className="max-w-6xl mx-auto px-3 sm:px-6 py-6 w-full min-w-0 overflow-x-hidden">
       <div className="flex flex-col md:flex-row md:items-end justify-between gap-4 mb-5">
         <div>
-          <h1 className="text-3xl font-extrabold tracking-[-0.02em] text-ink flex items-center gap-2">
+          <h1 className="text-2xl sm:text-3xl font-semibold tracking-[-0.01em] text-ink flex items-center gap-2">
             <Sparkles className="w-7 h-7 text-brand-ink" /> Рекомендовано для вас
           </h1>
           <p className="text-muted mt-1">
@@ -314,7 +314,7 @@ const RecommendationCard: React.FC<{ item: RecommendationItem; onOpen: () => voi
   const friendsVisible = friends.slice(0, 3);
 
   return (
-    <article className="anim-rise group flex flex-col justify-between rounded-[22px] bg-card border border-line-2 overflow-hidden shadow-sm hover:shadow-md transition-[box-shadow,border-color] hover:border-ink/50">
+    <article className="anim-rise group flex flex-col justify-between rounded-[22px] bg-card border border-line-2 overflow-hidden shadow-sm hover:shadow-md transition-[box-shadow,border-color] hover:border-brand/40">
       {/* Фото обложка */}
       <div className="relative h-[180px] sm:h-[190px] w-full bg-slate-800 overflow-hidden shrink-0">
         <img

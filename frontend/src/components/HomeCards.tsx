@@ -45,8 +45,10 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
       tabIndex={0}
       onClick={onOpen}
       onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && (e.preventDefault(), onOpen())}
-      className={`anim-rise group w-full flex flex-col text-left rounded-[22px] bg-card overflow-hidden cursor-pointer border transition-[box-shadow,border-color] shadow-sm hover:shadow-md justify-between ${
-        active ? 'border-ink ring-2 ring-ink/20' : 'border-line-2 hover:border-ink/50'
+      className={`anim-rise group w-full flex flex-col text-left rounded-[22px] bg-card overflow-hidden cursor-pointer border transition-[box-shadow,border-color] justify-between ${
+        active
+          ? 'border-brand ring-2 ring-brand/40 shadow-[0_4px_24px_rgba(4,215,147,0.35)] dark:shadow-[0_4px_24px_rgba(213,244,91,0.25)]'
+          : 'border-line-2 shadow-sm hover:shadow-md hover:border-brand/40'
       }`}
     >
       {/* Фото обложка */}
@@ -184,9 +186,13 @@ export const EventRow: React.FC<{
       onMouseEnter={onHover && (() => onHover(true))}
       onMouseLeave={onHover && (() => onHover(false))}
       aria-pressed={active}
-      className={`w-full shrink-0 text-left flex border-b border-line transition-colors ${
+      className={`w-full shrink-0 text-left flex border-b border-line transition-all ${
         compact ? 'gap-3.5 px-4 py-3.5' : 'gap-4 px-5 py-4'
-      } ${active ? 'bg-surface shadow-[inset_3px_0_0_var(--color-ink)]' : 'bg-card hover:bg-surface'}`}
+      } ${
+        active
+          ? 'bg-surface shadow-[inset_3px_0_0_var(--color-brand),0_0_16px_rgba(4,215,147,0.2)] dark:shadow-[inset_3px_0_0_var(--color-brand),0_0_16px_rgba(213,244,91,0.15)]'
+          : 'bg-card hover:bg-surface'
+      }`}
     >
       <div className={`shrink-0 flex flex-col gap-0.5 ${compact ? 'w-[62px]' : 'w-[68px] pt-px'}`}>
         <span className={`${compact ? 'text-lg' : 'text-xl'} font-bold leading-tight tabular-nums text-ink`}>{t.big}</span>

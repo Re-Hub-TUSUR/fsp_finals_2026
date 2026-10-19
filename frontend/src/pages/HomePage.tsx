@@ -369,8 +369,10 @@ export const HomePage: React.FC = () => {
 
   /* ---------- Мобильная шапка: поиск, фильтры, чипы Радиус / Спорт / Когда ---------- */
   const mobChip = (on: boolean) =>
-    `shrink-0 h-[42px] flex items-center rounded-[10px] text-ink text-[15px] font-bold whitespace-nowrap ${
-      on ? 'border-2 border-ink bg-surface' : 'border border-line-2 bg-card'
+    `shrink-0 h-[42px] flex items-center rounded-[10px] text-ink text-[15px] font-bold whitespace-nowrap transition-all ${
+      on
+        ? 'border-2 border-brand bg-surface shadow-[0_0_12px_rgba(4,215,147,0.35)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)]'
+        : 'border border-line-2 bg-card'
     }`;
   const mobileHeader = (floating: boolean) => (
     <div className="lg:hidden flex flex-col pt-2">
@@ -411,6 +413,15 @@ export const HomePage: React.FC = () => {
           <FilterIcon size={22} />
           <CountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
         </button>
+        {view === 'list' && (
+          <button
+            type="button"
+            onClick={() => setParam('view', null)}
+            className="shrink-0 h-[50px] px-3.5 rounded-xl bg-brand text-on-brand text-[15px] font-bold flex items-center justify-center shadow-sm"
+          >
+            На карте
+          </button>
+        )}
       </div>
       <div className="flex gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
         <button type="button" onClick={() => setRadiusSheetOpen(true)} className={`${mobChip(changed.radius)} gap-[7px] pl-3 pr-2.5`}>
@@ -447,22 +458,6 @@ export const HomePage: React.FC = () => {
 
   const feed = (
     <div className="max-w-[1400px] px-3 lg:px-8 pt-1.5 lg:pt-6 pb-10 flex flex-col gap-6 lg:gap-8">
-      <div className="lg:hidden px-1 pt-1.5 flex items-center gap-2.5">
-        <div className="flex-1 min-w-0 flex flex-col">
-          <span className="text-2xl font-bold text-ink">Лента событий</span>
-          <span className="text-sm font-medium text-muted flex items-center gap-2">
-            {resultLine}
-            {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-          </span>
-        </div>
-        <button
-          type="button"
-          onClick={() => setParam('view', null)}
-          className="shrink-0 h-[42px] px-3.5 rounded-[10px] bg-brand text-on-brand text-[15px] font-bold"
-        >
-          На карте
-        </button>
-      </div>
       {errorBox}
 
 
@@ -549,43 +544,33 @@ export const HomePage: React.FC = () => {
         >
           {view === 'list' && <div className="lg:hidden shrink-0 bg-page">{mobileHeader(false)}</div>}
 
-          <div className="hidden lg:flex shrink-0 px-5 py-3.5 items-center gap-2.5 bg-card border-b border-line-2">
-            <div className="flex-1 min-w-0 flex flex-col">
-              <span className="text-xl font-bold text-ink">{panelTitle}</span>
-              <span className="text-sm font-medium text-muted flex items-center gap-2">
-                {resultLine}
-                {loading && <Loader2 className="w-4 h-4 animate-spin" />}
-              </span>
-            </div>
-            {desktopMode === 'feed' ? (
+          {desktopMode !== 'feed' && (
+            <div className="hidden lg:flex shrink-0 px-5 py-3.5 items-center gap-2.5 bg-card border-b border-line-2">
+              <div className="flex-1 min-w-0 flex flex-col">
+                <span className="text-xl font-bold text-ink">{panelTitle}</span>
+                <span className="text-sm font-medium text-muted flex items-center gap-2">
+                  {resultLine}
+                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                </span>
+              </div>
               <button
                 type="button"
-                onClick={() => setParam('view', null)}
-                className="shrink-0 h-10 px-3.5 rounded-[10px] bg-brand text-on-brand text-[15px] font-bold hover:bg-brand-hover"
+                onClick={() => setParam('view', 'list')}
+                className="shrink-0 h-10 px-3 flex items-center gap-2 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold hover:bg-surface"
               >
-                На карте
+                <Maximize2 className="w-[17px] h-[17px]" />
+                Лента
               </button>
-            ) : (
-              <>
-                <button
-                  type="button"
-                  onClick={() => setParam('view', 'list')}
-                  className="shrink-0 h-10 px-3 flex items-center gap-2 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold hover:bg-surface"
-                >
-                  <Maximize2 className="w-[17px] h-[17px]" />
-                  Лента
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setPanelClosed(true)}
-                  aria-label="Скрыть список"
-                  className="shrink-0 w-10 h-10 rounded-[10px] bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
-                >
-                  <ChevronLeft className="w-5 h-5" strokeWidth={2.4} />
-                </button>
-              </>
-            )}
-          </div>
+              <button
+                type="button"
+                onClick={() => setPanelClosed(true)}
+                aria-label="Скрыть список"
+                className="shrink-0 w-10 h-10 rounded-[10px] bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
+              >
+                <ChevronLeft className="w-5 h-5" strokeWidth={2.4} />
+              </button>
+            </div>
+          )}
 
           {desktopMode === 'feed' || view === 'list' ? (
             <div className="flex-1 min-h-0 overflow-y-auto">{feed}</div>

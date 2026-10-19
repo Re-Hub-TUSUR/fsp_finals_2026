@@ -81,11 +81,13 @@ const Popover: React.FC<{
   );
 };
 
-// Изменённый фильтр выделяется рамкой цвета текста, открытый — фоном (макет «Карта и Лента»)
+// Изменённый фильтр выделяется рамкой цвета бренда с подсветкой-тенью
 const barButton = (open: boolean, active = false) =>
-  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] rounded-[10px] text-[15px] text-ink whitespace-nowrap transition-colors ${
-    active ? 'border-2 border-ink' : 'border border-line-2'
-  } ${open || active ? 'bg-surface' : 'bg-card hover:bg-surface'}`;
+  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] rounded-[10px] text-[15px] text-ink whitespace-nowrap transition-all ${
+    active
+      ? 'border-2 border-brand bg-surface shadow-[0_0_12px_rgba(4,215,147,0.35)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)]'
+      : 'border border-line-2'
+  } ${open && !active ? 'bg-surface' : !active ? 'bg-card hover:bg-surface' : ''}`;
 
 /** Прямоугольный чип-пресет (вместо «таблетки» Chip). */
 const PresetChip: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({ active, onClick, children }) => (
@@ -93,8 +95,10 @@ const PresetChip: React.FC<{ active: boolean; onClick: () => void; children: Rea
     type="button"
     aria-pressed={active}
     onClick={onClick}
-    className={`h-9 px-3 rounded-lg border text-sm font-semibold whitespace-nowrap transition-colors ${
-      active ? 'bg-ink border-ink text-page' : 'bg-card border-line-2 text-ink hover:bg-surface'
+    className={`h-9 px-3 rounded-lg border text-sm font-semibold whitespace-nowrap transition-all ${
+      active
+        ? 'bg-brand text-on-brand border-brand shadow-[0_2px_12px_rgba(4,215,147,0.4)] dark:shadow-[0_2px_12px_rgba(213,244,91,0.3)] font-bold'
+        : 'bg-card border-line-2 text-ink hover:bg-surface'
     }`}
   >
     {children}
@@ -124,8 +128,10 @@ function Seg<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={`flex-1 min-w-0 h-[42px] px-1 rounded-lg text-sm sm:text-[15px] font-semibold truncate transition-colors ${
-              on ? 'bg-card text-ink shadow-[0_1px_3px_rgba(10,20,45,0.18)]' : 'text-muted hover:text-ink'
+            className={`flex-1 min-w-0 h-[42px] px-1 rounded-lg text-sm sm:text-[15px] font-semibold truncate transition-all ${
+              on
+                ? 'bg-card text-ink border border-brand/60 shadow-[0_0_12px_rgba(4,215,147,0.3)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)] font-bold'
+                : 'text-muted hover:text-ink'
             }`}
           >
             {o.label}
@@ -193,8 +199,10 @@ export const SportList: React.FC<{
               type="button"
               aria-pressed={on}
               onClick={() => toggle(s.slug)}
-              className={`h-[42px] px-3 flex items-center gap-1.5 rounded-lg text-[15px] font-semibold text-left transition-colors ${
-                on ? 'bg-ink text-page' : 'text-ink hover:bg-surface'
+              className={`h-[42px] px-3 flex items-center gap-1.5 rounded-lg text-[15px] font-semibold text-left transition-all ${
+                on
+                  ? 'bg-brand text-on-brand shadow-[0_2px_10px_rgba(4,215,147,0.35)] dark:shadow-[0_2px_10px_rgba(213,244,91,0.25)] font-bold'
+                  : 'text-ink hover:bg-surface'
               }`}
             >
               <span className="flex-1 truncate">{s.name}</span>
@@ -295,14 +303,20 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
               onClick={() => pick(k)}
               aria-pressed={end || inRange}
               aria-label={keyToDate(k).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-              className={`relative h-10 text-[15px] ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} ${
-                end ? 'bg-ink text-page' : inRange ? 'bg-surface-2 text-ink' : past ? 'text-muted/50' : 'text-ink hover:bg-card'
+              className={`relative h-10 text-[15px] ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} transition-all ${
+                end
+                  ? 'bg-brand text-on-brand shadow-[0_2px_10px_rgba(4,215,147,0.4)] dark:shadow-[0_2px_10px_rgba(213,244,91,0.3)] font-bold'
+                  : inRange
+                    ? 'bg-surface-2 text-ink'
+                    : past
+                      ? 'text-muted/50'
+                      : 'text-ink hover:bg-card'
               }`}
             >
               {i + 1}
               {eventDays.has(k) && (
                 <span
-                  className={`absolute bottom-[5px] left-1/2 -ml-0.5 w-1 h-1 rounded-full ${end ? 'bg-page' : 'bg-brand'}`}
+                  className={`absolute bottom-[5px] left-1/2 -ml-0.5 w-1 h-1 rounded-full ${end ? 'bg-on-brand' : 'bg-brand'}`}
                 />
               )}
             </button>
@@ -347,7 +361,9 @@ export const FilterIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
 
 export const CountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
   n > 0 ? (
-    <span className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-ink text-page text-[13px] font-bold leading-[22px] text-center ${className}`}>
+    <span
+      className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-brand text-on-brand shadow-[0_1px_6px_rgba(4,215,147,0.35)] dark:shadow-[0_1px_6px_rgba(213,244,91,0.25)] text-[13px] font-bold leading-[22px] text-center ${className}`}
+    >
       {n}
     </span>
   ) : null;

@@ -57,8 +57,10 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   // Вкладки с подчёркиванием во всю высоту шапки (макет «Карта и Лента»)
   const linkClass = (active: boolean) =>
-    `h-full -mb-px px-3.5 flex items-center gap-2 border-b-[3px] text-base transition-colors ${
-      active ? 'border-ink text-ink font-bold' : 'border-transparent text-muted font-semibold hover:text-ink'
+    `h-full -mb-px px-3.5 flex items-center gap-2 border-b-[3px] text-base transition-all ${
+      active
+        ? 'border-brand text-ink font-bold shadow-[inset_0_-3px_10px_rgba(4,215,147,0.35)] dark:shadow-[inset_0_-3px_10px_rgba(213,244,91,0.25)]'
+        : 'border-transparent text-muted font-semibold hover:text-ink'
     }`;
   // Ссылка на режим главной с сохранением поиска
   const homeLink = (view: 'map' | 'list') => {
