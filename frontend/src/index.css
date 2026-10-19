@@ -1,5 +1,12 @@
 @import "tailwindcss";
 
+@keyframes interest-card-wiggle {
+  0%, 100% { transform: rotate(0deg) scale(1.01); }
+  25% { transform: rotate(-2deg) scale(1.03); }
+  55% { transform: rotate(2deg) scale(1.03); }
+  80% { transform: rotate(-1deg) scale(1.01); }
+}
+
 /*
  * Дизайн-система Sportikus (редизайн): чистые нейтрали + один акцент.
  * Светлая тема — мятный акцент, тёмная — лаймовый. Тема — атрибут data-theme на <html>.

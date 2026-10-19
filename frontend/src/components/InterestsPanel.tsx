@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { Heart, Settings2, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { PreferencesForm } from './PreferencesForm';
+import { InterestQuiz } from './InterestQuiz';
 import { PREFERRED_TIME_LABELS, SKILL_LABELS } from '../utils/format';
 
 /**
@@ -12,6 +13,7 @@ import { PREFERRED_TIME_LABELS, SKILL_LABELS } from '../utils/format';
 export const InterestsPanel: React.FC = () => {
   const { preferences, refreshPreferences } = useAuth();
   const [editing, setEditing] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
 
   const configured = !!preferences?.configured;
   const details: string[] = [];
@@ -42,6 +44,13 @@ export const InterestsPanel: React.FC = () => {
             >
               <Sparkles className="h-4 w-4" /> Рекомендации
             </Link>
+            <button
+              type="button"
+              onClick={() => setQuizOpen(true)}
+              className="flex h-11 items-center gap-2 rounded-xl border border-brand-line bg-brand-tint px-4 text-sm font-semibold text-brand-ink hover:bg-brand-tint-2"
+            >
+              <Sparkles className="h-4 w-4" /> {configured ? 'Пройти тест заново' : 'Пройти тест'}
+            </button>
             <button
               type="button"
               onClick={() => setEditing(true)}
@@ -85,6 +94,7 @@ export const InterestsPanel: React.FC = () => {
           Вы ещё не указали интересы — пока мы показываем популярное рядом. Выберите виды спорта и город, и подборка станет точнее.
         </p>
       )}
+      {quizOpen && <InterestQuiz initial={preferences} onClose={() => setQuizOpen(false)} onSaved={refreshPreferences} />}
     </section>
   );
 };
