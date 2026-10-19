@@ -20,6 +20,8 @@ public record ProfileResponse(
         String status,
         boolean canEdit,
         FriendshipState friendshipState,
+        Long subscriberCount,
+        Boolean subscribed,
         List<EventResponse> events
 ) {
 }

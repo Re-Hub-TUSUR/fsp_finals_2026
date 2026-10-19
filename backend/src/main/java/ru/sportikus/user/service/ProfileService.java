@@ -13,6 +13,7 @@ import ru.sportikus.friendship.service.FriendshipService;
 import ru.sportikus.organization.model.Organization;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
+import ru.sportikus.subscription.service.OrganizationSubscriptionService;
 import ru.sportikus.user.dto.ProfileResponse;
 import ru.sportikus.user.dto.ProfileUpdateRequest;
 import ru.sportikus.user.model.User;
@@ -39,6 +40,7 @@ public class ProfileService {
     private final EventRepository eventRepository;
     private final EventMapper eventMapper;
     private final FriendshipService friendshipService;
+    private final OrganizationSubscriptionService subscriptionService;
 
     @Transactional(readOnly = true)
     public ProfileResponse user(Long id, AuthUser viewer) {
@@ -46,7 +48,7 @@ public class ProfileService {
         boolean owner = viewer != null && viewer.id().equals(id);
         var events = eventRepository.findByOrganizerUserIdAndStatusOrderByStartTimeAsc(id, EventStatus.PUBLISHED);
         return new ProfileResponse(id, "USER", user.getFullName(), user.getEmail(), null, user.getAvatarUrl(),
-                null, null, null, null, owner, friendshipService.state(viewer == null ? null : viewer.id(), id),
+                null, null, null, null, owner, friendshipService.state(viewer == null ? null : viewer.id(), id), null, null,
                 eventMapper.toList(events, viewer == null ? null : viewer.id(), false));
     }
 
@@ -62,6 +64,7 @@ public class ProfileService {
         var events = eventRepository.findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(id, EventStatus.PUBLISHED);
         return new ProfileResponse(id, "ORGANIZATION", org.getName(), org.getOwner().getEmail(), org.getDescription(),
                 org.getLogoUrl(), org.getInn(), org.getOgrn(), org.getKpp(), org.getStatus(), owner, null,
+                subscriptionService.count(id), subscriptionService.subscribed(viewer == null ? null : viewer.id(), id),
                 eventMapper.toList(events, viewer == null ? null : viewer.id(), false));
     }
 

@@ -26,6 +26,8 @@ export interface Profile {
   status?: OrgStatus;
   canEdit: boolean;
   friendshipState?: FriendshipState;
+  subscriberCount?: number;
+  subscribed?: boolean;
   events: SportEvent[];
 }
 
@@ -56,6 +58,14 @@ export interface FriendSearchResult {
   email: string;
   avatarUrl?: string;
   state: FriendshipState;
+}
+
+export interface OrganizationSubscription {
+  organizationId: number;
+  name: string;
+  imageUrl?: string;
+  subscriberCount: number;
+  subscribedAt: string;
 }
 
 export interface Sport {

@@ -21,6 +21,7 @@ import type {
   FriendSearchResult,
   FriendshipState,
   Achievement,
+  OrganizationSubscription,
 } from '../types';
 
 export const achievementsApi = {
@@ -74,6 +75,12 @@ export const friendsApi = {
   incoming: () => api.get<FriendRequest[]>('/me/friend-requests').then((r) => r.data),
   list: () => api.get<Friend[]>('/me/friends').then((r) => r.data),
   search: (email: string) => api.get<FriendSearchResult>('/me/friend-search', { params: { email } }).then((r) => r.data),
+};
+
+export const subscriptionsApi = {
+  list: () => api.get<OrganizationSubscription[]>('/me/subscriptions').then((r) => r.data),
+  subscribe: (organizationId: number) => api.post(`/organizations/${organizationId}/subscription`),
+  unsubscribe: (organizationId: number) => api.delete(`/organizations/${organizationId}/subscription`),
 };
 
 export const catalogApi = {
