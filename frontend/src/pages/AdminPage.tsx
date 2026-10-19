@@ -95,7 +95,7 @@ export const AdminPage: React.FC = () => {
       key={key}
       onClick={() => setEventFilter(key)}
       aria-pressed={eventFilter === key}
-      className={`px-3 py-1.5 rounded-full text-sm font-semibold border ${
+      className={`px-3 py-1.5 rounded-full text-xs sm:text-sm font-semibold border shrink-0 whitespace-nowrap transition-colors ${
         eventFilter === key ? 'bg-brand border-brand text-on-brand' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
       }`}
     >
@@ -108,23 +108,23 @@ export const AdminPage: React.FC = () => {
     }`;
 
   return (
-    <div className="max-w-5xl mx-auto px-4 py-8">
+    <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full min-w-0 overflow-x-hidden">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-brand text-on-brand flex items-center justify-center shadow-md">
+        <div className="w-10 h-10 rounded-xl bg-brand text-on-brand flex items-center justify-center shadow-md shrink-0">
           <ShieldAlert className="w-6 h-6" />
         </div>
         <div>
-          <h1 className="text-2xl font-bold text-slate-900">Панель администратора</h1>
-          <p className="text-sm text-slate-500">Модерация организаций и мероприятий</p>
+          <h1 className="text-xl sm:text-2xl font-bold text-slate-900">Панель администратора</h1>
+          <p className="text-xs sm:text-sm text-slate-500">Модерация организаций и мероприятий</p>
         </div>
       </div>
 
-      <div className="flex border-b border-slate-200 gap-6 mb-6">
-        <button onClick={() => setTab('orgs')} className={tabClass(tab === 'orgs')}>
+      <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
+        <button onClick={() => setTab('orgs')} className={`${tabClass(tab === 'orgs')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <Building2 className="w-4 h-4" />
           Организации {pending > 0 && <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
         </button>
-        <button onClick={() => setTab('events')} className={tabClass(tab === 'events')}>
+        <button onClick={() => setTab('events')} className={`${tabClass(tab === 'events')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
           {attention > 0 && (
@@ -133,7 +133,7 @@ export const AdminPage: React.FC = () => {
             </span>
           )}
         </button>
-        <button onClick={() => setTab('comments')} className={tabClass(tab === 'comments')}>
+        <button onClick={() => setTab('comments')} className={`${tabClass(tab === 'comments')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <MessageSquare className="w-4 h-4" />
           Комментарии ({comments.length})
         </button>
@@ -154,28 +154,28 @@ export const AdminPage: React.FC = () => {
           {orgs.map((org) => (
             <div
               key={org.id}
-              className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
+              className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-bold text-slate-900">{org.name}</h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${ORG_STATUS[org.status].cls}`}>
+                  <h3 className="font-bold text-slate-900 break-words">{org.name}</h3>
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
                     {ORG_STATUS[org.status].label}
                   </span>
                 </div>
-                <p className="text-sm text-slate-600 mt-1">{org.description}</p>
-                <span className="text-xs text-slate-400 mt-2 block">
+                <p className="text-sm text-slate-600 mt-1 break-words">{org.description}</p>
+                <span className="text-xs text-slate-400 mt-2 block break-words">
                   Владелец: {org.ownerName} ({org.ownerEmail})
                 </span>
-                {org.rejectReason && <span className="text-xs text-red-600 mt-1 block">Причина отказа: {org.rejectReason}</span>}
+                {org.rejectReason && <span className="text-xs text-red-600 mt-1 block break-words">Причина отказа: {org.rejectReason}</span>}
               </div>
 
-              <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+              <div className="flex items-center gap-2 w-full md:w-auto shrink-0 justify-end flex-wrap sm:flex-nowrap">
                 {org.status !== 'APPROVED' && (
                   <button
                     onClick={() => run(() => adminApi.approveOrg(org.id))}
                     disabled={busy}
-                    className="flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-on-brand px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-sm"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-brand hover:bg-brand-hover text-on-brand px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-sm"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Одобрить
@@ -187,7 +187,7 @@ export const AdminPage: React.FC = () => {
                       setReason('');
                       setTarget({ kind: 'org', item: org });
                     }}
-                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 px-3.5 py-2.5 rounded-xl text-sm font-semibold"
+                    className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 px-3.5 py-2.5 rounded-xl text-sm font-semibold"
                   >
                     <XCircle className="w-4 h-4" />
                     Отклонить
@@ -204,7 +204,7 @@ export const AdminPage: React.FC = () => {
             Знаком {ATTENTION_SYMBOL} отмечены сомнительные мероприятия, которые пропустила автопроверка: посмотрите их
             внимательнее и нажмите «Проверено» или снимите с публикации.
           </p>
-          <div className="flex flex-wrap gap-2">
+          <div className="flex gap-2 overflow-x-auto no-scrollbar py-0.5 -mx-3 px-3 sm:mx-0 sm:px-0 sm:flex-wrap">
             {filterChip('all', `Все (${events.length})`)}
             {filterChip('attention', `${ATTENTION_SYMBOL} Требуют внимания (${attention})`)}
             {filterChip('rejected', `Отклонены автопроверкой (${autoRejected})`)}
@@ -215,7 +215,7 @@ export const AdminPage: React.FC = () => {
           {shownEvents.map((ev) => (
             <div
               key={ev.id}
-              className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+              className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-3 ${
                 needsAdminAttention(ev)
                   ? 'border-amber-300 bg-amber-50/40'
                   : ev.status === 'PUBLISHED'
@@ -223,46 +223,46 @@ export const AdminPage: React.FC = () => {
                     : 'border-red-200 bg-red-50/40'
               }`}
             >
-              <div className="min-w-0">
+              <div className="min-w-0 flex-1">
                 <span className="text-xs font-bold text-brand-ink bg-brand-tint px-2 py-0.5 rounded">{ev.sport.name}</span>
-                <Link to={`/events/${ev.id}`} className="block font-semibold text-slate-900 hover:text-brand-ink mt-1">
+                <Link to={`/events/${ev.id}`} className="block font-semibold text-slate-900 hover:text-brand-ink mt-1 break-words">
                   {ev.title}
                 </Link>
-                <p className="text-sm text-slate-500">
+                <p className="text-sm text-slate-500 break-words">
                   {ev.organizerName} · {formatShortDateTime(ev.startTime, ev.timeZone)}
                 </p>
                 {ev.status === 'MODERATION' ? (
                   <p className="text-sm text-amber-800 mt-1">⏳ Идёт проверка ИИ</p>
                 ) : (
-                  ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1">Снято: {ev.unpublishReason}</p>
+                  ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1 break-words">Снято: {ev.unpublishReason}</p>
                 )}
                 {needsAdminAttention(ev) && ev.moderation && (
                   <div className="mt-2 text-sm text-amber-900">
                     <span className="inline-flex items-center gap-1 font-semibold bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
                       {ATTENTION_SYMBOL} Прошло проверку ИИ — будьте внимательны
                     </span>
-                    {ev.moderation.reason && <p className="mt-1">{ev.moderation.reason}</p>}
+                    {ev.moderation.reason && <p className="mt-1 break-words">{ev.moderation.reason}</p>}
                   </div>
                 )}
                 {ev.moderation?.status === 'REJECTED' && (
-                  <span className="inline-block mt-2 text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded-lg">
+                  <span className="inline-block mt-2 text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded-lg break-words">
                     Отклонено автопроверкой{ev.moderation.model ? ` · ${ev.moderation.model}` : ''}
                   </span>
                 )}
                 {ev.moderation && ev.moderation.hits.length > 0 && ev.moderation.status !== 'CLEAN' && (
-                  <p className="mt-1 text-xs text-slate-500">
+                  <p className="mt-1 text-xs text-slate-500 break-words">
                     Фильтр нашёл:{' '}
                     {ev.moderation.hits.map((h) => `«${h.term}» (${MODERATION_CATEGORY_LABELS[h.category]})`).join(', ')}
                   </p>
                 )}
               </div>
               {ev.status === 'PUBLISHED' ? (
-                <div className="flex flex-wrap gap-2 shrink-0">
+                <div className="flex flex-wrap gap-2 w-full md:w-auto shrink-0 justify-end">
                   {needsAdminAttention(ev) && (
                     <button
                       onClick={() => run(() => adminApi.moderationReviewed(ev.id))}
                       disabled={busy}
-                      className="flex items-center gap-1.5 text-sm bg-brand hover:bg-brand-hover text-on-brand font-semibold px-4 py-2.5 rounded-xl"
+                      className="flex-1 sm:flex-initial flex items-center justify-center gap-1.5 text-sm bg-brand hover:bg-brand-hover text-on-brand font-semibold px-4 py-2.5 rounded-xl shadow-sm"
                     >
                       <CheckCircle className="w-4 h-4" /> Проверено
                     </button>
@@ -272,7 +272,7 @@ export const AdminPage: React.FC = () => {
                       setReason('');
                       setTarget({ kind: 'event', item: ev });
                     }}
-                    className="text-sm bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-4 py-2.5 rounded-xl"
+                    className="flex-1 sm:flex-initial flex items-center justify-center text-sm bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-4 py-2.5 rounded-xl"
                   >
                     Снять с публикации
                   </button>
@@ -281,7 +281,7 @@ export const AdminPage: React.FC = () => {
                 <button
                   onClick={() => run(() => adminApi.publish(ev.id))}
                   disabled={busy}
-                  className="flex items-center gap-1.5 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-4 py-2.5 rounded-xl shrink-0"
+                  className="w-full md:w-auto flex items-center justify-center gap-1.5 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-4 py-2.5 rounded-xl shrink-0"
                 >
                   <RotateCcw className="w-4 h-4" /> Вернуть
                 </button>
@@ -310,22 +310,22 @@ export const AdminPage: React.FC = () => {
                   <div className="flex flex-wrap items-center gap-2 mb-1">
                     <Link
                       to={`/events/${cm.eventId}`}
-                      className="text-xs font-bold text-brand-ink bg-brand-tint px-2 py-0.5 rounded hover:underline"
+                      className="text-xs font-bold text-brand-ink bg-brand-tint px-2 py-0.5 rounded hover:underline break-words"
                     >
                       {cm.eventTitle}
                     </Link>
-                    <span className="text-xs font-semibold text-slate-800">{cm.authorName}</span>
+                    <span className="text-xs font-semibold text-slate-800 break-words">{cm.authorName}</span>
                     {cm.organizer && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                         Организатор
                       </span>
                     )}
                     {cm.hidden && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700">
+                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
                         Скрыто
                       </span>
                     )}
-                    <span className="text-xs text-slate-400">{formatShortDateTime(cm.createdAt)}</span>
+                    <span className="text-xs text-slate-400 shrink-0">{formatShortDateTime(cm.createdAt)}</span>
                   </div>
                   <p className={`text-sm mt-1.5 break-words ${cm.hidden ? 'italic text-slate-400' : 'text-slate-800'}`}>
                     {cm.text}
@@ -335,7 +335,7 @@ export const AdminPage: React.FC = () => {
                   <button
                     onClick={() => run(() => commentsApi.hide(cm.eventId, cm.id))}
                     disabled={busy}
-                    className="flex items-center gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-3 py-2 rounded-xl shrink-0 self-start"
+                    className="w-full sm:w-auto flex items-center justify-center gap-1.5 text-xs bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-3 py-2 rounded-xl shrink-0 self-start"
                   >
                     <EyeOff className="w-3.5 h-3.5" /> Скрыть
                   </button>

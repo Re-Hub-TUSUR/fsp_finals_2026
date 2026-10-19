@@ -37,8 +37,8 @@ export function AuthPage() {
         className="mt-1 w-full rounded-md border border-slate-300 px-3 py-2.5 outline-none focus:border-emerald-600" />
     </label>
   );
-  return <div className="mx-auto max-w-lg px-4 py-10">
-    <h1 className="text-3xl font-bold text-slate-900">{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
+  return <div className="mx-auto max-w-lg px-3 sm:px-4 py-8 sm:py-10 w-full min-w-0 overflow-x-hidden">
+    <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">{mode === 'login' ? 'Вход' : 'Регистрация'}</h1>
     <div className="mt-6 grid grid-cols-3 border-b border-slate-200">
       {([['login','Войти'],['user','Пользователь'],['organization','Организация']] as const).map(([key,label]) =>
         <button key={key} onClick={() => { setMode(key); setError(''); }} className={`py-3 text-sm font-semibold ${mode === key ? 'border-b-2 border-emerald-600 text-emerald-700' : 'text-slate-500'}`}>{label}</button>)}

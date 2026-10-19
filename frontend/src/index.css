@@ -7,6 +7,23 @@
   80% { transform: rotate(-1deg) scale(1.01); }
 }
 
+html,
+body,
+#root {
+  height: 100%;
+  max-width: 100vw;
+  overflow-x: hidden;
+}
+
+/* Утилита для плавной горизонтальной прокрутки без полосы прокрутки */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
 /*
  * Дизайн-система Sportikus (редизайн): чистые нейтрали + один акцент.
  * Светлая тема — мятный акцент, тёмная — лаймовый. Тема — атрибут data-theme на <html>.

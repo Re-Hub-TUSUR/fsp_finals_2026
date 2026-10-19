@@ -145,11 +145,11 @@ export const NotificationBell: React.FC = () => {
         }}
         aria-label="Уведомления"
         title={unreadCount > 0 ? `${unreadCount} новых уведомлений` : 'Уведомления'}
-        className="relative w-[42px] h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors"
+        className="relative w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
       >
-        <Bell className="w-5 h-5" />
+        <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-brand text-on-brand text-[11px] font-extrabold flex items-center justify-center shadow-sm animate-pulse">
+          <span className="absolute -top-1 -right-1 min-w-[18px] sm:min-w-[20px] h-[18px] sm:h-[20px] px-1 rounded-full bg-brand text-on-brand text-[10px] sm:text-[11px] font-extrabold flex items-center justify-center shadow-sm animate-pulse">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
@@ -158,7 +158,7 @@ export const NotificationBell: React.FC = () => {
       {open && (
         <div
           ref={panelRef}
-          className="fixed inset-x-2 top-18 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[380px] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-[2200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-[2200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Заголовок */}
           <div className="p-4 border-b border-line-2 flex items-center justify-between bg-surface/50">

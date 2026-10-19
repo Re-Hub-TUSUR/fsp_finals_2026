@@ -32,14 +32,14 @@ function App() {
       <AuthProvider>
         <BrowserRouter>
           {/* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */}
-          <div className="h-dvh flex flex-col bg-page text-ink font-sans">
+          <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
             <AchievementToast />
             {/* Демо-панель для жюри: вход под любым сидовым аккаунтом в 1 клик */}
             <DemoRoleBar />
 
             <Navbar />
 
-            <main className="flex-1 min-h-0 overflow-y-auto">
+            <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-full">
               <PageFade>
               <Routes>
                 <Route path="/" element={<HomePage />} />
