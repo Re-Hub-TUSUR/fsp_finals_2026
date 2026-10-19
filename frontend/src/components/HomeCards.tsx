@@ -44,8 +44,7 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
         <div className="absolute right-4 bottom-4"><FriendsAttending event={event} dark /></div>
       </EventCover>
       <div className="w-full px-[18px] pt-3.5 pb-[18px] flex flex-col gap-2">
-        <div className="flex justify-between gap-3 text-sm leading-tight font-medium text-muted">
-          <span className="truncate">{event.sport.name}</span>
+        <div className="text-sm leading-tight font-medium text-muted">
           <span className="whitespace-nowrap">{distFrom(event, me)}</span>
         </div>
         <span className="text-[21px] leading-tight font-bold tracking-[-0.015em] text-ink">{event.title}</span>

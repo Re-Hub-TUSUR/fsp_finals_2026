@@ -197,6 +197,8 @@ export const HomePage: React.FC = () => {
     return base
       .filter(({ km }) => km == null || km <= r)
       .sort((a, b) => {
+        const friends = (b.e.friendsAttending?.length ?? 0) - (a.e.friendsAttending?.length ?? 0);
+        if (friends) return friends;
         const live = Number(isLive(b.e)) - Number(isLive(a.e));
         if (live) return live;
         if (a.km != null && b.km != null) return a.km - b.km;
