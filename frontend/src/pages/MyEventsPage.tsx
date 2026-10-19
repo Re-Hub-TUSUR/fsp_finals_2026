@@ -110,7 +110,7 @@ export const MyEventsPage: React.FC = () => {
                       <div className="mt-1 space-y-0.5 text-sm text-slate-600">
                         <div className="flex items-center gap-2">
                           <Calendar className="w-4 h-4 text-slate-400" />
-                          {formatShortDateTime(p.event.startTime)}
+                          {formatShortDateTime(p.event.startTime, p.event.timeZone)}
                         </div>
                         <div className="flex items-center gap-2">
                           <MapPin className="w-4 h-4 text-slate-400" />
@@ -150,7 +150,7 @@ export const MyEventsPage: React.FC = () => {
                     {e.title}
                   </Link>
                   <div className="text-sm text-slate-600 mt-1">
-                    {formatShortDateTime(e.startTime)} · {e.sport.name} · {e.confirmedCount}/{e.capacity} мест
+                    {formatShortDateTime(e.startTime, e.timeZone)} · {e.sport.name} · {e.confirmedCount}/{e.capacity} мест
                   </div>
                   {e.status !== 'PUBLISHED' && (
                     <div className="text-sm text-red-700 mt-1">Снято с публикации: {e.unpublishReason}</div>

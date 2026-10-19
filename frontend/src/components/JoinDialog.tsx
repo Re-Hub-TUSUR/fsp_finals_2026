@@ -63,7 +63,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
           <div className="font-bold text-slate-900">{event.title}</div>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <Calendar className="w-4 h-4 shrink-0" />
-            {formatShortDateTime(event.startTime)}
+            {formatShortDateTime(event.startTime, event.timeZone)}
           </div>
           <div className="flex items-center gap-2 text-sm text-slate-600">
             <MapPin className="w-4 h-4 shrink-0" />

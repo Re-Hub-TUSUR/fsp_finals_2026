@@ -174,7 +174,7 @@ export const ManageEventPage: React.FC = () => {
       </Link>
       <h1 className="text-2xl font-bold text-slate-900">{event.title}</h1>
       <p className="text-slate-500 mb-5">
-        {formatShortDateTime(event.startTime)} · {event.address}
+        {formatShortDateTime(event.startTime, event.timeZone)} · {event.address}
       </p>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex items-center justify-between shadow-sm">

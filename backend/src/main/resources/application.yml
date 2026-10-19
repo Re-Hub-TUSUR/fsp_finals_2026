@@ -48,3 +48,29 @@ app:
 features:
   location-sharing:
     enabled: false
+
+# Рекомендации: веса и лимиты можно менять без пересборки (см. RecommendationProperties)
+recommendations:
+  default-radius-km: 25
+  horizon-days: 30
+  candidates-per-source: 300
+  cache-ttl: PT2M
+  max-same-sport-in-row: 2
+  affinity-half-life-days: 90
+  # На масштабе страны порог поддержки стоит поднять до десятков пользователей
+  similarity-min-score: 0.2
+  similarity-min-cooccurrence: 2
+  weights:
+    interest: 0.35
+    distance: 0.20
+    affinity: 0.15
+    urgency: 0.10
+    skill: 0.08
+    social: 0.07
+    organizer: 0.05
+    time: 0.05
+    dislike-penalty: 0.30
+  jobs:
+    enabled: true
+    popularity-refresh: PT5M
+    nightly-cron: "0 30 3 * * *"

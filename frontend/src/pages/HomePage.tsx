@@ -87,11 +87,15 @@ export const HomePage: React.FC = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (!ready) return;
+    if (!ready || !viewport) return;
     let cancelled = false;
     setLoading(true);
     eventsApi
       .list({
+        // Каталог всегда ограничен видимой областью карты — в масштабе страны иначе не обойтись
+        lat: viewport.lat,
+        lng: viewport.lng,
+        radiusKm: viewport.radiusKm,
         sport: selectedSports,
         q: debouncedQuery || undefined,
         skillLevel: skill || undefined,

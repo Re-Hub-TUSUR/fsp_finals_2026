@@ -1,6 +1,10 @@
 import { api } from './client';
 import type {
   AdminOrganization,
+  City,
+  Preferences,
+  Recommendations,
+  UpdatePreferencesPayload,
   CreateEventPayload,
   EventTemplate,
   JoinMode,
@@ -72,4 +76,23 @@ export const adminApi = {
   unpublish: (id: number, reason: string) =>
     api.post<SportEvent>(`/admin/events/${id}/unpublish`, { reason }).then((r) => r.data),
   publish: (id: number) => api.post<SportEvent>(`/admin/events/${id}/publish`).then((r) => r.data),
+};
+
+export const citiesApi = {
+  list: () => api.get<City[]>('/cities').then((r) => r.data),
+  nearest: (lat: number, lng: number) => api.get<City>('/cities/nearest', { params: { lat, lng } }).then((r) => r.data),
+};
+
+/** Интересы пользователя. update() вызывается и из формы регистрации, и из профиля. */
+export const preferencesApi = {
+  get: () => api.get<Preferences>('/me/preferences').then((r) => r.data),
+  update: (payload: UpdatePreferencesPayload) => api.put<Preferences>('/me/preferences', payload).then((r) => r.data),
+};
+
+export const recommendationsApi = {
+  get: (params: { lat?: number; lng?: number; limit?: number } = {}) =>
+    api.get<Recommendations>('/recommendations', { params }).then((r) => r.data),
+  feedback: (eventId: number, action: 'CLICK' | 'DISMISS', requestId?: string, position?: number) =>
+    api.post('/recommendations/feedback', { eventId, action, requestId, position }),
+  undoDismiss: (eventId: number) => api.delete(`/recommendations/feedback/${eventId}`),
 };

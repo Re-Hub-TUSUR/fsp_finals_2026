@@ -37,6 +37,8 @@ public record EventResponse(
         Double lat,
         Double lng,
         String address,
+        String cityName,
+        String timeZone,
 
         int capacity,
         int confirmedCount,

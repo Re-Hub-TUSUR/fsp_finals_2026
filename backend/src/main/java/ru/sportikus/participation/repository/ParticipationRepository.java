@@ -40,7 +40,7 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
     @EntityGraph(attributePaths = "user")
     List<Participation> findByEventIdOrderByCreatedAtAsc(Long eventId);
 
-    @EntityGraph(attributePaths = {"event", "event.sport", "event.organizerUser", "event.organizerOrg", "event.template"})
+    @EntityGraph(attributePaths = {"event", "event.sport", "event.organizerUser", "event.organizerOrg", "event.template", "event.city"})
     List<Participation> findByUserIdOrderByCreatedAtDesc(Long userId);
 
     @EntityGraph(attributePaths = {"user", "event"})

@@ -4,6 +4,7 @@ import jakarta.persistence.*;
 import lombok.*;
 import org.hibernate.annotations.JdbcTypeCode;
 import org.hibernate.type.SqlTypes;
+import ru.sportikus.city.model.City;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
 import ru.sportikus.organization.model.Organization;
@@ -67,6 +68,15 @@ public class Event {
 
     @Column(nullable = false)
     private String address;
+
+    /** Ближайший город — геокорзина для «популярного рядом». */
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "city_id")
+    private City city;
+
+    /** Часовой пояс места проведения (IANA), в нём показывается и интерпретируется время. */
+    @Column(name = "time_zone")
+    private String timeZone;
 
     @Column(nullable = false)
     @Builder.Default

@@ -181,7 +181,7 @@ export const AdminPage: React.FC = () => {
                   {ev.title}
                 </Link>
                 <p className="text-sm text-slate-500">
-                  {ev.organizerName} · {formatShortDateTime(ev.startTime)}
+                  {ev.organizerName} · {formatShortDateTime(ev.startTime, ev.timeZone)}
                 </p>
                 {ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1">Снято: {ev.unpublishReason}</p>}
               </div>

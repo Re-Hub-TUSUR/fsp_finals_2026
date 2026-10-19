@@ -10,6 +10,7 @@ import { EventPage } from './pages/EventPage';
 import { ManageEventPage } from './pages/ManageEventPage';
 import { MyEventsPage } from './pages/MyEventsPage';
 import { AdminPage } from './pages/AdminPage';
+import { RecommendedPage } from './pages/RecommendedPage';
 
 function App() {
   return (
@@ -33,6 +34,7 @@ function App() {
                 <Route path="/my" element={<MyEventsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
+                <Route path="/recommended" element={<RecommendedPage />} />
               </Routes>
             </main>
 

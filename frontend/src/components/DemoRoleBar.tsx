@@ -6,7 +6,8 @@ const ACTIVE_COLORS: Record<DemoRoleKey, string> = {
   user: 'bg-blue-600',
   olga: 'bg-sky-600',
   pro: 'bg-indigo-600',
-  enisey: 'bg-brand',
+  masha: 'bg-rose-600',
+  enisey: 'bg-emerald-600',
   ladya: 'bg-amber-600',
   admin: 'bg-purple-600',
 };

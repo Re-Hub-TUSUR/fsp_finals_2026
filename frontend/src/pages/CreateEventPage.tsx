@@ -2,9 +2,10 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { AlertTriangle, Building2, Loader2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { catalogApi, eventsApi } from '../api';
+import { catalogApi, citiesApi, eventsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type {
+  City,
   CreateEventPayload,
   CustomField,
   EventTemplate,
@@ -20,7 +21,7 @@ import { LocationPicker } from '../components/LocationPicker';
 import { QuestionsEditor } from '../components/constructor/QuestionsEditor';
 import { CustomFieldsEditor } from '../components/constructor/CustomFieldsEditor';
 import { OrgDetailsForm } from '../components/constructor/OrgDetailsForm';
-import { JOIN_MODE_LABELS, SKILL_LABELS, localInputToIso, toLocalInput } from '../utils/format';
+import { JOIN_MODE_LABELS, SKILL_LABELS, toLocalInput, utcLabel, zonedLocalToIso } from '../utils/format';
 
 const KRASNOYARSK: [number, number] = [56.0153, 92.8932];
 
@@ -51,7 +52,7 @@ function defaultStart(): Date {
 }
 
 export const CreateEventPage: React.FC = () => {
-  const { currentUser, ready } = useAuth();
+  const { currentUser, ready, preferences } = useAuth();
   const navigate = useNavigate();
 
   const [templates, setTemplates] = useState<EventTemplate[]>([]);
@@ -69,6 +70,9 @@ export const CreateEventPage: React.FC = () => {
   const [end, setEnd] = useState(() => toLocalInput(new Date(defaultStart().getTime() + 2 * 3600000)));
   const [address, setAddress] = useState('');
   const [coords, setCoords] = useState<[number, number]>(KRASNOYARSK);
+  const [coordsTouched, setCoordsTouched] = useState(false);
+  /** Ближайший город к точке сбора: его часовой пояс — местное время мероприятия. */
+  const [venueCity, setVenueCity] = useState<City | null>(null);
 
   const [capacity, setCapacity] = useState(10);
   const [joinMode, setJoinMode] = useState<JoinMode>('APPROVAL');
@@ -101,10 +105,25 @@ export const CreateEventPage: React.FC = () => {
       .catch((e) => setLoadError(errorMessage(e)));
   }, []);
 
+  // Пока точку не выбирали — ставим её в домашний город пользователя
+  useEffect(() => {
+    const city = preferences?.homeCity;
+    if (!coordsTouched && city) setCoords([city.lat, city.lng]);
+  }, [preferences, coordsTouched]);
+
+  useEffect(() => {
+    const t = setTimeout(() => {
+      citiesApi.nearest(coords[0], coords[1]).then(setVenueCity).catch(() => setVenueCity(null));
+    }, 300);
+    return () => clearTimeout(t);
+  }, [coords]);
+
   const availableTemplates = useMemo(
     () => templates.filter((t) => !t.organizationOnly || isOrg),
     [templates, isOrg],
   );
+
+  const standardSports = useMemo(() => sports.filter((s) => !s.custom), [sports]);
 
   const applyTemplate = React.useCallback(
     (t: EventTemplate, allSports: Sport[]) => {
@@ -147,8 +166,9 @@ export const CreateEventPage: React.FC = () => {
     if (blocked || !template) return;
     setError(null);
 
-    const startIso = localInputToIso(start);
-    const endIso = localInputToIso(end);
+    const zone = venueCity?.timeZone;
+    const startIso = zonedLocalToIso(start, zone);
+    const endIso = zonedLocalToIso(end, zone);
     if (!startIso || !endIso) return setError('Укажите дату и время начала и окончания');
     if (!customSport && sportId === '') return setError('Выберите вид спорта или введите свой');
     if (customSport && !customSportName.trim()) return setError('Введите название вида спорта');
@@ -182,7 +202,7 @@ export const CreateEventPage: React.FC = () => {
       skillLevel,
       requiredEquipment: equipment.trim() || undefined,
       price: price ? Number(price) : undefined,
-      registrationDeadline: localInputToIso(deadline),
+      registrationDeadline: zonedLocalToIso(deadline, zone),
       minAge: minAge ? Number(minAge) : undefined,
       maxAge: maxAge ? Number(maxAge) : undefined,
       details: pruneValues(details),
@@ -340,7 +360,7 @@ export const CreateEventPage: React.FC = () => {
                   className={inputClass}
                 >
                   <option value="">— выберите —</option>
-                  {sports.map((s) => (
+                  {standardSports.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
@@ -410,10 +430,27 @@ export const CreateEventPage: React.FC = () => {
                 className={inputClass}
               />
             </div>
-            <LocationPicker lat={coords[0]} lng={coords[1]} onChange={(lat, lng) => setCoords([lat, lng])} />
+            <LocationPicker
+              lat={coords[0]}
+              lng={coords[1]}
+              onChange={(lat, lng) => {
+                setCoordsTouched(true);
+                setCoords([lat, lng]);
+              }}
+            />
             <p className="text-xs text-slate-500">
               Координаты: {coords[0].toFixed(5)}, {coords[1].toFixed(5)}
+              {venueCity && ` · ${venueCity.name}`}
             </p>
+            {venueCity && (
+              <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2">
+                Время начала и окончания указывается по местному времени места проведения:{' '}
+                <b>
+                  {venueCity.name} ({utcLabel(venueCity.timeZone)})
+                </b>
+                .
+              </p>
+            )}
           </Section>
 
           <Section n={4} title="Участие" hint="Как люди попадают на мероприятие и сколько их может быть.">

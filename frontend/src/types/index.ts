@@ -108,6 +108,9 @@ export interface SportEvent {
   lat: number;
   lng: number;
   address: string;
+  /** Ближайший город и местный часовой пояс места проведения. */
+  cityName?: string;
+  timeZone?: string;
   capacity: number;
   confirmedCount: number;
   joinMode: JoinMode;
@@ -186,4 +189,66 @@ export interface JoinPayload {
   message?: string;
   answers?: FieldValues;
   acceptedRequirements?: boolean;
+}
+
+// ------------------------------------------------------------- рекомендации
+
+export interface City {
+  id: number;
+  name: string;
+  region?: string;
+  lat: number;
+  lng: number;
+  timeZone: string;
+}
+
+export type PreferredTime = 'MORNING' | 'DAY' | 'EVENING' | 'WEEKEND';
+
+/** Интересы и предпочтения пользователя (форма регистрации и профиль). */
+export interface Preferences {
+  sports: Sport[];
+  skillLevel?: SkillLevel;
+  homeCity?: City;
+  homeLat?: number;
+  homeLng?: number;
+  maxDistanceKm: number;
+  preferredTimes: PreferredTime[];
+  maxPrice?: number;
+  birthYear?: number;
+  configured: boolean;
+}
+
+export interface UpdatePreferencesPayload {
+  sportIds: number[];
+  skillLevel?: SkillLevel;
+  homeCityId?: number;
+  homeLat?: number;
+  homeLng?: number;
+  maxDistanceKm?: number;
+  preferredTimes: PreferredTime[];
+  maxPrice?: number;
+  birthYear?: number;
+}
+
+export interface RecommendationReason {
+  code: string;
+  text: string;
+}
+
+export interface RecommendationItem {
+  event: SportEvent;
+  score: number;
+  reasons: RecommendationReason[];
+  sources: string[];
+  breakdown: Record<string, number>;
+}
+
+export interface Recommendations {
+  requestId: string;
+  model: string;
+  location?: { lat: number; lng: number; source: 'GEO' | 'HOME' | 'CITY'; cityName?: string; radiusKm: number };
+  coldStart: boolean;
+  needsLocation: boolean;
+  items: RecommendationItem[];
+  generatedAt: string;
 }
