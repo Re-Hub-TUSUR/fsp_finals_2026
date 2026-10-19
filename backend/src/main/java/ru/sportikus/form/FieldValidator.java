@@ -61,9 +61,15 @@ public class FieldValidator {
             if (options.stream().anyMatch(o -> o.length() > 100)) {
                 throw ApiException.badRequest(context + ": вариант ответа длиннее 100 символов");
             }
+            boolean number = def.type() == FieldType.NUMBER;
+            if (number) {
+                checkBounds(context, def);
+            }
             result.add(new FieldDef(def.key(), def.label().trim(), def.type(), def.required(),
                     choice ? options : null, trimToNull(def.unit()), trimToNull(def.placeholder()),
-                    trimToNull(def.help())));
+                    trimToNull(def.help()),
+                    number ? def.min() : null, number ? def.max() : null,
+                    number && Boolean.TRUE.equals(def.integer()) ? Boolean.TRUE : null));
         }
         return result;
     }
@@ -136,6 +142,17 @@ public class FieldValidator {
                 if (number.abs().compareTo(new BigDecimal("1000000000")) > 0) {
                     throw ApiException.badRequest("Поле «" + label + "»: слишком большое число");
                 }
+                // Без явного min числа не бывают отрицательными (расстояние, команды, длительность, возраст ответа)
+                BigDecimal min = BigDecimal.valueOf(def.min() != null ? def.min() : 0d);
+                if (number.compareTo(min) < 0) {
+                    throw ApiException.badRequest("Поле «" + label + "»: значение не меньше " + plain(min));
+                }
+                if (def.max() != null && number.compareTo(BigDecimal.valueOf(def.max())) > 0) {
+                    throw ApiException.badRequest("Поле «" + label + "»: значение не больше " + plain(BigDecimal.valueOf(def.max())));
+                }
+                if (Boolean.TRUE.equals(def.integer()) && number.stripTrailingZeros().scale() > 0) {
+                    throw ApiException.badRequest("Поле «" + label + "» должно быть целым числом");
+                }
                 return number.stripTrailingZeros().scale() <= 0 ? (Object) number.longValue() : (Object) number.doubleValue();
             }
             case SELECT -> {
@@ -181,5 +198,23 @@ public class FieldValidator {
         }
         String t = s.trim();
         return t.isEmpty() ? null : t;
+    }
+
+    private static void checkBounds(String context, FieldDef def) {
+        if ((def.min() != null && (def.min().isNaN() || def.min().isInfinite()))
+                || (def.max() != null && (def.max().isNaN() || def.max().isInfinite()))) {
+            throw ApiException.badRequest(context + ": некорректные границы у поля «" + def.label() + "»");
+        }
+        double min = def.min() != null ? def.min() : 0d;
+        if (min < 0) {
+            throw ApiException.badRequest(context + ": у поля «" + def.label() + "» минимум не может быть отрицательным");
+        }
+        if (def.max() != null && def.max() < min) {
+            throw ApiException.badRequest(context + ": у поля «" + def.label() + "» максимум меньше минимума");
+        }
+    }
+
+    private static String plain(BigDecimal value) {
+        return value.stripTrailingZeros().toPlainString();
     }
 }

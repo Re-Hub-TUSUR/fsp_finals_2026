@@ -47,6 +47,46 @@ class FieldValidatorTest {
         assertThat(result.get("n")).isEqualTo(10L);
     }
 
+    private static FieldDef number(String key, Double min, Double max, Boolean integer) {
+        return new FieldDef(key, "Поле " + key, FieldType.NUMBER, false, null, null, null, null, min, max, integer);
+    }
+
+    @Test
+    void numbersAreNotNegativeByDefault() {
+        List<FieldDef> defs = List.of(field("n", FieldType.NUMBER, false));
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("n", -3), "ctx"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("не меньше 0");
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("n", "-0,5"), "ctx"))
+                .isInstanceOf(ApiException.class);
+        assertThat(validator.validateValues(defs, Map.of("n", 0), "ctx")).containsEntry("n", 0L);
+    }
+
+    @Test
+    void enforcesMinMaxAndIntegerBounds() {
+        List<FieldDef> defs = List.of(number("teams", 1d, 100d, true), number("km", 0.1, null, null));
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("teams", 0), "ctx"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("не меньше 1");
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("teams", 101), "ctx"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("не больше 100");
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("teams", 2.5), "ctx"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("целым");
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("km", -3), "ctx"))
+                .isInstanceOf(ApiException.class);
+        assertThatThrownBy(() -> validator.validateValues(defs, Map.of("km", 0), "ctx"))
+                .isInstanceOf(ApiException.class);
+        assertThat(validator.validateValues(defs, Map.of("teams", 4, "km", 5.5), "ctx"))
+                .containsEntry("teams", 4L).containsEntry("km", 5.5);
+    }
+
+    @Test
+    void rejectsInvalidBoundsInClientDefinitions() {
+        assertThatThrownBy(() -> validator.validateDefinitions(List.of(number("q", -5d, null, null)), "Вопросы"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("отрицательным");
+        assertThatThrownBy(() -> validator.validateDefinitions(List.of(number("q", 10d, 5d, null)), "Вопросы"))
+                .isInstanceOf(ApiException.class).hasMessageContaining("меньше минимума");
+        assertThat(validator.validateDefinitions(List.of(number("q", 1d, 9d, true)), "Вопросы").get(0).max()).isEqualTo(9d);
+    }
+
     @Test
     void rejectsMissingRequiredField() {
         List<FieldDef> defs = List.of(field("title", FieldType.TEXT, true));

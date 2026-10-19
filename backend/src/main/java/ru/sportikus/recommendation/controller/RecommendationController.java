@@ -27,6 +27,15 @@ public class RecommendationController {
 
     private final RecommendationService recommendationService;
 
+    /** Рекомендации строятся по интересам и участию — у организации их нет. */
+    private static ru.sportikus.security.AuthUser user() {
+        ru.sportikus.security.AuthUser auth = CurrentUser.require();
+        if (auth.isOrganizer()) {
+            throw ru.sportikus.common.ApiException.forbidden("Персональные рекомендации доступны только пользователям");
+        }
+        return auth;
+    }
+
     @GetMapping
     @Operation(summary = "Рекомендованные мероприятия",
             description = "lat/lng — геолокация устройства (необязательно; иначе — дом или домашний город из профиля). "
@@ -34,20 +43,20 @@ public class RecommendationController {
     public RecommendationResponse recommend(@RequestParam(required = false) Double lat,
                                             @RequestParam(required = false) Double lng,
                                             @RequestParam(required = false) Integer limit) {
-        return recommendationService.recommend(CurrentUser.require().id(), lat, lng, limit);
+        return recommendationService.recommend(user().id(), lat, lng, limit);
     }
 
     @PostMapping("/feedback")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Реакция на рекомендацию: CLICK (открыл) или DISMISS («Не интересно»)")
     public void feedback(@Valid @RequestBody FeedbackRequest request) {
-        recommendationService.feedback(CurrentUser.require().id(), request);
+        recommendationService.feedback(user().id(), request);
     }
 
     @DeleteMapping("/feedback/{eventId}")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     @Operation(summary = "Отменить «Не интересно»")
     public void undoDismiss(@PathVariable Long eventId) {
-        recommendationService.undoDismiss(CurrentUser.require().id(), eventId);
+        recommendationService.undoDismiss(user().id(), eventId);
     }
 }

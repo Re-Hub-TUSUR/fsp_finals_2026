@@ -9,9 +9,33 @@ interface FieldInputProps {
 }
 
 export const inputClass =
-  'w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl outline-none bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-slate-100 disabled:text-slate-400';
+  'w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl outline-none bg-card focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-slate-100 disabled:text-slate-400';
 
 export const labelClass = 'block text-sm font-semibold text-slate-700 mb-1.5';
+
+/** Нижняя граница числового поля: без явного min числа не бывают отрицательными. */
+export const numberMin = (field: FieldDef) => field.min ?? 0;
+
+/** Ошибка значения числового поля или null, если всё в порядке (пустое значение — не ошибка). */
+export function numberError(field: FieldDef, value: FieldValue): string | null {
+  if (field.type !== 'NUMBER' || value === undefined || value === '') return null;
+  const n = Number(value);
+  if (Number.isNaN(n)) return 'Введите число';
+  const min = numberMin(field);
+  if (n < min) return `Значение не меньше ${min}`;
+  if (field.max !== undefined && n > field.max) return `Значение не больше ${field.max}`;
+  if (field.integer && !Number.isInteger(n)) return 'Нужно целое число';
+  return null;
+}
+
+/** Первая ошибка среди числовых полей формы: «Название: что не так». */
+export function firstNumberError(fields: FieldDef[], values: Record<string, FieldValue>): string | null {
+  for (const f of fields) {
+    const err = numberError(f, values[f.key]);
+    if (err) return `«${f.label}»: ${err.charAt(0).toLowerCase()}${err.slice(1)}`;
+  }
+  return null;
+}
 
 /** Рисует поле формы по его описанию — основа конструктора: форма создаётся данными, а не кодом. */
 export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, disabled }) => {
@@ -38,8 +62,11 @@ export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, 
           <input
             id={id}
             type="number"
-            inputMode="decimal"
-            step="any"
+            inputMode={field.integer ? 'numeric' : 'decimal'}
+            step={field.integer ? 1 : 'any'}
+            min={numberMin(field)}
+            max={field.max}
+            aria-invalid={numberError(field, value) ? true : undefined}
             disabled={disabled}
             placeholder={field.placeholder}
             value={(value as number | string | undefined) ?? ''}
@@ -84,7 +111,7 @@ export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, 
                 className={`px-3 py-2 rounded-xl text-sm border transition-colors ${
                   active
                     ? 'bg-brand border-brand text-on-brand'
-                    : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+                    : 'bg-card border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
                 {o}
@@ -136,6 +163,11 @@ export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, 
         {field.required && <span className="text-red-500"> *</span>}
       </label>
       {control}
+      {numberError(field, value) && (
+        <p role="alert" className="text-xs text-red-700 mt-1">
+          {numberError(field, value)}
+        </p>
+      )}
       {field.help && <p className="text-xs text-slate-500 mt-1">{field.help}</p>}
     </div>
   );

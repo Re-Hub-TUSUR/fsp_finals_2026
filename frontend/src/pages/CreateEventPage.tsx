@@ -16,7 +16,7 @@ import type {
   SkillLevel,
   Sport,
 } from '../types';
-import { FieldInput, inputClass, labelClass, pruneValues } from '../components/FieldInput';
+import { FieldInput, firstNumberError, inputClass, labelClass, pruneValues } from '../components/FieldInput';
 import { LocationPicker } from '../components/LocationPicker';
 import { geocodeAddress } from '../lib/mapgl';
 import { QuestionsEditor } from '../components/constructor/QuestionsEditor';
@@ -211,8 +211,13 @@ export const CreateEventPage: React.FC = () => {
         return setError(`Заполните поле «${f.label}»`);
       }
     }
+    const numberProblem = firstNumberError(template.fields, details);
+    if (numberProblem) return setError(numberProblem);
     const cleanQuestions = questions.filter((q) => q.label.trim());
     for (const q of cleanQuestions) {
+      if (q.type === 'NUMBER' && q.max !== undefined && q.max < (q.min ?? 0)) {
+        return setError(`У вопроса «${q.label}» максимум меньше минимума`);
+      }
       if ((q.type === 'SELECT' || q.type === 'MULTISELECT') && !(q.options && q.options.length)) {
         return setError(`У вопроса «${q.label}» нужно указать варианты ответа`);
       }

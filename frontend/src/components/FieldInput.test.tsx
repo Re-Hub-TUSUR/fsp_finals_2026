@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, expect, it, vi } from 'vitest';
 import type { FieldDef } from '../types';
-import { displayValue, FieldInput, pruneValues } from './FieldInput';
+import { displayValue, FieldInput, numberError, pruneValues } from './FieldInput';
 
 function field(overrides: Partial<FieldDef>): FieldDef {
   return { key: 'k', label: 'Поле', type: 'TEXT', required: false, ...overrides };
@@ -112,5 +112,33 @@ describe('displayValue', () => {
   it('returns null for empty values', () => {
     expect(displayValue(field({}), undefined)).toBeNull();
     expect(displayValue(field({}), '')).toBeNull();
+  });
+});
+
+describe('numberError', () => {
+  const num = (extra: Partial<FieldDef> = {}): FieldDef => ({ key: 'n', label: 'Дистанция', type: 'NUMBER', required: false, ...extra });
+
+  it('rejects negative numbers even when no min is configured', () => {
+    expect(numberError(num(), -3)).toMatch(/не меньше 0/);
+    expect(numberError(num(), 0)).toBeNull();
+  });
+
+  it('applies min, max and integer bounds', () => {
+    const f = num({ min: 1, max: 10, integer: true });
+    expect(numberError(f, 0)).toMatch(/не меньше 1/);
+    expect(numberError(f, 11)).toMatch(/не больше 10/);
+    expect(numberError(f, 2.5)).toMatch(/целое/);
+    expect(numberError(f, 5)).toBeNull();
+  });
+
+  it('ignores empty values and non-number fields', () => {
+    expect(numberError(num(), undefined)).toBeNull();
+    expect(numberError({ ...num(), type: 'TEXT' }, 'abc')).toBeNull();
+  });
+
+  it('renders the min attribute and an inline error', () => {
+    render(<FieldInput field={num({ min: 1 })} value={-4} onChange={vi.fn()} />);
+    expect(screen.getByLabelText('Дистанция')).toHaveAttribute('min', '1');
+    expect(screen.getByRole('alert')).toHaveTextContent('не меньше 1');
   });
 });

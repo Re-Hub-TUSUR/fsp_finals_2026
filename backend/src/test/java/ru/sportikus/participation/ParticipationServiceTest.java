@@ -55,6 +55,7 @@ class ParticipationServiceTest {
     @Mock UserRepository userRepository;
     @Mock EventMapper eventMapper;
     @Mock ApplicationEventPublisher events;
+    @Mock ru.sportikus.preference.repository.UserPreferencesRepository preferences;
     @Mock ru.sportikus.notification.service.NotificationService notificationService;
 
     ParticipationService service;
@@ -63,7 +64,7 @@ class ParticipationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ParticipationService(eventRepository, participationRepository, userRepository,
-                new FieldValidator(), eventMapper, events, notificationService);
+                new FieldValidator(), eventMapper, events, preferences, notificationService);
 
         User author = User.builder().id(1L).fullName("Иван").role("ROLE_USER").build();
         event = Event.builder().id(EVENT_ID).title("Футбол").organizerUser(author)
@@ -101,6 +102,52 @@ class ParticipationServiceTest {
         when(userRepository.findById(1L)).thenReturn(Optional.of(User.builder().id(1L).build()));
         assertThatThrownBy(() -> service.join(ORGANIZER, EVENT_ID, emptyJoin()))
                 .isInstanceOf(ApiException.class).hasMessageContaining("собственное");
+    }
+
+    @Test
+    void organizationAccountCannotJoin() {
+        AuthUser org = new AuthUser(5L, "club@sport.ru", "ROLE_ORGANIZER");
+        when(userRepository.findById(5L)).thenReturn(Optional.of(User.builder().id(5L).role("ROLE_ORGANIZER").build()));
+        assertThatThrownBy(() -> service.join(org, EVENT_ID, emptyJoin()))
+                .isInstanceOf(ApiException.class).hasMessageContaining("Организация");
+        verify(participationRepository, never()).save(any(Participation.class));
+    }
+
+    private void prefsWithBirthYear(Integer year) {
+        when(preferences.findById(2L)).thenReturn(Optional.of(
+                ru.sportikus.preference.model.UserPreferences.builder().birthYear(year).build()));
+    }
+
+    @Test
+    void rejectsUserYoungerThanMinAge() {
+        event.setMinAge(10);
+        prefsWithBirthYear(java.time.Year.now().getValue() - 6);
+        assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
+                .isInstanceOf(ApiException.class).hasMessageContaining("от 10");
+    }
+
+    @Test
+    void rejectsUserOlderThanMaxAge() {
+        event.setMaxAge(18);
+        prefsWithBirthYear(java.time.Year.now().getValue() - 40);
+        assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
+                .isInstanceOf(ApiException.class).hasMessageContaining("до 18");
+    }
+
+    @Test
+    void ageLimitNeedsBirthYear() {
+        event.setMinAge(10);
+        when(preferences.findById(2L)).thenReturn(Optional.empty());
+        assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
+                .isInstanceOf(ApiException.class).hasMessageContaining("год рождения");
+    }
+
+    @Test
+    void userInsideAgeRangeJoins() {
+        event.setMinAge(10);
+        event.setMaxAge(18);
+        prefsWithBirthYear(java.time.Year.now().getValue() - 14);
+        assertThat(service.join(PARTICIPANT, EVENT_ID, emptyJoin()).status()).isEqualTo(ParticipationStatus.PENDING);
     }
 
     @Test

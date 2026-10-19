@@ -19,6 +19,15 @@ public record FieldDef(
         List<String> options,
         String unit,
         String placeholder,
-        String help
+        String help,
+        /** Границы для NUMBER; null min — по умолчанию 0 (отрицательных значений в формах не бывает). */
+        Double min,
+        Double max,
+        /** NUMBER только целые (количество команд, игроков). */
+        Boolean integer
 ) {
+    public FieldDef(String key, String label, FieldType type, boolean required, List<String> options,
+                    String unit, String placeholder, String help) {
+        this(key, label, type, required, options, unit, placeholder, help, null, null, null);
+    }
 }

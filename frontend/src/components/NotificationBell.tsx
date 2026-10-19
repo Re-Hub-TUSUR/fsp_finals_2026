@@ -1,34 +1,10 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import {
-  Bell,
-  CalendarPlus,
-  CheckCheck,
-  CheckCircle2,
-  Hourglass,
-  Inbox,
-  Loader2,
-  UserCheck,
-  UserPlus,
-  X,
-  XCircle,
-} from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { Bell, CheckCheck, Inbox, Loader2, X } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { AppNotification } from '../types';
-
-function formatRelativeTime(dateStr: string): string {
-  try {
-    const diff = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000);
-    if (diff < 60) return 'только что';
-    if (diff < 3600) return `${Math.floor(diff / 60)} мин назад`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)} ч назад`;
-    if (diff < 172800) return 'вчера';
-    return new Date(dateStr).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
-  } catch {
-    return '';
-  }
-}
+import { NotificationItem } from './NotificationItem';
 
 export const NotificationBell: React.FC = () => {
   const { currentUser } = useAuth();
@@ -75,7 +51,10 @@ export const NotificationBell: React.FC = () => {
       }
     };
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') setOpen(false);
+      if (e.key === 'Escape') {
+        setOpen(false);
+        buttonRef.current?.focus();
+      }
     };
     document.addEventListener('mousedown', handleClick);
     document.addEventListener('keydown', handleKey);
@@ -113,27 +92,6 @@ export const NotificationBell: React.FC = () => {
     }
   };
 
-  const renderIcon = (n: AppNotification) => {
-    switch (n.type) {
-      case 'PARTICIPATION_CONFIRMED':
-        return <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />;
-      case 'PARTICIPATION_REJECTED':
-        return <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />;
-      case 'EVENT_INVITE':
-        return <CalendarPlus className="w-5 h-5 text-brand shrink-0 mt-0.5" />;
-      case 'WAITLIST_SPOT_AVAILABLE':
-        return <Hourglass className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />;
-      case 'WAITLIST_SPOT_TAKEN':
-        return <Hourglass className="w-5 h-5 text-muted shrink-0 mt-0.5" />;
-      case 'FRIEND_REQUEST':
-        return <UserPlus className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />;
-      case 'FRIEND_ACCEPTED':
-        return <UserCheck className="w-5 h-5 text-indigo-500 shrink-0 mt-0.5" />;
-      default:
-        return <Bell className="w-5 h-5 text-muted shrink-0 mt-0.5" />;
-    }
-  };
-
   return (
     <div className="relative">
       <button
@@ -144,6 +102,9 @@ export const NotificationBell: React.FC = () => {
           if (!open) void fetchNotifications(false);
         }}
         aria-label="Уведомления"
+        aria-haspopup="dialog"
+        aria-expanded={open}
+        aria-controls="notifications-panel"
         title={unreadCount > 0 ? `${unreadCount} новых уведомлений` : 'Уведомления'}
         className="relative w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
       >
@@ -158,7 +119,11 @@ export const NotificationBell: React.FC = () => {
       {open && (
         <div
           ref={panelRef}
-          className="fixed inset-x-2 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-full sm:mt-2 w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-[2200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          id="notifications-panel"
+          role="dialog"
+          aria-label="Уведомления"
+          // fixed, а не absolute: шапка с overflow-hidden обрезала бы панель на десктопе
+          className="fixed inset-x-2 top-16 sm:inset-x-auto sm:right-4 sm:top-[68px] w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-[2200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Заголовок */}
           <div className="p-4 border-b border-line-2 flex items-center justify-between bg-surface/50">
@@ -185,6 +150,7 @@ export const NotificationBell: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setOpen(false)}
+                aria-label="Закрыть уведомления"
                 className="w-7 h-7 rounded-lg flex items-center justify-center text-muted hover:bg-surface hover:text-ink"
               >
                 <X className="w-4 h-4" />
@@ -205,36 +171,16 @@ export const NotificationBell: React.FC = () => {
                 <p className="text-xs mt-1">Здесь будут приглашения от друзей и подтверждения заявок</p>
               </div>
             ) : (
-              items.map((n) => (
-                <button
-                  key={n.id}
-                  type="button"
-                  onClick={() => handleItemClick(n)}
-                  className={`w-full text-left p-3.5 flex gap-3 transition-colors hover:bg-surface ${
-                    n.read ? 'opacity-75' : 'bg-brand/5'
-                  }`}
-                >
-                  {renderIcon(n)}
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between gap-2">
-                      <p className={`text-sm leading-snug ${n.read ? 'text-ink font-semibold' : 'text-ink font-bold'}`}>
-                        {n.title}
-                      </p>
-                      <span className="text-[11px] text-muted shrink-0">
-                        {formatRelativeTime(n.createdAt)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">
-                      {n.message}
-                    </p>
-                  </div>
-                  {!n.read && (
-                    <span className="w-2 h-2 rounded-full bg-brand shrink-0 self-center" />
-                  )}
-                </button>
-              ))
+              items.map((n) => <NotificationItem key={n.id} n={n} onClick={handleItemClick} />)
             )}
           </div>
+          <Link
+            to="/notifications"
+            onClick={() => setOpen(false)}
+            className="shrink-0 border-t border-line-2 py-3 text-center text-sm font-semibold text-ink hover:bg-surface transition-colors"
+          >
+            Все уведомления
+          </Link>
         </div>
       )}
     </div>

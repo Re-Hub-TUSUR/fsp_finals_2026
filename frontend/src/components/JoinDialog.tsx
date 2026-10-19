@@ -4,7 +4,7 @@ import type { FieldValues, SportEvent } from '../types';
 import { participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { Modal } from './Modal';
-import { FieldInput, inputClass, labelClass, pruneValues } from './FieldInput';
+import { FieldInput, firstNumberError, inputClass, labelClass, pruneValues } from './FieldInput';
 import { formatPrice, formatShortDateTime } from '../utils/format';
 
 interface JoinDialogProps {
@@ -42,6 +42,8 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone, 
         return setError(`Ответьте на вопрос «${q.label}»`);
       }
     }
+    const numberProblem = firstNumberError(questions, answers);
+    if (numberProblem) return setError(numberProblem);
     if (hasRequirements && !accepted) return setError('Подтвердите, что ознакомились с требованиями организатора');
 
     setSubmitting(true);

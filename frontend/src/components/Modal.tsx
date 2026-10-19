@@ -27,9 +27,9 @@ export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide, he
       aria-label={title}
     >
       <div
-        className={`bg-white w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-[28px] sm:rounded-3xl shadow-card`}
+        className={`bg-card w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-[28px] sm:rounded-3xl shadow-card`}
       >
-        <div className="sticky top-0 bg-white z-10 px-5 pt-2.5 pb-3">
+        <div className="sticky top-0 bg-card z-10 px-5 pt-2.5 pb-3">
           <div className="w-10 h-[5px] rounded-full bg-surface-2 mx-auto mb-3 sm:hidden" />
           <div className="flex items-center justify-between gap-3">
             <h3 className="font-extrabold text-2xl tracking-[-0.02em] text-ink">{title}</h3>

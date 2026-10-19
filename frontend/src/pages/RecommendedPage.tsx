@@ -63,7 +63,8 @@ export const RecommendedPage: React.FC = () => {
   const [quizOpen, setQuizOpen] = useState(false);
   const [hidden, setHidden] = useState<RecommendationItem | null>(null);
 
-  const isAdmin = currentUser?.role === 'ROLE_ADMIN';
+  // Рекомендации строятся по интересам и участию — у администратора и организации их нет
+  const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.role === 'ROLE_ORGANIZER';
 
   const load = useCallback(async (point: GeoState) => {
     setLoading(true);
@@ -132,7 +133,7 @@ export const RecommendedPage: React.FC = () => {
   if (!currentUser || isAdmin) {
     return (
       <div className="max-w-md mx-auto my-16 p-6 bg-surface border border-line rounded-[20px] text-center text-ink">
-        Рекомендации доступны пользователям. Переключите роль в верхней панели.
+        Персональные рекомендации доступны только пользователям.
       </div>
     );
   }

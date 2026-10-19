@@ -59,35 +59,35 @@ export const TicketModal: React.FC<TicketModalProps> = ({
   const isPaid = event.price !== undefined && event.price !== null && event.price > 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-md bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="relative w-full max-w-md bg-card rounded-3xl shadow-2xl overflow-hidden border border-line animate-in fade-in zoom-in-95 duration-200">
         {/* Верхняя декоративная плашка билета */}
-        <div className="bg-gradient-to-r from-brand via-brand-dark to-slate-900 text-snow p-6 relative">
+        <div className="bg-brand text-on-brand p-6 relative">
           <button
             onClick={onClose}
             aria-label="Закрыть"
-            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 text-white flex items-center justify-center transition"
+            className="absolute top-4 right-4 w-8 h-8 rounded-full bg-on-brand/15 hover:bg-on-brand/25 text-on-brand flex items-center justify-center transition"
           >
             <X className="w-4 h-4" />
           </button>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-white/20 backdrop-blur-sm px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-on-brand/15 px-2.5 py-0.5 rounded-full">
               <Ticket className="w-3.5 h-3.5" /> Электронный билет
             </span>
             {isPaid ? (
-              <span className="text-[11px] font-bold bg-amber-400 text-slate-950 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Оплачено: {event.price} ₽
               </span>
             ) : (
-              <span className="text-[11px] font-bold bg-emerald-400 text-slate-950 px-2 py-0.5 rounded-full">
+              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Бесплатный вход
               </span>
             )}
           </div>
 
           <h2 className="text-xl font-extrabold leading-snug drop-shadow-sm">{event.title}</h2>
-          <p className="text-xs text-white/80 mt-1 flex items-center gap-1.5">
+          <p className="text-xs text-on-brand/80 mt-1 flex items-center gap-1.5">
             <span>Организатор:</span>
             <b>{event.organizerName}</b>
           </p>
@@ -97,16 +97,16 @@ export const TicketModal: React.FC<TicketModalProps> = ({
         <div className="p-6 space-y-5">
           {/* Статус проверки на входе */}
           {checkedIn ? (
-            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-emerald-50 border border-emerald-200 text-emerald-900">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <div className="flex items-center gap-3 p-3.5 rounded-2xl bg-brand-tint border border-brand-line text-ink">
+              <CheckCircle2 className="w-5 h-5 text-brand-ink shrink-0" />
               <div className="text-xs">
                 <p className="font-bold">Вход на мероприятие подтверждён!</p>
-                <p className="text-emerald-700">Билет проверен организатором {checkedInAt ? `(${checkedInAt.slice(11, 16)})` : ''}</p>
+                <p className="text-muted">Билет проверен организатором {checkedInAt ? `(${checkedInAt.slice(11, 16)})` : ''}</p>
               </div>
             </div>
           ) : (
-            <div className="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-200 text-slate-700">
-              <Sparkles className="w-5 h-5 text-brand shrink-0" />
+            <div className="flex items-center gap-3 p-3 rounded-2xl bg-surface border border-line text-ink">
+              <Sparkles className="w-5 h-5 text-brand-ink shrink-0" />
               <p className="text-xs">
                 Покажите этот QR-код организатору на входе для допуска на мероприятие.
               </p>
@@ -114,14 +114,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           )}
 
           {/* QR код */}
-          <div className="flex flex-col items-center justify-center p-4 bg-slate-50 rounded-2xl border border-slate-200">
+          <div className="flex flex-col items-center justify-center p-4 bg-surface rounded-2xl border border-line">
             {qrUrl ? (
-              <div className="relative p-2 bg-white rounded-2xl shadow-sm border border-slate-200">
+              <div className="relative p-2 bg-[#ffffff] rounded-2xl shadow-sm border border-line">
                 <img src={qrUrl} alt={`QR код билета ${ticketCode}`} className="w-56 h-56 object-contain" />
                 {checkedIn && (
-                  <div className="absolute inset-0 bg-white/80 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
-                    <CheckCircle2 className="w-14 h-14 text-emerald-600 animate-in zoom-in" />
-                    <span className="text-xs font-bold text-emerald-800 mt-2 uppercase tracking-wide">
+                  <div className="absolute inset-0 bg-[#ffffff]/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
+                    <CheckCircle2 className="w-14 h-14 text-[#059669] animate-in zoom-in" />
+                    <span className="text-xs font-bold text-[#065f46] mt-2 uppercase tracking-wide">
                       Использован
                     </span>
                   </div>
@@ -135,21 +135,21 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
             {/* Код билета с кнопкой копирования */}
             <div className="mt-3 flex items-center gap-2">
-              <code className="text-base font-extrabold tracking-wider text-slate-800 bg-white px-3 py-1 rounded-lg border border-slate-200 font-mono">
+              <code className="text-base font-extrabold tracking-wider text-ink bg-card px-3 py-1 rounded-lg border border-line font-mono">
                 {ticketCode}
               </code>
               <button
                 onClick={handleCopy}
                 title="Скопировать код"
-                className="p-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-600 transition"
+                className="p-1.5 rounded-lg bg-card border border-line hover:bg-surface text-muted transition"
               >
-                {copied ? <CheckCircle2 className="w-4 h-4 text-emerald-600" /> : <Copy className="w-4 h-4" />}
+                {copied ? <CheckCircle2 className="w-4 h-4 text-brand-ink" /> : <Copy className="w-4 h-4" />}
               </button>
             </div>
           </div>
 
           {/* Информация об участнике и событии */}
-          <div className="space-y-2.5 text-xs text-slate-600 bg-slate-50/80 p-3.5 rounded-2xl border border-slate-200">
+          <div className="space-y-2.5 text-xs text-muted bg-surface p-3.5 rounded-2xl border border-line">
             <div className="flex items-center justify-between">
               <span className="text-slate-400">Участник:</span>
               <div className="flex items-center gap-1.5 font-bold text-slate-900">
@@ -181,14 +181,14 @@ export const TicketModal: React.FC<TicketModalProps> = ({
               <a
                 href={qrUrl}
                 download={`ticket-${ticketCode}.png`}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 py-3 rounded-xl font-semibold text-xs transition"
+                className="flex-1 inline-flex items-center justify-center gap-1.5 bg-surface hover:bg-surface-2 text-ink py-3 rounded-xl font-semibold text-xs transition"
               >
                 <Download className="w-4 h-4" /> Сохранить QR
               </a>
             )}
             <button
               onClick={onClose}
-              className="flex-1 bg-slate-900 hover:bg-slate-800 text-snow py-3 rounded-xl font-semibold text-xs transition"
+              className="flex-1 bg-ink hover:opacity-90 text-page py-3 rounded-xl font-semibold text-xs transition"
             >
               Закрыть
             </button>

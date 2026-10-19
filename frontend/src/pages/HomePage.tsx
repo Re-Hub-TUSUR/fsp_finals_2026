@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, ChevronLeft, List, LocateFixed, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
-import type { City, RecommendationItem, Sport, SportEvent } from '../types';
+import type { City, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
 import { CoverCard, EventRow } from '../components/HomeCards';
 import { MapSheet, type SheetState } from '../components/MapSheet';
@@ -29,7 +29,7 @@ import {
   writeEventsSnapshot,
   type SnapshotQuery,
 } from '../utils/eventsSnapshot';
-import { catalogApi, citiesApi, eventsApi, recommendationsApi } from '../api';
+import { catalogApi, citiesApi, eventsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { spotsLeft } from '../utils/format';
@@ -73,7 +73,8 @@ export const HomePage: React.FC = () => {
 
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
-  const [recs, setRecs] = useState<RecommendationItem[]>([]);
+  // «Искать при перемещении карты»: пока выключено, карта и список показывают все события города
+  const [moveSearch, setMoveSearch] = useState(false);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   // Десктоп: список у карты можно свернуть; мобильный: шторка над картой
@@ -140,13 +141,14 @@ export const HomePage: React.FC = () => {
     return () => clearTimeout(t);
   }, [q]);
 
-  // Область загрузки: радиус от точки отсчёта; без радиуса на карте — видимая область,
-  // в «Списке» (карта скрыта) — город: точка отсчёта или домашний город, иначе Красноярск
+  // Область загрузки: радиус от точки отсчёта; без радиуса — весь город (точка отсчёта или домашний
+  // город, иначе Красноярск). Видимая область карты — только если включено «Искать при перемещении карты»
   const selectedCity = cities.find((city) => String(city.id) === params.get('city'));
   const selectedCityCenter = selectedCity ? { lat: selectedCity.lat, lng: selectedCity.lng } : null;
   const cityCenter = selectedCityCenter ?? origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
-  const fetchCenter = selectedCityCenter ?? (radiusOn && origin ? origin : view === 'list' ? cityCenter : viewport);
-  const fetchRadius = radiusOn ? RADIUS_FETCH_KM : view === 'list' ? CITY_RADIUS_KM : viewport.radiusKm;
+  const byViewport = view === 'map' && moveSearch;
+  const fetchCenter = selectedCityCenter ?? (radiusOn && origin ? origin : byViewport ? viewport : cityCenter);
+  const fetchRadius = radiusOn ? RADIUS_FETCH_KM : byViewport ? viewport.radiusKm : CITY_RADIUS_KM;
 
   useEffect(() => {
     if (selectedCityCenter) setViewport({ ...selectedCityCenter, radiusKm: CITY_RADIUS_KM });
@@ -173,7 +175,6 @@ export const HomePage: React.FC = () => {
     }
     eventsApi
       .list({
-        // Без радиуса каталог ограничен видимой областью карты — в масштабе страны иначе не обойтись
         lat: fetchCenter.lat,
         lng: fetchCenter.lng,
         radiusKm: fetchRadius,
@@ -206,19 +207,6 @@ export const HomePage: React.FC = () => {
     filters.joinMode,
     reloadTick,
   ]);
-
-  // Рекомендации — только в «Списке» и без поискового запроса
-  useEffect(() => {
-    if (!ready || !currentUser || currentUser.role === 'ROLE_ADMIN' || view !== 'list') return;
-    let cancelled = false;
-    recommendationsApi
-      .get({ lat: origin?.lat, lng: origin?.lng, limit: 5 })
-      .then((r) => !cancelled && setRecs(r.items))
-      .catch(() => !cancelled && setRecs([]));
-    return () => {
-      cancelled = true;
-    };
-  }, [ready, currentUser, view, origin, reloadTick]);
 
   // Клиентские фильтры: «когда», радиус, свободные места, бесплатные
   const base = useMemo<Item[]>(
@@ -264,8 +252,7 @@ export const HomePage: React.FC = () => {
 
   const visibleEvents = useMemo(() => visible.map((v) => v.e), [visible]);
   const selectedEvent = visibleEvents.find((e) => e.id === selectedId) ?? null;
-  const detailEvent =
-    events.find((e) => e.id === detailId) ?? recs.find((r) => r.event.id === detailId)?.event ?? null;
+  const detailEvent = events.find((e) => e.id === detailId) ?? null;
 
   const sections = useMemo<Section[]>(() => {
     const out: Section[] = [];
@@ -512,13 +499,25 @@ export const HomePage: React.FC = () => {
             // Карта под Лентой сообщает область, которую не видно, — её не учитываем
             onViewportChange={(v) => view === 'map' && setViewport(v)}
             onMore={openDetail}
+            onJoined={() => setReloadTick((t) => t + 1)}
             showCard={view === 'map' && isDesktop()}
             radius={radiusOn && origin ? { center: origin, km: Number(filters.radius) } : null}
             controlsClassName="top-[128px] right-3 lg:top-4 lg:right-4"
             cardClassName={`bottom-4 ${desktopMode === 'list' ? 'lg:left-[456px]' : ''}`}
           />
+          {view === 'map' && (
+            <label className="absolute top-[128px] left-3 lg:top-4 lg:left-1/2 lg:-translate-x-1/2 z-20 flex items-center gap-2 h-10 px-3 rounded-[10px] border border-line-2 bg-card text-ink text-sm font-semibold shadow-[0_4px_16px_rgba(20,30,45,0.14)] cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={moveSearch}
+                onChange={(e) => setMoveSearch(e.target.checked)}
+                className="w-4 h-4 accent-brand"
+              />
+              Искать при перемещении карты
+            </label>
+          )}
           {loading && view === 'map' && (
-            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-card border border-line-2 rounded-lg px-3 py-1.5 text-sm text-muted items-center gap-2">
+            <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-card border border-line-2 rounded-lg px-3 py-1.5 text-sm text-muted items-center gap-2">
               <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
             </div>
           )}
@@ -609,6 +608,7 @@ export const HomePage: React.FC = () => {
               onPick={(e) => setSelectedId(e.id)}
               onClearSelection={() => setSelectedId(null)}
               onMore={openDetail}
+              onJoined={() => setReloadTick((t) => t + 1)}
               onOpenFeed={() => setParam('view', 'list')}
               empty={empty}
               listRef={sheetListRef}

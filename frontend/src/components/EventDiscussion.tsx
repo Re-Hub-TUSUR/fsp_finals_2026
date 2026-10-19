@@ -110,7 +110,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
   };
 
   return (
-    <section className="bg-white rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-sm">
+    <section className="bg-card rounded-2xl border border-slate-200 p-6 sm:p-7 shadow-sm">
       {/* Шапка чата / обсуждения */}
       <div className="flex flex-wrap items-center justify-between gap-3 pb-5 mb-6 border-b border-slate-100">
         <div className="flex items-center gap-3">
@@ -132,7 +132,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
 
         {/* Индикатор автообновления */}
         <div className="flex items-center gap-1.5 text-xs text-slate-400 bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-full">
-          <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+          <span className="w-2 h-2 rounded-full bg-brand animate-pulse" />
           <span>Автообновление (8 сек)</span>
         </div>
       </div>
@@ -177,10 +177,10 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
                   c.hidden
                     ? 'bg-slate-50/60 border-slate-200 opacity-75'
                     : c.organizer
-                    ? 'bg-emerald-50/40 border-emerald-200 shadow-sm'
+                    ? 'bg-brand-tint border-brand-line shadow-sm'
                     : isMine
                     ? 'bg-brand/5 border-brand/20'
-                    : 'bg-white border-slate-200'
+                    : 'bg-card border-slate-200'
                 }`}
               >
                 <div className="flex items-start justify-between gap-3 mb-2">
@@ -204,7 +204,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
 
                         {/* Яркий бейдж Организатора по ТЗ */}
                         {c.organizer && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide bg-emerald-600 text-snow px-2 py-0.5 rounded-full shadow-sm">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide bg-brand text-on-brand px-2 py-0.5 rounded-full shadow-sm">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             Организатор
                           </span>
@@ -268,7 +268,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
               <span>Вы пишете как:</span>
               <b className="text-slate-800">{currentUser.fullName}</b>
               {isEventOrganizer && (
-                <span className="text-emerald-700 font-bold bg-emerald-100 px-1.5 py-0.2 rounded text-[10px]">
+                <span className="text-ink font-bold bg-brand-tint-2 px-1.5 py-0.2 rounded text-[10px]">
                   ✓ Организатор
                 </span>
               )}

@@ -23,7 +23,7 @@ public class OrganizationSubscriptionService {
 
     @Transactional
     public void subscribe(AuthUser auth, Long organizationId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         Organization organization = approved(organizationId);
         if (organization.getOwner().getId().equals(auth.id())) {
             throw ApiException.badRequest("Нельзя подписаться на собственную организацию");
@@ -39,13 +39,13 @@ public class OrganizationSubscriptionService {
 
     @Transactional
     public void unsubscribe(AuthUser auth, Long organizationId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         repository.deleteByUserIdAndOrganizationId(auth.id(), organizationId);
     }
 
     @Transactional(readOnly = true)
     public List<OrganizationSubscriptionResponse> mine(AuthUser auth) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         return repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
                 .filter(item -> "APPROVED".equals(item.getOrganization().getStatus()))
                 .map(item -> new OrganizationSubscriptionResponse(
@@ -70,7 +70,8 @@ public class OrganizationSubscriptionService {
                 .orElseThrow(() -> ApiException.notFound("Организация не найдена"));
     }
 
-    private static void rejectAdmin(AuthUser auth) {
+    private static void rejectNonUser(AuthUser auth) {
         if (auth.isAdmin()) throw ApiException.forbidden("Администратор не может подписываться на организации");
+        if (auth.isOrganizer()) throw ApiException.forbidden("Подписываться на организации могут только пользователи");
     }
 }

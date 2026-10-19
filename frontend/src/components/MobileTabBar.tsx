@@ -8,6 +8,7 @@ export const MobileTabBar: React.FC = () => {
   const { currentUser } = useAuth();
   const location = useLocation();
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
+  const isOrganizer = currentUser?.role === 'ROLE_ORGANIZER';
   const onHome = location.pathname === '/' || location.pathname === '/events';
   const isList = onHome && new URLSearchParams(location.search).get('view') === 'list';
 
@@ -44,10 +45,11 @@ export const MobileTabBar: React.FC = () => {
       )}
       {currentUser &&
         !isAdmin &&
+        !isOrganizer &&
         tab('/recommended', 'Для вас', <Sparkles className="w-6 h-6" />, location.pathname === '/recommended')}
       {currentUser &&
         !isAdmin &&
-        tab('/my', 'Мои', <CalendarDays className="w-6 h-6" />, location.pathname === '/my')}
+        tab('/my', 'Мои события', <CalendarDays className="w-6 h-6" />, location.pathname === '/my')}
       {isAdmin && tab('/admin', 'Модерация', <ShieldCheck className="w-6 h-6" />, location.pathname === '/admin')}
     </nav>
   );

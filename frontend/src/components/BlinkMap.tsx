@@ -30,6 +30,8 @@ interface BlinkMapProps {
   showCard?: boolean;
   /** «Подробнее» в мини-карточке — открыть панель события */
   onMore?: (event: SportEvent) => void;
+  /** После записи из карточки на карте */
+  onJoined?: () => void;
   /** Фильтр «Радиус»: круг вокруг точки отсчёта; при смене карта подстраивается под круг */
   radius?: { center: LatLng; km: number } | null;
   /** Центр, выбранный вне карты (например, через выбор города). */
@@ -84,6 +86,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   cardClassName = 'bottom-4',
   showCard = true,
   onMore,
+  onJoined,
   radius = null,
   center = null,
 }) => {
@@ -395,6 +398,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
           me={me}
           onClose={() => onSelectEvent(null)}
           onMore={onMore ? () => onMore(selectedEvent) : undefined}
+          onJoined={onJoined}
           className={`absolute z-30 left-2 right-2 sm:left-4 sm:right-auto sm:w-[400px] ${cardClassName}`}
         />
       )}

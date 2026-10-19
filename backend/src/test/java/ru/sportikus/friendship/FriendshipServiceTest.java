@@ -30,12 +30,13 @@ class FriendshipServiceTest {
     private static final AuthUser IVAN = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
     @Mock FriendshipRepository friendships;
     @Mock UserRepository users;
+    @Mock ru.sportikus.organization.repository.OrganizationRepository organizations;
     @Mock ru.sportikus.notification.service.NotificationService notifications;
     FriendshipService service;
 
     @BeforeEach
     void setUp() {
-        service = new FriendshipService(friendships, users, notifications);
+        service = new FriendshipService(friendships, users, organizations, notifications);
         when(users.findById(1L)).thenReturn(Optional.of(User.builder().id(1L).fullName("Иван").role("ROLE_USER").build()));
         when(users.findById(2L)).thenReturn(Optional.of(User.builder().id(2L).fullName("Ольга").role("ROLE_USER").build()));
         when(users.getReferenceById(1L)).thenReturn(User.builder().id(1L).fullName("Иван").role("ROLE_USER").build());
@@ -54,6 +55,25 @@ class FriendshipServiceTest {
         when(friendships.findBetween(1L, 2L)).thenReturn(Optional.of(Friendship.builder().build()));
         assertThatThrownBy(() -> service.request(IVAN, 2L)).isInstanceOf(ApiException.class);
         assertThatThrownBy(() -> service.request(new AuthUser(6L, "admin@sport.ru", "ROLE_ADMIN"), 2L)).isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void organizationsCannotBeFriends() {
+        when(users.findById(3L)).thenReturn(Optional.of(User.builder().id(3L).fullName("Клуб").role("ROLE_ORGANIZER").build()));
+        assertThatThrownBy(() -> service.request(IVAN, 3L)).isInstanceOf(ApiException.class).hasMessageContaining("подписаться");
+        assertThatThrownBy(() -> service.request(new AuthUser(3L, "club@sport.ru", "ROLE_ORGANIZER"), 2L))
+                .isInstanceOf(ApiException.class);
+    }
+
+    @Test
+    void searchReturnsOrganizationIdInsteadOfFriendState() {
+        User club = User.builder().id(3L).fullName("Клуб").email("club@sport.ru").role("ROLE_ORGANIZER").build();
+        when(users.findByEmailIgnoreCase("club@sport.ru")).thenReturn(Optional.of(club));
+        when(organizations.findFirstByOwnerIdOrderByIdAsc(3L)).thenReturn(Optional.of(
+                ru.sportikus.organization.model.Organization.builder().id(7L).status("APPROVED").build()));
+        var found = service.search(IVAN, "club@sport.ru");
+        assertThat(found.organizationId()).isEqualTo(7L);
+        assertThat(found.state()).isEqualTo(FriendshipState.NONE);
     }
 
     @Test

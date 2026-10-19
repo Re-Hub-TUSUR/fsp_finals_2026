@@ -180,10 +180,10 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
   const checkedInCount = confirmedParticipants.filter((p) => p.checkedIn).length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/70 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
+      <div className="relative w-full max-w-lg bg-card rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
         {/* Шапка модалки */}
-        <div className="bg-slate-900 text-snow p-5 flex items-center justify-between border-b border-slate-800">
+        <div className="bg-ink text-page p-5 flex items-center justify-between border-b border-slate-800">
           <div className="flex items-center gap-2.5">
             <div className="w-9 h-9 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold">
               <QrCode className="w-5 h-5" />
@@ -208,10 +208,10 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
         {/* Прогресс-бар чек-ина */}
         <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between text-xs">
           <span className="text-slate-600 font-medium flex items-center gap-1.5">
-            <UserCheck className="w-4 h-4 text-emerald-600" />
+            <UserCheck className="w-4 h-4 text-brand-ink" />
             Отмечено на мероприятии:
           </span>
-          <span className="font-extrabold text-slate-900 bg-white px-2.5 py-1 rounded-full border border-slate-200">
+          <span className="font-extrabold text-slate-900 bg-card px-2.5 py-1 rounded-full border border-slate-200">
             {checkedInCount} / {confirmedParticipants.length} чел.
           </span>
         </div>
@@ -222,7 +222,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
             <div
               className={`p-4 rounded-2xl border transition-all animate-in zoom-in-95 ${
                 result.success
-                  ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                  ? 'bg-brand-tint border-brand-line text-ink'
                   : result.status === 'ALREADY_CHECKED_IN'
                   ? 'bg-amber-50 border-amber-200 text-amber-900'
                   : 'bg-red-50 border-red-200 text-red-900'
@@ -230,7 +230,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
             >
               <div className="flex items-start gap-3">
                 {result.success ? (
-                  <CheckCircle2 className="w-6 h-6 text-emerald-600 shrink-0 mt-0.5" />
+                  <CheckCircle2 className="w-6 h-6 text-brand-ink shrink-0 mt-0.5" />
                 ) : result.status === 'ALREADY_CHECKED_IN' ? (
                   <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
                 ) : (
@@ -247,7 +247,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
                   <p className="text-xs mt-1">{result.message}</p>
 
                   {result.participant && (
-                    <div className="mt-3 pt-3 border-t border-black/10 flex items-center justify-between text-xs">
+                    <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
                         {result.participant.avatarUrl ? (
                           <img
@@ -258,7 +258,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
                         ) : null}
                         <b className="font-semibold">{result.participant.fullName}</b>
                       </div>
-                      <code className="font-mono text-[11px] bg-white/70 px-2 py-0.5 rounded">
+                      <code className="font-mono text-[11px] bg-card/70 px-2 py-0.5 rounded">
                         {result.ticketCode}
                       </code>
                     </div>
@@ -397,8 +397,8 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
                     key={p.id}
                     className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition ${
                       p.checkedIn
-                        ? 'bg-emerald-50/60 border-emerald-200 text-emerald-900'
-                        : 'bg-white border-slate-200 hover:border-brand/40'
+                        ? 'bg-brand-tint border-brand-line text-ink'
+                        : 'bg-card border-slate-200 hover:border-brand/40'
                     }`}
                   >
                     <div className="flex items-center gap-2 min-w-0">
@@ -422,7 +422,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
                     </div>
 
                     {p.checkedIn ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded-full shrink-0">
+                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-brand-tint-2 px-2 py-0.5 rounded-full shrink-0">
                         <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён
                       </span>
                     ) : (

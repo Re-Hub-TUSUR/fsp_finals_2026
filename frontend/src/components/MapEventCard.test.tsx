@@ -1,9 +1,20 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { MemoryRouter } from 'react-router-dom';
-import { describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SportEvent } from '../types';
 import { MapEventCard } from './MapEventCard';
+import { useAuth } from '../context/AuthContext';
+import { eventsApi } from '../api';
+
+vi.mock('../context/AuthContext', () => ({ useAuth: vi.fn() }));
+vi.mock('../api', () => ({
+  eventsApi: { get: vi.fn() },
+  participationApi: { join: vi.fn() },
+}));
+
+const asRole = (role: string | null) =>
+  vi.mocked(useAuth).mockReturnValue({ currentUser: role ? { id: 1, role } : null } as unknown as ReturnType<typeof useAuth>);
 
 function baseEvent(overrides: Partial<SportEvent> = {}): SportEvent {
   return {
@@ -35,6 +46,11 @@ function renderCard(event: SportEvent, props: Partial<Parameters<typeof MapEvent
 }
 
 describe('MapEventCard', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    asRole('ROLE_USER');
+  });
+
   it('calls onClose when the close button is clicked', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -79,5 +95,22 @@ describe('MapEventCard', () => {
   it('links to a 2GIS route when onMore is not provided', () => {
     renderCard(baseEvent());
     expect(screen.getByText('Маршрут')).toHaveAttribute('href', expect.stringContaining('2gis.ru'));
+  });
+
+  it('"Записаться" starts joining and does not open the details panel', async () => {
+    const user = userEvent.setup();
+    const onMore = vi.fn();
+    vi.mocked(eventsApi.get).mockResolvedValue(baseEvent());
+    renderCard(baseEvent(), { onMore });
+    await user.click(screen.getByRole('button', { name: 'Записаться' }));
+    await waitFor(() => expect(eventsApi.get).toHaveBeenCalledWith(7));
+    expect(onMore).not.toHaveBeenCalled();
+  });
+
+  it('an organization account gets a link to the event page instead of a join button', () => {
+    asRole('ROLE_ORGANIZER');
+    renderCard(baseEvent(), { onMore: vi.fn() });
+    expect(screen.queryByRole('button', { name: 'Записаться' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/events/7');
   });
 });

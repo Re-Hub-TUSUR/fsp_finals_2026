@@ -1,9 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Clock, Loader2, MapPin, X } from 'lucide-react';
 import type { SportEvent } from '../types';
-import { eventsApi, participationApi } from '../api';
-import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { SKILL_LABELS, registrationClosesAt } from '../utils/format';
 import {
@@ -20,7 +18,7 @@ import {
   type LatLng,
 } from '../utils/eventView';
 import { CoverBadge, EventCover, OrgAvatar, SeatMeter, SportIcon } from './EventBits';
-import { JoinDialog } from './JoinDialog';
+import { useEventJoin } from './useEventJoin';
 import { RouteButton } from './RouteButton';
 import { useEventWeather } from './EventWeather';
 
@@ -48,9 +46,9 @@ const Row: React.FC<{ icon: React.ReactNode; title: React.ReactNode; sub?: React
  */
 export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, onClose, onChanged }) => {
   const { currentUser, preferences } = useAuth();
-  const [joinEvent, setJoinEvent] = useState<SportEvent | null>(null);
-  const [loadingJoin, setLoadingJoin] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const join = useEventJoin(event, onChanged);
+  const loadingJoin = join.busy;
+  const error = join.error;
 
   const weather = useEventWeather(event);
   const status = eventStatus(event);
@@ -66,45 +64,21 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
       ? `/profiles/users/${event.organizerUserId}`
       : null;
 
-  const openJoin = async () => {
-    // В списке нет анкеты и требований организатора — берём полную карточку
-    setLoadingJoin(true);
-    setError(null);
-    try {
-      setJoinEvent(await eventsApi.get(event.id));
-    } catch (e) {
-      setError(errorMessage(e, 'Не удалось открыть запись'));
-    } finally {
-      setLoadingJoin(false);
-    }
-  };
-
-  /** Отклик из очереди: место свободно — занимаем сразу, без анкеты (она сохранена при постановке в очередь). */
-  const claimSpot = async () => {
-    setLoadingJoin(true);
-    setError(null);
-    try {
-      await participationApi.join(event.id, {});
-    } catch (e) {
-      setError(errorMessage(e, 'Не удалось занять место'));
-    } finally {
-      setLoadingJoin(false);
-      onChanged();
-    }
-  };
-
   const primaryClass = 'flex-[1.4] h-14 rounded-[18px] text-[17px] font-bold flex items-center justify-center gap-2 transition-colors';
   const primary = event.canManage ? (
     <Link to={`/events/${event.id}/manage`} className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover`}>
       Управлять
     </Link>
+  ) : currentUser && currentUser.role !== 'ROLE_USER' ? (
+    // Записываться могут только пользователи (организация и администратор — нет)
+    <span className={`${primaryClass} bg-surface-2 text-muted`}>Только для пользователей</span>
   ) : my?.status === 'WAITLISTED' ? (
     isFull(event) ? (
-      <span className={`${primaryClass} bg-sky-100 text-sky-800`}>Вы в очереди</span>
+      <span className={`${primaryClass} bg-surface-2 text-ink`}>Вы в очереди</span>
     ) : (
       <button
         type="button"
-        onClick={() => void claimSpot()}
+        onClick={() => void join.start()}
         disabled={loadingJoin}
         className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-70`}
       >
@@ -125,7 +99,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
   ) : (
     <button
       type="button"
-      onClick={() => void openJoin()}
+      onClick={() => void join.start()}
       disabled={loadingJoin}
       className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-70`}
     >
@@ -139,7 +113,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
       <div
         role="dialog"
         aria-label={event.title}
-        className="flex flex-col bg-white overflow-hidden shadow-[0_-12px_32px_rgba(6,12,30,0.28)] lg:shadow-[-12px_0_32px_rgba(6,12,30,0.16)]"
+        className="flex flex-col bg-card overflow-hidden shadow-[0_-12px_32px_rgba(6,12,30,0.28)] lg:shadow-[-12px_0_32px_rgba(6,12,30,0.16)]"
       >
         <div className="flex-1 min-h-0 overflow-y-auto">
           <div className="lg:hidden w-10 h-[5px] rounded-full bg-surface-2 mx-auto mt-2.5 mb-1" />
@@ -236,7 +210,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
           </div>
         </div>
 
-        <div className="shrink-0 flex gap-2.5 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-line bg-white">
+        <div className="shrink-0 flex gap-2.5 px-4 pt-3 pb-[max(16px,env(safe-area-inset-bottom))] border-t border-line bg-card">
           <Link
             to={`/events/${event.id}`}
             className="flex-1 h-14 rounded-[18px] bg-surface text-ink text-base font-semibold flex items-center justify-center hover:bg-surface-2"
@@ -247,17 +221,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
         </div>
       </div>
 
-      {joinEvent && (
-        <JoinDialog
-          event={joinEvent}
-          waitlist={isFull(event)}
-          onClose={() => setJoinEvent(null)}
-          onDone={() => {
-            setJoinEvent(null);
-            onChanged();
-          }}
-        />
-      )}
+      {join.dialog}
     </>
   );
 };

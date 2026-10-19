@@ -12,6 +12,7 @@ import { ManageEventPage } from './pages/ManageEventPage';
 import { MyEventsPage } from './pages/MyEventsPage';
 import { AdminPage } from './pages/AdminPage';
 import { RecommendedPage } from './pages/RecommendedPage';
+import { NotificationsPage } from './pages/NotificationsPage';
 import { AuthPage } from './pages/AuthPage';
 import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 import { AchievementToast } from './components/AchievementToast';
@@ -50,6 +51,7 @@ function App() {
                 <Route path="/my" element={<MyEventsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
                 <Route path="/recommended" element={<RecommendedPage />} />
+                <Route path="/notifications" element={<NotificationsPage />} />
                 <Route path="/auth" element={<AuthPage />} />
                 <Route path="/profile" element={<OwnProfilePage />} />
                 <Route path="/profiles/:type/:id" element={<ProfilePage />} />

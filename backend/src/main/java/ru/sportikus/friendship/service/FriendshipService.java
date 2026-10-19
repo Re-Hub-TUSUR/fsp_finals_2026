@@ -12,6 +12,7 @@ import ru.sportikus.friendship.dto.FriendshipState;
 import ru.sportikus.friendship.model.Friendship;
 import ru.sportikus.friendship.model.FriendshipStatus;
 import ru.sportikus.friendship.repository.FriendshipRepository;
+import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
@@ -24,11 +25,12 @@ import java.util.List;
 public class FriendshipService {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final OrganizationRepository organizationRepository;
     private final ru.sportikus.notification.service.NotificationService notificationService;
 
     @Transactional
     public FriendshipResponse request(AuthUser auth, Long userId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         User target = target(auth, userId);
         Friendship existing = friendshipRepository.findBetween(auth.id(), userId).orElse(null);
         if (existing != null) {
@@ -47,7 +49,7 @@ public class FriendshipService {
 
     @Transactional
     public FriendshipResponse accept(AuthUser auth, Long userId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         Friendship friendship = pendingIncoming(auth.id(), userId);
         friendship.setStatus(FriendshipStatus.ACCEPTED);
         friendship.setAcceptedAt(Instant.now());
@@ -57,13 +59,13 @@ public class FriendshipService {
 
     @Transactional
     public void reject(AuthUser auth, Long userId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         friendshipRepository.delete(pendingIncoming(auth.id(), userId));
     }
 
     @Transactional
     public void remove(AuthUser auth, Long userId) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         Friendship friendship = friendshipRepository.findBetween(auth.id(), userId)
                 .orElseThrow(() -> ApiException.notFound("Заявка в друзья или дружба не найдена"));
         if (friendship.getStatus() == FriendshipStatus.PENDING && !friendship.getRequester().getId().equals(auth.id())) {
@@ -74,7 +76,7 @@ public class FriendshipService {
 
     @Transactional(readOnly = true)
     public List<FriendRequestResponse> incoming(AuthUser auth) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         return friendshipRepository.findByRecipientIdAndStatusOrderByCreatedAtAsc(auth.id(), FriendshipStatus.PENDING).stream()
                 .map(f -> new FriendRequestResponse(f.getRequester().getId(), f.getRequester().getFullName(),
                         f.getRequester().getAvatarUrl(), f.getCreatedAt()))
@@ -83,7 +85,7 @@ public class FriendshipService {
 
     @Transactional(readOnly = true)
     public List<FriendResponse> friends(AuthUser auth) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         return friendshipRepository.findByUserIdAndStatus(auth.id(), FriendshipStatus.ACCEPTED).stream()
                 .map(friendship -> {
                     User friend = friendship.getRequester().getId().equals(auth.id())
@@ -96,15 +98,21 @@ public class FriendshipService {
 
     @Transactional(readOnly = true)
     public FriendSearchResponse search(AuthUser auth, String email) {
-        rejectAdmin(auth);
+        rejectNonUser(auth);
         String normalized = email == null ? "" : email.trim();
         if (normalized.isBlank()) throw ApiException.badRequest("Введите электронную почту");
         User user = userRepository.findByEmailIgnoreCase(normalized)
                 .filter(candidate -> !candidate.getId().equals(auth.id()))
                 .filter(candidate -> !"ROLE_ADMIN".equals(candidate.getRole()))
                 .orElseThrow(() -> ApiException.notFound("Пользователь с такой почтой не найден"));
+        // Организация — не друг: отдаём id для подписки, состояния дружбы нет
+        Long organizationId = "ROLE_ORGANIZER".equals(user.getRole())
+                ? organizationRepository.findFirstByOwnerIdOrderByIdAsc(user.getId())
+                        .filter(org -> "APPROVED".equals(org.getStatus()))
+                        .map(org -> org.getId()).orElse(null)
+                : null;
         return new FriendSearchResponse(user.getId(), user.getFullName(), user.getEmail(), user.getAvatarUrl(),
-                state(auth.id(), user.getId()));
+                organizationId != null ? FriendshipState.NONE : state(auth.id(), user.getId()), organizationId);
     }
 
     @Transactional(readOnly = true)
@@ -128,10 +136,14 @@ public class FriendshipService {
         if (auth.id().equals(userId)) throw ApiException.badRequest("Нельзя добавить себя в друзья");
         User target = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
         if ("ROLE_ADMIN".equals(target.getRole())) throw ApiException.forbidden("Администратор не участвует в дружбе");
+        if ("ROLE_ORGANIZER".equals(target.getRole())) {
+            throw ApiException.forbidden("Дружба доступна только между пользователями — на организацию можно подписаться");
+        }
         return target;
     }
 
-    private static void rejectAdmin(AuthUser auth) {
+    private static void rejectNonUser(AuthUser auth) {
         if (auth.isAdmin()) throw ApiException.forbidden("Администратор не участвует в дружбе");
+        if (auth.isOrganizer()) throw ApiException.forbidden("Организация не участвует в дружбе");
     }
 }

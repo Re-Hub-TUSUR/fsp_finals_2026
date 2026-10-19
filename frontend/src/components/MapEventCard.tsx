@@ -1,9 +1,11 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import type { SportEvent } from '../types';
+import { useAuth } from '../context/AuthContext';
 import { distanceKm, eventAction, formatDistance, routeUrl, startLabelLong, type LatLng } from '../utils/eventView';
 import { SeatLine } from './EventBits';
+import { useEventJoin } from './useEventJoin';
 
 interface MapEventCardProps {
   event: SportEvent;
@@ -11,12 +13,18 @@ interface MapEventCardProps {
   onClose: () => void;
   /** Открыть панель события (на главной); без него кнопки ведут на страницу события */
   onMore?: () => void;
+  /** После записи — перечитать список, чтобы обновились места и статусы */
+  onJoined?: () => void;
   className?: string;
 }
 
 /** Карточка выбранного мероприятия поверх карты (мини-карточка из референса). */
-export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, onMore, className = '' }) => {
+export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, onMore, onJoined, className = '' }) => {
+  const { currentUser } = useAuth();
+  const join = useEventJoin(event, () => onJoined?.());
   const action = eventAction(event);
+  // Записаться может только пользователь; остальным (организация, админ, организатор события) — страница события
+  const canJoin = action.joinable && !!onMore && currentUser?.role === 'ROLE_USER' && !event.canManage;
   const dist = me ? formatDistance(distanceKm(me, event)) : null;
   const secondary =
     'flex-1 h-12 rounded-[10px] border border-line-2 bg-card text-ink font-semibold text-base flex items-center justify-center hover:bg-surface transition-colors';
@@ -59,17 +67,23 @@ export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, 
             Маршрут
           </a>
         )}
-        {onMore && action.joinable ? (
-          // Запись — через панель события (там анкета организатора и JoinDialog)
-          <button type="button" onClick={onMore} className={primary}>
+        {canJoin ? (
+          <button type="button" onClick={() => void join.start()} disabled={join.busy} className={`${primary} gap-2 disabled:opacity-70`}>
+            {join.busy && <Loader2 className="w-4 h-4 animate-spin" />}
             {action.label}
           </button>
         ) : (
           <Link to={`/events/${event.id}`} className={primary}>
-            {action.label}
+            {action.joinable && currentUser?.role !== 'ROLE_USER' && currentUser ? 'Открыть' : action.label}
           </Link>
         )}
       </div>
+      {join.error && (
+        <p role="alert" className="text-sm text-red-700">
+          {join.error}
+        </p>
+      )}
+      {join.dialog}
     </div>
   );
 };

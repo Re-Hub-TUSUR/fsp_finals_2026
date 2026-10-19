@@ -5,6 +5,8 @@ public record FriendSearchResponse(
         String fullName,
         String email,
         String avatarUrl,
-        FriendshipState state
+        FriendshipState state,
+        /** Не null — найден аккаунт организации: с ней дружбы нет, на неё можно подписаться. */
+        Long organizationId
 ) {
 }

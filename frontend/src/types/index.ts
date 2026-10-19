@@ -58,6 +58,8 @@ export interface FriendSearchResult {
   email: string;
   avatarUrl?: string;
   state: FriendshipState;
+  /** Найден аккаунт организации: дружбы нет, на неё подписываются */
+  organizationId?: number | null;
 }
 
 export interface OrganizationSubscription {
@@ -156,6 +158,10 @@ export interface FieldDef {
   unit?: string;
   placeholder?: string;
   help?: string;
+  /** NUMBER: границы (без min — 0) и признак «только целые» */
+  min?: number;
+  max?: number;
+  integer?: boolean;
 }
 
 export type FieldValue = string | number | boolean | string[] | undefined;

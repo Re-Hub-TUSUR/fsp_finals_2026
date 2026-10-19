@@ -122,7 +122,7 @@ export const ManageEventPage: React.FC = () => {
   const questions = event.registrationFields ?? [];
 
   const card = (p: Participation) => (
-    <li key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
+    <li key={p.id} className="bg-card rounded-2xl border border-slate-200 p-4 shadow-sm">
       <div className="flex items-start gap-3">
         <img src={p.user?.avatarUrl} alt="" className="w-11 h-11 rounded-full object-cover bg-slate-200 shrink-0" />
         <div className="min-w-0 flex-1">
@@ -145,14 +145,14 @@ export const ManageEventPage: React.FC = () => {
                 Билет: {p.ticketCode}
               </span>
               {p.checkedIn ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-brand-tint-2 px-2.5 py-0.5 rounded-full">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён {p.checkedInAt ? `(${p.checkedInAt.slice(11, 16)})` : ''}
                 </span>
               ) : (
                 <button
                   onClick={() => checkInDirect(p.ticketCode!)}
                   disabled={busyId === p.id}
-                  className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-snow px-3 py-1 rounded-lg transition shadow-sm"
+                  className="inline-flex items-center gap-1 text-xs font-semibold bg-brand hover:bg-brand-hover text-on-brand px-3 py-1 rounded-lg transition shadow-sm"
                 >
                   <UserCheck className="w-3.5 h-3.5" /> Отметить вход
                 </button>
@@ -212,16 +212,16 @@ export const ManageEventPage: React.FC = () => {
         {formatShortDateTime(event.startTime, event.timeZone)} · {event.address}
       </p>
 
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-snow rounded-2xl p-4 sm:p-5 mb-6 shadow-md border border-slate-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-card text-ink rounded-2xl p-4 sm:p-5 mb-6 shadow-card border border-line">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold shrink-0">
+          <div className="w-10 h-10 rounded-xl bg-brand-tint text-brand-ink flex items-center justify-center font-bold shrink-0">
             <QrCode className="w-5 h-5" />
           </div>
           <div className="min-w-0">
             <div className="font-bold text-base leading-snug">Контроль входа и проверка QR-билетов</div>
-            <p className="text-xs text-slate-300 mt-0.5">
+            <p className="text-xs text-muted mt-0.5">
               Отмечено на площадке:{' '}
-              <b className="text-emerald-400">
+              <b className="text-brand-ink">
                 {groups.confirmed.filter((p) => p.checkedIn).length}
               </b>{' '}
               из {groups.confirmed.length} участников
@@ -237,7 +237,7 @@ export const ManageEventPage: React.FC = () => {
         </button>
       </div>
 
-      <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex items-center justify-between shadow-sm">
+      <div className="bg-card rounded-2xl border border-slate-200 p-4 mb-6 flex items-center justify-between shadow-sm">
         <div>
           <div className="text-sm text-slate-500">Подтверждённые участники</div>
           <div className="text-2xl font-bold text-slate-900">

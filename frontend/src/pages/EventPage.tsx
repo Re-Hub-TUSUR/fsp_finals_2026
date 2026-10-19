@@ -226,14 +226,14 @@ export const EventPage: React.FC = () => {
           >
             Заявки и участники
             {!!event.pendingCount && (
-              <span className="ml-2 bg-white text-brand-ink text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="ml-2 bg-on-brand text-brand text-xs font-bold px-2 py-0.5 rounded-full">
                 {event.pendingCount}
               </span>
             )}
           </Link>
           <button
             onClick={() => setScannerOpen(true)}
-            className="w-full flex items-center justify-center gap-2 text-center bg-slate-900 hover:bg-slate-800 text-snow font-semibold py-3 rounded-xl shadow-sm transition active:scale-98"
+            className="w-full flex items-center justify-center gap-2 text-center bg-ink hover:opacity-90 text-page font-semibold py-3 rounded-xl shadow-sm transition active:scale-98"
           >
             <QrCode className="w-4 h-4 text-brand" />
             Контроль входа (Сканер QR)
@@ -241,7 +241,7 @@ export const EventPage: React.FC = () => {
           {ended && (
             <button
               onClick={() => setCompleteOpen(true)}
-              className="w-full rounded-xl bg-slate-800 px-4 py-3 font-semibold text-white hover:bg-slate-700"
+              className="w-full rounded-xl bg-ink px-4 py-3 font-semibold text-page hover:opacity-90"
             >
               Завершить событие
             </button>
@@ -251,8 +251,15 @@ export const EventPage: React.FC = () => {
     }
     if (currentUser?.role === 'ROLE_ADMIN') {
       return (
-        <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-4">
+        <p className="text-sm text-muted bg-surface border border-line rounded-xl p-4">
           Администратор не участвует в мероприятиях — модерация доступна в разделе «Модерация».
+        </p>
+      );
+    }
+    if (currentUser?.role === 'ROLE_ORGANIZER') {
+      return (
+        <p className="text-sm text-muted bg-surface border border-line rounded-xl p-4">
+          Организация не участвует в мероприятиях — записаться может только пользователь.
         </p>
       );
     }
@@ -261,11 +268,11 @@ export const EventPage: React.FC = () => {
         <div className="space-y-3">
           <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
             <div className="flex items-center gap-2 font-bold">
-              <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Вы участвуете!
+              <CheckCircle2 className="w-5 h-5 text-brand-ink" /> Вы участвуете!
             </div>
             {my.checkedIn ? (
-              <div className="mt-2 text-xs font-semibold text-emerald-800 bg-emerald-100/80 rounded-lg p-2.5 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+              <div className="mt-2 text-xs font-semibold text-ink bg-brand-tint-2 rounded-lg p-2.5 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-brand-ink shrink-0" />
                 Вход на мероприятие подтверждён организатором
               </div>
             ) : (
@@ -321,7 +328,7 @@ export const EventPage: React.FC = () => {
       return (
         <div className="space-y-3">
           {full ? (
-            <div className="rounded-xl bg-sky-50 border border-sky-200 p-4 text-sky-900">
+            <div className="rounded-xl bg-surface-2 border border-line p-4 text-ink">
               <div className="flex items-center gap-2 font-bold">
                 <Hourglass className="w-5 h-5" /> Вы в очереди
               </div>
@@ -332,7 +339,7 @@ export const EventPage: React.FC = () => {
           ) : (
             <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
               <div className="flex items-center gap-2 font-bold">
-                <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Освободилось место!
+                <CheckCircle2 className="w-5 h-5 text-brand-ink" /> Освободилось место!
               </div>
               <p className="text-sm mt-1">Займите его, пока не опередили.</p>
               <button
@@ -438,7 +445,7 @@ export const EventPage: React.FC = () => {
 
       <div className="grid lg:grid-cols-[1fr_360px] gap-5 lg:gap-6 items-start">
         <div className="contents lg:flex lg:flex-col lg:gap-5 min-w-0">
-          <div className="order-1 lg:order-none bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+          <div className="order-1 lg:order-none bg-card rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
             <div className="flex flex-wrap items-center gap-2 mb-3">
               <span className="text-xs font-bold uppercase tracking-wider text-brand-ink bg-brand-tint px-2.5 py-1 rounded-lg border border-brand-line">
                 {event.sport.name}
@@ -452,7 +459,7 @@ export const EventPage: React.FC = () => {
                 {SKILL_LABELS[event.skillLevel]}
               </span>
               {event.byOrganization && (
-                <span className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                <span className="text-xs font-bold text-page bg-ink px-2.5 py-1 rounded-lg flex items-center gap-1">
                   <Building2 className="w-3.5 h-3.5" /> Организация
                 </span>
               )}
@@ -502,11 +509,11 @@ export const EventPage: React.FC = () => {
                     <p className="text-xs text-slate-500">Вы можете пойти вместе!</p>
                   </div>
                 </div>
-                {currentUser && currentUser.role !== 'ROLE_ADMIN' && (
+                {currentUser && currentUser.role === 'ROLE_USER' && (
                   <button
                     type="button"
                     onClick={() => setInviteOpen(true)}
-                    className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition-colors"
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-card border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition-colors"
                   >
                     <UserPlus className="w-3.5 h-3.5 text-brand" />
                     <span>Позвать ещё</span>
@@ -517,7 +524,7 @@ export const EventPage: React.FC = () => {
           </div>
 
           <div className="order-3 lg:order-none space-y-5 min-w-0">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+          <div className="bg-card rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
             <h2 className="text-lg font-bold text-slate-900 mb-4">Основное</h2>
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
               <Fact icon={<Clock className="w-5 h-5" />} label="Когда">
@@ -563,7 +570,7 @@ export const EventPage: React.FC = () => {
           </div>
 
           {(templateFacts.length > 0 || (event.customFields?.length ?? 0) > 0) && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+            <div className="bg-card rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
               <h2 className="text-lg font-bold text-slate-900 mb-4">
                 {event.template && event.template.code !== 'free' ? event.template.name : 'Детали'}
               </h2>
@@ -585,7 +592,7 @@ export const EventPage: React.FC = () => {
           )}
 
           {org && (
-            <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+            <div className="bg-card rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
               <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
                 <Building2 className="w-5 h-5 text-slate-500" /> Сведения организатора
               </h2>
@@ -697,7 +704,7 @@ export const EventPage: React.FC = () => {
         </div>
 
         <aside className="order-2 lg:order-none lg:sticky lg:top-20 space-y-4">
-          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+          <div className="bg-card rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <div>
               <div className="flex items-end justify-between mb-1.5">
                 <span className="text-sm text-slate-500">Места</span>
@@ -718,7 +725,7 @@ export const EventPage: React.FC = () => {
 
             {/* Социальные действия: Позвать друзей и Поделиться */}
             <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
-              {currentUser && currentUser.role !== 'ROLE_ADMIN' && (
+              {currentUser && currentUser.role === 'ROLE_USER' && (
                 <button
                   type="button"
                   onClick={() => setInviteOpen(true)}
@@ -732,7 +739,7 @@ export const EventPage: React.FC = () => {
                 type="button"
                 onClick={() => setShareOpen(true)}
                 className={`w-full py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors shadow-2xs ${
-                  !currentUser || currentUser.role === 'ROLE_ADMIN' ? 'col-span-2' : ''
+                  !currentUser || currentUser.role !== 'ROLE_USER' ? 'col-span-2' : ''
                 }`}
               >
                 <Share2 className="w-4 h-4 text-slate-600" />
@@ -744,7 +751,7 @@ export const EventPage: React.FC = () => {
           <a
             href={eventsApi.icsUrl(event.id)}
             download
-            className="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl py-3 text-sm font-semibold text-slate-700"
+            className="flex items-center justify-center gap-2 bg-card border border-slate-200 hover:bg-slate-50 rounded-xl py-3 text-sm font-semibold text-slate-700"
           >
             <CalendarPlus className="w-4 h-4" /> Добавить в календарь (.ics)
           </a>
@@ -795,7 +802,7 @@ export const EventPage: React.FC = () => {
           {actionError && <p className="mt-3 text-sm text-red-700">{actionError}</p>}
           <div className="mt-5 flex justify-end gap-3">
             <button type="button" onClick={() => setCompleteOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold">Отмена</button>
-            <button type="button" disabled={busy} onClick={completeEvent} className="rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-50">{busy ? 'Завершение...' : 'Завершить'}</button>
+            <button type="button" disabled={busy} onClick={completeEvent} className="rounded-xl bg-ink px-4 py-2.5 font-semibold text-page disabled:opacity-50">{busy ? 'Завершение...' : 'Завершить'}</button>
           </div>
         </Modal>
       )}

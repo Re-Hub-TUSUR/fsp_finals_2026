@@ -52,6 +52,7 @@ export const Navbar: React.FC = () => {
   const cityName = selectedCity?.name ?? preferences?.homeCity?.name ?? 'Красноярск';
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
+  const isOrganizer = currentUser?.role === 'ROLE_ORGANIZER';
   const onHome = location.pathname === '/' || location.pathname === '/events';
   const homeView = onHome ? (params.get('view') === 'list' ? 'list' : 'map') : null;
   const isActive = (path: string) => location.pathname === path;
@@ -134,14 +135,14 @@ export const Navbar: React.FC = () => {
               <List className="w-[18px] h-[18px]" />
               Лента
             </Link>
-            {currentUser && !isAdmin && (
+            {currentUser && !isAdmin && !isOrganizer && (
               <Link to="/recommended" className={linkClass(isActive('/recommended'))}>
                 Для вас
               </Link>
             )}
             {currentUser && !isAdmin && (
               <Link to="/my" className={linkClass(isActive('/my'))}>
-                Мои
+                Мои события
               </Link>
             )}
             {isAdmin && (

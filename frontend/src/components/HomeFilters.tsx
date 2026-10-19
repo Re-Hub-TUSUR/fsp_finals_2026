@@ -240,6 +240,8 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
     const d = keyToDate(when.from);
     return Math.max(0, Math.min(2, (d.getFullYear() - now.getFullYear()) * 12 + d.getMonth() - now.getMonth()));
   });
+  // «День» — одно нажатие выбирает один день; «Период» — начало и конец интервала
+  const [mode, setMode] = useState<'day' | 'range'>(() => (when.kind === 'range' && when.to != null ? 'range' : 'day'));
   const now = new Date();
   const today = dayKey(now);
   const first = new Date(now.getFullYear(), now.getMonth() + offset, 1);
@@ -249,7 +251,8 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
   const b = when.kind === 'range' ? (when.to ?? when.from) : null;
 
   const pick = (k: number) => {
-    // Первое нажатие — начало интервала, второе — конец
+    if (mode === 'day') return onChange({ kind: 'range', from: k, to: null });
+    // Период: первое нажатие — начало интервала, второе — конец
     if (when.kind !== 'range' || when.to != null) return onChange({ kind: 'range', from: k, to: null });
     if (k < when.from) return onChange({ kind: 'range', from: k, to: when.from });
     onChange({ kind: 'range', from: when.from, to: k === when.from ? null : k });
@@ -257,6 +260,25 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
 
   return (
     <div className="flex flex-col gap-2 p-2.5 rounded-[10px] bg-surface">
+      <div role="group" aria-label="Режим выбора даты" className="grid grid-cols-2 gap-1 p-1 rounded-[10px] bg-card">
+        {(['day', 'range'] as const).map((m) => (
+          <button
+            key={m}
+            type="button"
+            aria-pressed={mode === m}
+            onClick={() => {
+              setMode(m);
+              // Из «Периода» в «День» оставляем только первый день
+              if (m === 'day' && when.kind === 'range' && when.to != null) onChange({ kind: 'range', from: when.from, to: null });
+            }}
+            className={`h-9 rounded-lg text-sm font-semibold transition-colors ${
+              mode === m ? 'bg-ink text-page' : 'text-muted hover:text-ink'
+            }`}
+          >
+            {m === 'day' ? 'День' : 'Период'}
+          </button>
+        ))}
+      </div>
       <div className="flex items-center justify-between">
         <button
           type="button"
@@ -325,7 +347,9 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
       </div>
       <span className="text-[13px] leading-snug font-medium text-muted">
         {a == null
-          ? 'Выберите дату или интервал: первое нажатие — начало, второе — конец'
+          ? mode === 'day'
+            ? 'Нажмите на день, чтобы показать события этой даты'
+            : 'Выберите период: первое нажатие — начало, второе — конец'
           : `Выбрано: ${whenLabel(when)}. Точкой отмечены дни с событиями`}
       </span>
     </div>

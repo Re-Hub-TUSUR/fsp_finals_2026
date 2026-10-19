@@ -21,11 +21,13 @@ import ru.sportikus.participation.dto.ParticipationResponse;
 import ru.sportikus.participation.model.Participation;
 import ru.sportikus.participation.model.ParticipationStatus;
 import ru.sportikus.participation.repository.ParticipationRepository;
+import ru.sportikus.preference.repository.UserPreferencesRepository;
 import ru.sportikus.security.AuthUser;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -57,6 +59,7 @@ public class ParticipationService {
     private final FieldValidator fieldValidator;
     private final EventMapper eventMapper;
     private final ApplicationEventPublisher events;
+    private final UserPreferencesRepository preferencesRepository;
     private final ru.sportikus.notification.service.NotificationService notificationService;
 
     @Transactional
@@ -68,6 +71,9 @@ public class ParticipationService {
 
         if (auth.isAdmin()) {
             throw ApiException.forbidden("Администратор не участвует в мероприятиях");
+        }
+        if (auth.isOrganizer() || "ROLE_ORGANIZER".equals(user.getRole())) {
+            throw ApiException.forbidden("Организация не участвует в мероприятиях — записаться может только пользователь");
         }
         if (EventAccess.isManager(event, user.getId())) {
             throw ApiException.conflict("Нельзя записаться на собственное мероприятие");
@@ -83,6 +89,10 @@ public class ParticipationService {
         }
 
         Participation existing = participationRepository.findByEventIdAndUserId(eventId, user.getId()).orElse(null);
+        boolean claimingQueue = existing != null && existing.getStatus() == ParticipationStatus.WAITLISTED;
+        if (!claimingQueue) {
+            checkAge(event, user.getId());
+        }
         if (existing != null) {
             switch (existing.getStatus()) {
                 case CONFIRMED -> throw ApiException.conflict("Вы уже участвуете в этом мероприятии");
@@ -124,6 +134,26 @@ public class ParticipationService {
         Participation saved = participationRepository.save(p);
         events.publishEvent(new ParticipationChangedEvent(user.getId(), eventId, previous, saved.getStatus()));
         return ParticipationResponse.withUser(saved);
+    }
+
+    /** Возрастное ограничение: возраст считается на дату начала мероприятия по году рождения из профиля. */
+    private void checkAge(Event event, Long userId) {
+        if (event.getMinAge() == null && event.getMaxAge() == null) {
+            return;
+        }
+        Integer birthYear = preferencesRepository.findById(userId)
+                .map(p -> p.getBirthYear()).orElse(null);
+        if (birthYear == null) {
+            throw ApiException.conflict("У мероприятия есть возрастное ограничение — укажите год рождения в профиле");
+        }
+        ZoneId zone = event.getTimeZone() != null ? ZoneId.of(event.getTimeZone()) : ZoneId.systemDefault();
+        int age = event.getStartTime().atZone(zone).getYear() - birthYear;
+        if (event.getMinAge() != null && age < event.getMinAge()) {
+            throw ApiException.conflict("Возрастное ограничение мероприятия: от " + event.getMinAge() + " лет");
+        }
+        if (event.getMaxAge() != null && age > event.getMaxAge()) {
+            throw ApiException.conflict("Возрастное ограничение мероприятия: до " + event.getMaxAge() + " лет");
+        }
     }
 
     /** Отклик из очереди: место уже освободилось — занимаем (или подаём заявку), иначе «место заняли». */

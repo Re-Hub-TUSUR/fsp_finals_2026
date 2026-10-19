@@ -63,7 +63,11 @@ export const QuestionsEditor: React.FC<QuestionsEditorProps> = ({ questions, onC
               aria-label="Тип ответа"
               onChange={(e) => {
                 const type = e.target.value as FieldType;
-                update(i, { type, options: isChoice(type) ? (q.options ?? []) : undefined });
+                update(i, {
+                  type,
+                  options: isChoice(type) ? (q.options ?? []) : undefined,
+                  ...(type === 'NUMBER' ? { min: q.min ?? 0 } : { min: undefined, max: undefined, integer: undefined }),
+                });
               }}
               className="px-3 py-2 text-sm border border-slate-300 rounded-xl bg-white"
             >
@@ -83,6 +87,42 @@ export const QuestionsEditor: React.FC<QuestionsEditorProps> = ({ questions, onC
               Обязательный
             </label>
           </div>
+          {q.type === 'NUMBER' && (
+            <div className="flex flex-wrap items-center gap-2 text-sm text-slate-700">
+              <label className="flex items-center gap-1.5">
+                От
+                <input
+                  type="number"
+                  min={0}
+                  aria-label="Минимальное значение"
+                  value={q.min ?? 0}
+                  onChange={(e) => update(i, { min: Math.max(0, Number(e.target.value) || 0) })}
+                  className="w-24 px-2 py-1.5 border border-slate-300 rounded-lg bg-white"
+                />
+              </label>
+              <label className="flex items-center gap-1.5">
+                до
+                <input
+                  type="number"
+                  min={q.min ?? 0}
+                  aria-label="Максимальное значение"
+                  value={q.max ?? ''}
+                  placeholder="∞"
+                  onChange={(e) => update(i, { max: e.target.value === '' ? undefined : Number(e.target.value) })}
+                  className="w-24 px-2 py-1.5 border border-slate-300 rounded-lg bg-white"
+                />
+              </label>
+              <label className="flex items-center gap-1.5 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={q.integer === true}
+                  onChange={(e) => update(i, { integer: e.target.checked || undefined })}
+                  className="w-4 h-4 accent-brand"
+                />
+                Только целые
+              </label>
+            </div>
+          )}
           {isChoice(q.type) && (
             <input
               type="text"

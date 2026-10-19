@@ -1,5 +1,6 @@
 import React from 'react';
-import { ChevronRight, X } from 'lucide-react';
+import { ChevronRight, Loader2, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
 import type { SportEvent } from '../types';
 import {
   distanceKm,
@@ -12,6 +13,7 @@ import {
   type LatLng,
 } from '../utils/eventView';
 import { EventRow } from './HomeCards';
+import { useEventJoin } from './useEventJoin';
 
 export type SheetState = 'peek' | 'half';
 
@@ -27,6 +29,8 @@ interface MapSheetProps {
   onClearSelection: () => void;
   /** «Подробнее» и запись — через панель события */
   onMore: (event: SportEvent) => void;
+  /** После записи из шторки — перечитать список */
+  onJoined?: () => void;
   onOpenFeed: () => void;
   empty: React.ReactNode;
   listRef: React.Ref<HTMLDivElement>;
@@ -47,6 +51,7 @@ export const MapSheet: React.FC<MapSheetProps> = ({
   onPick,
   onClearSelection,
   onMore,
+  onJoined,
   onOpenFeed,
   empty,
   listRef,
@@ -69,7 +74,7 @@ export const MapSheet: React.FC<MapSheetProps> = ({
         <span className="w-10 h-1 rounded-[2px] bg-line-2" />
       </button>
 
-      {!half && selected && <SelectedPeek event={selected} me={me} onClose={onClearSelection} onMore={() => onMore(selected)} />}
+      {!half && selected && <SelectedPeek event={selected} me={me} onClose={onClearSelection} onMore={() => onMore(selected)} onJoined={onJoined} />}
 
       {!half && !selected && (
         <div className="flex-1 min-h-0 px-4 pb-3.5 flex items-center gap-3">
@@ -115,13 +120,17 @@ export const MapSheet: React.FC<MapSheetProps> = ({
   );
 };
 
-const SelectedPeek: React.FC<{ event: SportEvent; me: LatLng | null; onClose: () => void; onMore: () => void }> = ({
-  event,
-  me,
-  onClose,
-  onMore,
-}) => {
+const SelectedPeek: React.FC<{
+  event: SportEvent;
+  me: LatLng | null;
+  onClose: () => void;
+  onMore: () => void;
+  onJoined?: () => void;
+}> = ({ event, me, onClose, onMore, onJoined }) => {
+  const { currentUser } = useAuth();
+  const join = useEventJoin(event, () => onJoined?.());
   const action = eventAction(event);
+  const canJoin = action.joinable && currentUser?.role === 'ROLE_USER' && !event.canManage;
   return (
     <div className="flex-1 min-h-0 px-4 pb-3.5 flex flex-col gap-3">
       <div className="flex gap-2.5 items-start">
@@ -154,12 +163,21 @@ const SelectedPeek: React.FC<{ event: SportEvent; me: LatLng | null; onClose: ()
         </button>
         <button
           type="button"
-          onClick={onMore}
-          className={`flex-[1.4] h-[50px] rounded-[10px] text-base font-bold transition-colors ${action.cls}`}
+          // Записаться — сразу запись; остальным (гость, организация, статус «вы записаны») — подробности
+          onClick={canJoin ? () => void join.start() : onMore}
+          disabled={join.busy}
+          className={`flex-[1.4] h-[50px] rounded-[10px] text-base font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 ${action.cls}`}
         >
+          {join.busy && <Loader2 className="w-4 h-4 animate-spin" />}
           {action.label}
         </button>
       </div>
+      {join.error && (
+        <p role="alert" className="text-sm text-red-700">
+          {join.error}
+        </p>
+      )}
+      {join.dialog}
     </div>
   );
 };
