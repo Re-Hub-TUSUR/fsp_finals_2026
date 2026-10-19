@@ -1,141 +1,320 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import L from 'leaflet';
+import React, { useEffect, useRef, useState } from 'react';
 import type { SportEvent } from '../types';
-import { Clock, Users, MapPin, X, ArrowRight } from 'lucide-react';
-import { Link } from 'react-router-dom';
-import { ParticipationBadge } from './ParticipationBadge';
-import { JOIN_MODE_LABELS, formatPrice, formatTimeBadge, spotsLeft } from '../utils/format';
+import { toLngLat, useMapgl, type LngLat } from '../lib/mapgl';
+import {
+  PIN_SIZE,
+  PIN_SIZE_SELECTED,
+  ME_SIZE,
+  clusterElement,
+  clusterSize,
+  meElement,
+  pinElement,
+} from '../lib/mapPins';
+import type { LatLng } from '../utils/eventView';
+import { useTheme } from '../context/ThemeContext';
+import { MapFallback } from './MapFallback';
+import { MapEventCard } from './MapEventCard';
+import { Loader2, Minus, Moon, Plus, Sun } from 'lucide-react';
 
 interface BlinkMapProps {
   events: SportEvent[];
   selectedEvent: SportEvent | null;
   onSelectEvent: (event: SportEvent | null) => void;
+  /** Где пользователь (для «я здесь» и расстояний) */
+  me: LatLng | null;
+  onLocate: (me: LatLng) => void;
+  /** Позиция колонки кнопок управления (на мобильном — под поиском и чипами) */
+  controlsClassName?: string;
+  /** Отступ карточки выбранного события снизу (на мобильном — над нижней навигацией) */
+  cardClassName?: string;
 }
 
-// Center of Krasnoyarsk
-const KRASNOYARSK_COORDS: [number, number] = [56.0153, 92.8932];
-const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120';
+// Center of Krasnoyarsk ([lng, lat] для 2GIS)
+const KRASNOYARSK_COORDS: LngLat = [92.8932, 56.0153];
+// Радиус склейки меток в кластер (px) и зум, с которого кластеры не нужны
+const CLUSTER_RADIUS = 72;
+const CLUSTER_MAX_ZOOM = 15.8;
+const SELECT_MIN_ZOOM = 15.4;
+const PITCH_3D = 50;
+const ROTATION_3D = -12;
+const FIT_PADDING = { top: 80, right: 80, bottom: 80, left: 80 };
 
-const escapeAttr = (value: string) =>
-  value.replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+interface Group {
+  x: number;
+  y: number;
+  items: SportEvent[];
+  selected: boolean;
+}
 
-// Helper to create Blink-style DivIcon
-function createBlinkIcon(event: SportEvent, isSelected: boolean) {
-  const timeBadge = formatTimeBadge(event.startTime, event.endTime);
-  const left = spotsLeft(event);
-  const isHot = left <= 3 && left > 0;
+const groupClass = 'flex flex-col bg-white border border-line rounded-2xl shadow-card overflow-hidden';
+const ctrlButton =
+  'w-12 h-12 flex items-center justify-center text-ink hover:bg-surface transition-colors disabled:opacity-60 [&+&]:border-t [&+&]:border-line';
 
-  const html = `
-    <div class="blink-pin ${isSelected ? 'scale-110 z-30' : ''}">
-      <!-- Top time badge -->
-      <div style="background-color: ${isSelected ? '#059669' : '#0f172a'}; color: white;" class="text-[11px] font-bold px-2 py-0.5 rounded-full shadow-md whitespace-nowrap flex items-center gap-1 border border-white/40">
-        ${isHot ? '🔥' : '⏱️'} ${timeBadge}
-      </div>
+const LocateIcon = () => (
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+    <circle cx="12" cy="12" r="7" />
+    <circle cx="12" cy="12" r="2.5" fill="currentColor" />
+    <path d="M12 2v3M12 19v3M2 12h3M19 12h3" />
+  </svg>
+);
 
-      <!-- Main circle bubble -->
-      <div class="w-12 h-12 rounded-full overflow-hidden border-2 ${isSelected ? 'border-emerald-500 ring-4 ring-emerald-500/30' : 'border-white'} shadow-lg bg-emerald-600 flex items-center justify-center my-1 relative">
-        <img src="${escapeAttr(event.organizerAvatar || FALLBACK_AVATAR)}" alt="" class="w-full h-full object-cover" />
-      </div>
+export const BlinkMap: React.FC<BlinkMapProps> = ({
+  events,
+  selectedEvent,
+  onSelectEvent,
+  me,
+  onLocate,
+  controlsClassName = 'top-4 right-4',
+  cardClassName = 'bottom-4',
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const onSelectRef = useRef(onSelectEvent);
+  onSelectRef.current = onSelectEvent;
+  const lastPinClick = useRef(0);
+  const fitted = useRef(false);
+  const { theme, toggleTheme } = useTheme();
 
-      <!-- Bottom capacity badge -->
-      <div class="text-[10px] font-bold px-1.5 py-0.5 rounded-md shadow bg-white text-slate-800 border border-slate-200">
-        ${event.confirmedCount}/${event.capacity} мест
-      </div>
+  const [viewTick, setViewTick] = useState(0);
+  const [is3d, setIs3d] = useState(true);
+  const [locating, setLocating] = useState(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
-      <!-- Arrow tail -->
-      <div class="w-0 h-0 border-l-[6px] border-l-transparent border-r-[6px] border-r-transparent border-t-[8px] border-t-slate-800 -mt-0.5"></div>
-    </div>
-  `;
-
-  return L.divIcon({
-    html,
-    className: 'blink-custom-marker',
-    iconSize: [60, 80],
-    iconAnchor: [30, 80],
+  const { instance, error } = useMapgl(containerRef, {
+    center: KRASNOYARSK_COORDS,
+    zoom: 13,
+    pitch: PITCH_3D,
+    rotation: ROTATION_3D,
+    zoomControl: false,
   });
-}
 
-export const BlinkMap: React.FC<BlinkMapProps> = ({ events, selectedEvent, onSelectEvent }) => {
+  const selectedId = selectedEvent?.id;
+
+  // Пересчёт кластеров после движения карты; клик по пустому месту снимает выбор
+  useEffect(() => {
+    if (!instance) return;
+    const { map } = instance;
+    const onMoveEnd = () => setViewTick((t) => t + 1);
+    const onClick = () => {
+      if (Date.now() - lastPinClick.current > 300) onSelectRef.current(null);
+    };
+    map.on('moveend', onMoveEnd);
+    map.on('click', onClick);
+    return () => {
+      map.off('moveend', onMoveEnd);
+      map.off('click', onClick);
+    };
+  }, [instance]);
+
+  // При первой загрузке показываем все мероприятия
+  useEffect(() => {
+    if (!instance || fitted.current || events.length === 0) return;
+    fitted.current = true;
+    if (events.length === 1) {
+      instance.map.setCenter(toLngLat(events[0].lat, events[0].lng), { animate: false });
+      instance.map.setZoom(15, { animate: false });
+      return;
+    }
+    // Подгоняем в плоском виде, иначе наклон искажает границы
+    instance.map.setPitch(0, { animate: false });
+    instance.map.setRotation(0, { animate: false });
+    const lngs = events.map((e) => e.lng);
+    const lats = events.map((e) => e.lat);
+    instance.map.fitBounds(
+      { southWest: [Math.min(...lngs), Math.min(...lats)], northEast: [Math.max(...lngs), Math.max(...lats)] },
+      { padding: FIT_PADDING, maxZoom: 15, animation: { animate: false } },
+    );
+    // fitBounds сбрасывает наклон — возвращаем 3D-вид из референса (pitch 50 / bearing -12)
+    if (is3d) {
+      instance.map.setPitch(PITCH_3D, { animate: false });
+      instance.map.setRotation(ROTATION_3D, { animate: false });
+    }
+    // is3d читаем только в момент первой подгонки
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance, events]);
+
+  // Центрируем выбранное мероприятие и приближаем, чтобы его было видно среди соседей
+  useEffect(() => {
+    if (!instance || selectedId == null) return;
+    const event = events.find((e) => e.id === selectedId);
+    if (!event) return;
+    instance.map.setCenter(toLngLat(event.lat, event.lng), { duration: 900 });
+    if (instance.map.getZoom() < SELECT_MIN_ZOOM) instance.map.setZoom(SELECT_MIN_ZOOM, { duration: 900 });
+    // events не в зависимостях: центрируем только при смене выбора
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance, selectedId]);
+
+  // Метки и кластеры в экранных координатах
+  useEffect(() => {
+    if (!instance) return;
+    const { api, map } = instance;
+    const radius = map.getZoom() >= CLUSTER_MAX_ZOOM ? 0 : CLUSTER_RADIUS;
+    const groups: Group[] = [];
+
+    for (const event of events) {
+      const [x, y] = map.project(toLngLat(event.lat, event.lng));
+      const selected = event.id === selectedId;
+      const group =
+        radius && !selected ? groups.find((g) => !g.selected && Math.hypot(g.x - x, g.y - y) < radius) : undefined;
+      if (group) group.items.push(event);
+      else groups.push({ x, y, items: [event], selected });
+    }
+
+    const markers = groups.map((group) => {
+      if (group.items.length === 1) {
+        const event = group.items[0];
+        const size = group.selected ? PIN_SIZE_SELECTED : PIN_SIZE;
+        const html = pinElement(event, group.selected);
+        html.addEventListener('click', () => {
+          lastPinClick.current = Date.now();
+          onSelectRef.current(event);
+        });
+        return new api.HtmlMarker(map, {
+          coordinates: toLngLat(event.lat, event.lng),
+          html,
+          anchor: [size / 2, size / 2],
+          interactive: true,
+          zIndex: group.selected ? 3 : 2,
+        });
+      }
+
+      const center: LngLat = [
+        group.items.reduce((s, e) => s + e.lng, 0) / group.items.length,
+        group.items.reduce((s, e) => s + e.lat, 0) / group.items.length,
+      ];
+      const size = clusterSize(group.items.length);
+      const html = clusterElement(group.items);
+      html.addEventListener('click', () => {
+        lastPinClick.current = Date.now();
+        map.setCenter(center, { duration: 600 });
+        map.setZoom(Math.min(17, map.getZoom() + 1.8), { duration: 600 });
+      });
+      return new api.HtmlMarker(map, {
+        coordinates: center,
+        html,
+        anchor: [size / 2, size / 2],
+        interactive: true,
+        zIndex: 2,
+      });
+    });
+
+    return () => markers.forEach((m) => m.destroy());
+  }, [instance, events, selectedId, viewTick]);
+
+  // Точка «Вы здесь»
+  useEffect(() => {
+    if (!instance || !me) return;
+    const marker = new instance.api.HtmlMarker(instance.map, {
+      coordinates: toLngLat(me.lat, me.lng),
+      html: meElement(),
+      anchor: [ME_SIZE / 2, ME_SIZE / 2],
+      interactive: false,
+      zIndex: 1,
+    });
+    return () => marker.destroy();
+  }, [instance, me]);
+
+  useEffect(() => {
+    if (!notice) return;
+    const t = setTimeout(() => setNotice(null), 4000);
+    return () => clearTimeout(t);
+  }, [notice]);
+
+  const zoomBy = (delta: number) => instance?.map.setZoom(instance.map.getZoom() + delta, { duration: 300 });
+
+  const toggle3d = () => {
+    if (!instance) return;
+    const next = !is3d;
+    instance.map.setPitch(next ? PITCH_3D : 0, { duration: 800 });
+    instance.map.setRotation(next ? ROTATION_3D : 0, { duration: 800 });
+    setIs3d(next);
+  };
+
+  const locate = () => {
+    if (!navigator.geolocation) {
+      setNotice('Браузер не поддерживает геолокацию');
+      return;
+    }
+    setLocating(true);
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+        onLocate(coords);
+        setLocating(false);
+        instance?.map.setCenter(toLngLat(coords.lat, coords.lng), { duration: 700 });
+        instance?.map.setZoom(15, { duration: 700 });
+      },
+      () => {
+        setLocating(false);
+        setNotice('Не удалось определить местоположение');
+      },
+      { enableHighAccuracy: true, timeout: 10000 },
+    );
+  };
+
   return (
-    <div className="relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
-      <MapContainer center={KRASNOYARSK_COORDS} zoom={13} scrollWheelZoom={true} className="w-full h-full">
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+    <div className="relative w-full h-full overflow-hidden bg-[#EDEFF3] dark:bg-[#23272B]">
+      <div ref={containerRef} className="absolute inset-0" />
+      {error && <MapFallback message={error} />}
 
-        {events.map((event) => (
-          <Marker
-            key={event.id}
-            position={[event.lat, event.lng]}
-            icon={createBlinkIcon(event, selectedEvent?.id === event.id)}
-            eventHandlers={{
-              click: () => onSelectEvent(event),
-            }}
-          />
-        ))}
-      </MapContainer>
-
-      {/* Blink-style Bottom Sheet for selected event */}
-      {selectedEvent && (
-        <div className="absolute bottom-4 left-4 right-4 md:left-auto md:right-4 md:w-96 bg-white/95 backdrop-blur-md p-4 rounded-2xl shadow-2xl border border-slate-200/80 z-[1000]">
-          <div className="flex justify-between items-start mb-2 gap-2">
-            <div className="min-w-0">
-              <span className="text-[11px] font-bold uppercase tracking-wider text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">
-                {selectedEvent.sport.name}
-              </span>
-              <h3 className="font-bold text-slate-900 text-lg leading-snug mt-1">{selectedEvent.title}</h3>
-            </div>
+      {instance && (
+        <div className={`absolute z-20 flex flex-col gap-2.5 ${controlsClassName}`}>
+          <div className={groupClass}>
             <button
-              onClick={() => onSelectEvent(null)}
-              aria-label="Закрыть"
-              className="text-slate-400 hover:text-slate-600 p-1 rounded-lg hover:bg-slate-100 transition-colors shrink-0"
+              type="button"
+              onClick={toggle3d}
+              aria-pressed={is3d}
+              aria-label={is3d ? 'Плоская карта' : 'Объёмная карта'}
+              className={`${ctrlButton} text-sm font-extrabold ${is3d ? 'text-brand-ink' : ''}`}
             >
-              <X className="w-5 h-5" />
+              3D
+            </button>
+            <button
+              type="button"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
+              className={ctrlButton}
+            >
+              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
-
-          {selectedEvent.description && (
-            <p className="text-sm text-slate-600 line-clamp-2 mb-3">{selectedEvent.description}</p>
-          )}
-
-          <div className="flex flex-col gap-1.5 text-sm text-slate-600 mb-4 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
-            <div className="flex items-center gap-2">
-              <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
-              <span className="truncate">{selectedEvent.address}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>{formatTimeBadge(selectedEvent.startTime, selectedEvent.endTime)}</span>
-              <span className="text-slate-300">·</span>
-              <span>{formatPrice(selectedEvent.price)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>
-                Свободно: {spotsLeft(selectedEvent)} из {selectedEvent.capacity} · {JOIN_MODE_LABELS[selectedEvent.joinMode].toLowerCase()}
-              </span>
-            </div>
+          <div className={groupClass}>
+            <button type="button" onClick={() => zoomBy(1)} aria-label="Приблизить" className={ctrlButton}>
+              <Plus className="w-5 h-5" />
+            </button>
+            <button type="button" onClick={() => zoomBy(-1)} aria-label="Отдалить" className={ctrlButton}>
+              <Minus className="w-5 h-5" />
+            </button>
           </div>
-
-          <div className="flex items-center gap-2">
-            <Link
-              to={`/events/${selectedEvent.id}`}
-              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-2.5 px-3 rounded-xl text-sm text-center flex items-center justify-center gap-1.5 transition-colors shadow-sm"
+          <div className={groupClass}>
+            <button
+              type="button"
+              onClick={locate}
+              disabled={locating}
+              aria-label="Моё местоположение"
+              className={`${ctrlButton} text-brand-ink`}
             >
-              {selectedEvent.myParticipation && selectedEvent.myParticipation.status !== 'CANCELLED'
-                ? 'Открыть мероприятие'
-                : selectedEvent.joinMode === 'APPROVAL'
-                  ? 'Подробнее и заявка'
-                  : 'Подробнее и запись'}
-              <ArrowRight className="w-4 h-4" />
-            </Link>
-            {selectedEvent.myParticipation && selectedEvent.myParticipation.status !== 'CANCELLED' && (
-              <ParticipationBadge status={selectedEvent.myParticipation.status} />
-            )}
+              {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateIcon />}
+            </button>
           </div>
         </div>
+      )}
+
+      {notice && (
+        <div
+          role="status"
+          className="absolute top-4 left-1/2 -translate-x-1/2 z-30 bg-ink text-white text-sm font-medium rounded-full px-3.5 py-2 shadow-card"
+        >
+          {notice}
+        </div>
+      )}
+
+      {selectedEvent && (
+        <MapEventCard
+          event={selectedEvent}
+          me={me}
+          onClose={() => onSelectEvent(null)}
+          className={`absolute z-30 left-2 right-2 sm:left-4 sm:right-auto sm:w-[380px] ${cardClassName}`}
+        />
       )}
     </div>
   );

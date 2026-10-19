@@ -76,7 +76,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
 
         <div
           className={`flex gap-3 rounded-xl border p-4 text-sm ${
-            needsApproval ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-emerald-50 border-emerald-200 text-emerald-900'
+            needsApproval ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-brand-tint border-brand-line text-brand-ink'
           }`}
         >
           <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
@@ -124,7 +124,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
               type="checkbox"
               checked={accepted}
               onChange={(e) => setAccepted(e.target.checked)}
-              className="w-5 h-5 mt-0.5 accent-emerald-600 shrink-0"
+              className="w-5 h-5 mt-0.5 accent-brand shrink-0"
             />
             <span className="text-sm text-slate-800">
               Я ознакомился(-ась) с требованиями организатора:
@@ -156,7 +156,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
           <button
             type="submit"
             disabled={submitting}
-            className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+            className="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
             {needsApproval ? 'Отправить заявку' : 'Подтвердить запись'}

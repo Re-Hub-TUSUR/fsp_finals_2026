@@ -46,7 +46,7 @@ export const CustomFieldsEditor: React.FC<CustomFieldsEditorProps> = ({ fields, 
       <button
         type="button"
         onClick={() => onChange([...fields, { label: '', value: '' }])}
-        className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+        className="flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:text-brand-ink"
       >
         <Plus className="w-4 h-4" />
         Добавить параметр

@@ -1,6 +1,7 @@
-import React from 'react';
-import { MapContainer, Marker, TileLayer, useMapEvents } from 'react-leaflet';
-import L from 'leaflet';
+import React, { useEffect, useRef } from 'react';
+import type { Marker } from '@2gis/mapgl/types';
+import { toLngLat, useMapgl } from '../lib/mapgl';
+import { MapFallback } from './MapFallback';
 
 interface LocationPickerProps {
   lat: number;
@@ -8,29 +9,36 @@ interface LocationPickerProps {
   onChange: (lat: number, lng: number) => void;
 }
 
-const PIN = L.divIcon({
-  html: '<div style="font-size:34px;line-height:1;transform:translate(-50%,-100%);filter:drop-shadow(0 2px 3px rgba(0,0,0,.35))">📍</div>',
-  className: '',
-  iconSize: [0, 0],
-});
+/** Выбор точки сбора кликом по карте 2GIS. */
+export const LocationPicker: React.FC<LocationPickerProps> = ({ lat, lng, onChange }) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const markerRef = useRef<Marker | null>(null);
+  const onChangeRef = useRef(onChange);
+  onChangeRef.current = onChange;
 
-const ClickHandler: React.FC<{ onPick: (lat: number, lng: number) => void }> = ({ onPick }) => {
-  useMapEvents({
-    click: (e) => onPick(e.latlng.lat, e.latlng.lng),
-  });
-  return null;
+  const { instance, error } = useMapgl(containerRef, { center: toLngLat(lat, lng), zoom: 13 });
+
+  useEffect(() => {
+    if (!instance) return;
+    instance.map.on('click', (e) => onChangeRef.current(e.lngLat[1], e.lngLat[0]));
+    const marker = new instance.api.Marker(instance.map, { coordinates: toLngLat(lat, lng) });
+    markerRef.current = marker;
+    return () => {
+      marker.destroy();
+      markerRef.current = null;
+    };
+    // Маркер создаётся один раз на карту, дальше двигается через setCoordinates
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [instance]);
+
+  useEffect(() => {
+    markerRef.current?.setCoordinates(toLngLat(lat, lng));
+  }, [lat, lng]);
+
+  return (
+    <div className="relative h-64 rounded-xl overflow-hidden border border-slate-300">
+      <div ref={containerRef} className="w-full h-full" />
+      {error && <MapFallback message={error} />}
+    </div>
+  );
 };
-
-/** Выбор точки сбора кликом по карте (OpenStreetMap, без платных API). */
-export const LocationPicker: React.FC<LocationPickerProps> = ({ lat, lng, onChange }) => (
-  <div className="h-64 rounded-xl overflow-hidden border border-slate-300">
-    <MapContainer center={[lat, lng]} zoom={13} scrollWheelZoom className="w-full h-full">
-      <TileLayer
-        attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-        url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-      />
-      <ClickHandler onPick={onChange} />
-      <Marker position={[lat, lng]} icon={PIN} />
-    </MapContainer>
-  </div>
-);

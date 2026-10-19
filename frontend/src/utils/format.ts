@@ -21,7 +21,7 @@ export const PARTICIPATION_LABELS: Record<ParticipationStatus, string> = {
 
 export const PARTICIPATION_STYLES: Record<ParticipationStatus, string> = {
   PENDING: 'bg-amber-100 text-amber-800 border-amber-200',
-  CONFIRMED: 'bg-emerald-100 text-emerald-800 border-emerald-200',
+  CONFIRMED: 'bg-brand-tint-2 text-brand-ink border-brand-line',
   REJECTED: 'bg-red-100 text-red-700 border-red-200',
   CANCELLED: 'bg-slate-100 text-slate-600 border-slate-200',
 };

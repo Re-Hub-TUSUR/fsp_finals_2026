@@ -9,7 +9,7 @@ interface FieldInputProps {
 }
 
 export const inputClass =
-  'w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl outline-none bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/20 disabled:bg-slate-100 disabled:text-slate-400';
+  'w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl outline-none bg-white focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-slate-100 disabled:text-slate-400';
 
 export const labelClass = 'block text-sm font-semibold text-slate-700 mb-1.5';
 
@@ -83,7 +83,7 @@ export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, 
                 onClick={() => onChange(active ? chosen.filter((c) => c !== o) : [...chosen, o])}
                 className={`px-3 py-2 rounded-xl text-sm border transition-colors ${
                   active
-                    ? 'bg-emerald-600 border-emerald-600 text-white'
+                    ? 'bg-brand border-brand text-on-brand'
                     : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
                 }`}
               >
@@ -105,7 +105,7 @@ export const FieldInput: React.FC<FieldInputProps> = ({ field, value, onChange, 
               disabled={disabled}
               checked={value === true}
               onChange={(e) => onChange(e.target.checked)}
-              className="w-5 h-5 accent-emerald-600"
+              className="w-5 h-5 accent-brand"
             />
             <span>
               {field.label}

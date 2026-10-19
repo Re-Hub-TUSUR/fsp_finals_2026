@@ -9,7 +9,7 @@
 ## 🛠️ Стек технологий
 
 * **Backend:** Java 21, Spring Boot 3.3+, Spring Data JPA, Spring Security, Flyway, PostgreSQL 16, Springdoc OpenAPI (Swagger UI).
-* **Frontend:** React 19, Vite, TypeScript, Tailwind CSS, Leaflet + React-Leaflet (карта OpenStreetMap без платных API), Lucide Icons.
+* **Frontend:** React 19, Vite, TypeScript, Tailwind CSS, карты 2GIS MapGL JS API (ключ `VITE_2GIS_KEY` в `.env`), Lucide Icons.
 * **DevOps:** Docker, Docker Compose, Nginx.
 
 ---

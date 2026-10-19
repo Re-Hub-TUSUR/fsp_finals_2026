@@ -6,9 +6,12 @@ interface ModalProps {
   onClose: () => void;
   children: React.ReactNode;
   wide?: boolean;
+  /** Действие справа от заголовка (например, «Сбросить») */
+  headerAction?: React.ReactNode;
 }
 
-export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide }) => {
+/** Диалог: на мобильном — шит снизу (радиус 28), на десктопе — по центру. */
+export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide, headerAction }) => {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
     window.addEventListener('keydown', onKey);
@@ -17,27 +20,33 @@ export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide }) 
 
   return (
     <div
-      className="fixed inset-0 z-[2000] bg-slate-900/50 backdrop-blur-sm flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-[2000] bg-[rgba(4,6,10,0.5)] flex items-end sm:items-center justify-center p-0 sm:p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
       aria-modal="true"
       aria-label={title}
     >
       <div
-        className={`bg-white w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-2xl sm:rounded-2xl shadow-2xl`}
+        className={`bg-white w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-[28px] sm:rounded-3xl shadow-card`}
       >
-        <div className="flex items-center justify-between gap-3 px-5 pt-5 pb-3 sticky top-0 bg-white z-10">
-          <h3 className="font-bold text-lg text-slate-900">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Закрыть"
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100"
-          >
-            <X className="w-5 h-5" />
-          </button>
+        <div className="sticky top-0 bg-white z-10 px-5 pt-2.5 pb-3">
+          <div className="w-10 h-[5px] rounded-full bg-surface-2 mx-auto mb-3 sm:hidden" />
+          <div className="flex items-center justify-between gap-3">
+            <h3 className="font-extrabold text-2xl tracking-[-0.02em] text-ink">{title}</h3>
+            <div className="flex items-center gap-1">
+              {headerAction}
+              <button
+                type="button"
+                onClick={onClose}
+                aria-label="Закрыть"
+                className="w-10 h-10 rounded-xl bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
+              >
+                <X className="w-4 h-4" strokeWidth={2.4} />
+              </button>
+            </div>
+          </div>
         </div>
-        <div className="px-5 pb-5">{children}</div>
+        <div className="px-5 pb-6">{children}</div>
       </div>
     </div>
   );

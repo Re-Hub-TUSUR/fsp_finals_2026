@@ -28,14 +28,14 @@ export const TagInput: React.FC<TagInputProps> = ({ values, onChange, placeholde
           {values.map((v) => (
             <span
               key={v}
-              className="inline-flex items-center gap-1.5 bg-emerald-50 text-emerald-800 border border-emerald-200 rounded-full pl-3 pr-1.5 py-1 text-sm"
+              className="inline-flex items-center gap-1.5 bg-brand-tint text-brand-ink border border-brand-line rounded-full pl-3 pr-1.5 py-1 text-sm"
             >
               {v}
               <button
                 type="button"
                 aria-label={`Убрать «${v}»`}
                 onClick={() => onChange(values.filter((x) => x !== v))}
-                className="p-0.5 rounded-full hover:bg-emerald-100"
+                className="p-0.5 rounded-full hover:bg-brand-tint-2"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -76,7 +76,7 @@ export const TagInput: React.FC<TagInputProps> = ({ values, onChange, placeholde
                 type="button"
                 key={s}
                 onClick={() => add(s)}
-                className="text-xs px-2.5 py-1 rounded-full border border-dashed border-slate-300 text-slate-600 hover:border-emerald-400 hover:text-emerald-700"
+                className="text-xs px-2.5 py-1 rounded-full border border-dashed border-slate-300 text-slate-600 hover:border-brand-line hover:text-brand-ink"
               >
                 + {s}
               </button>

@@ -104,7 +104,7 @@ export const EventPage: React.FC = () => {
       <div className="max-w-md mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
         <AlertTriangle className="w-10 h-10 text-red-600 mx-auto mb-2" />
         <p className="text-red-900 font-semibold">{error ?? 'Мероприятие не найдено'}</p>
-        <Link to="/" className="inline-block mt-4 text-emerald-700 font-semibold">
+        <Link to="/" className="inline-block mt-4 text-brand-ink font-semibold">
           ← К каталогу
         </Link>
       </div>
@@ -139,7 +139,7 @@ export const EventPage: React.FC = () => {
     if (event.canManage) {
       return (
         <div className="space-y-3">
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-900 text-sm">
+          <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink text-sm">
             <b>Вы организатор этого мероприятия.</b>
             {event.joinMode === 'APPROVAL' && (
               <p className="mt-1">
@@ -151,11 +151,11 @@ export const EventPage: React.FC = () => {
           </div>
           <Link
             to={`/events/${event.id}/manage`}
-            className="block text-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl"
+            className="block text-center bg-brand hover:bg-brand-hover text-on-brand font-semibold py-3 rounded-xl"
           >
             Заявки и участники
             {!!event.pendingCount && (
-              <span className="ml-2 bg-white text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
+              <span className="ml-2 bg-white text-brand-ink text-xs font-bold px-2 py-0.5 rounded-full">
                 {event.pendingCount}
               </span>
             )}
@@ -173,7 +173,7 @@ export const EventPage: React.FC = () => {
     if (my?.status === 'CONFIRMED') {
       return (
         <div className="space-y-3">
-          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-900">
+          <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
             <div className="flex items-center gap-2 font-bold">
               <CheckCircle2 className="w-5 h-5" /> Вы участвуете!
             </div>
@@ -217,7 +217,7 @@ export const EventPage: React.FC = () => {
       <div className="space-y-2">
         <button
           onClick={() => setJoinOpen(true)}
-          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg py-3.5 rounded-xl shadow-sm active:scale-[0.99] transition"
+          className="w-full bg-brand hover:bg-brand-hover text-on-brand font-bold text-lg py-3.5 rounded-xl shadow-sm active:scale-[0.99] transition"
         >
           {event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться'}
         </button>
@@ -251,7 +251,7 @@ export const EventPage: React.FC = () => {
         <div className="contents lg:flex lg:flex-col lg:gap-5 min-w-0">
           <div className="order-1 lg:order-none bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
             <div className="flex flex-wrap items-center gap-2 mb-3">
-              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+              <span className="text-xs font-bold uppercase tracking-wider text-brand-ink bg-brand-tint px-2.5 py-1 rounded-lg border border-brand-line">
                 {event.sport.name}
               </span>
               {event.template && event.template.code !== 'free' && (
@@ -354,21 +354,21 @@ export const EventPage: React.FC = () => {
                 )}
                 {org.contactPhone && (
                   <Fact icon={<Phone className="w-5 h-5" />} label="Телефон">
-                    <a href={`tel:${org.contactPhone.replace(/[^+\d]/g, '')}`} className="text-emerald-700 hover:underline">
+                    <a href={`tel:${org.contactPhone.replace(/[^+\d]/g, '')}`} className="text-brand-ink hover:underline">
                       {org.contactPhone}
                     </a>
                   </Fact>
                 )}
                 {org.contactEmail && (
                   <Fact icon={<Mail className="w-5 h-5" />} label="E-mail">
-                    <a href={`mailto:${org.contactEmail}`} className="text-emerald-700 hover:underline break-all">
+                    <a href={`mailto:${org.contactEmail}`} className="text-brand-ink hover:underline break-all">
                       {org.contactEmail}
                     </a>
                   </Fact>
                 )}
                 {org.website && (
                   <Fact icon={<Globe className="w-5 h-5" />} label="Сайт / регламент">
-                    <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline break-all">
+                    <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-brand-ink hover:underline break-all">
                       {org.website}
                     </a>
                   </Fact>
@@ -403,10 +403,10 @@ export const EventPage: React.FC = () => {
               {(org.program?.length ?? 0) > 0 && (
                 <div className="mt-5">
                   <h3 className="text-sm font-semibold text-slate-700 mb-2">Программа</h3>
-                  <ol className="border-l-2 border-emerald-200 ml-2 space-y-2.5">
+                  <ol className="border-l-2 border-brand-line ml-2 space-y-2.5">
                     {org.program!.map((p, i) => (
                       <li key={i} className="pl-4 relative">
-                        <span className="absolute -left-[7px] top-2 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                        <span className="absolute -left-[7px] top-2 w-3 h-3 rounded-full bg-brand border-2 border-white" />
                         {p.time && <span className="font-semibold text-slate-900 mr-2">{p.time}</span>}
                         <span className="text-slate-700">{p.title}</span>
                       </li>
@@ -455,7 +455,7 @@ export const EventPage: React.FC = () => {
                 </span>
               </div>
               <div className="h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={filled} aria-valuemin={0} aria-valuemax={100}>
-                <div className={`h-full rounded-full ${full ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${filled}%` }} />
+                <div className={`h-full rounded-full ${full ? 'bg-amber-500' : 'bg-brand'}`} style={{ width: `${filled}%` }} />
               </div>
               <p className="text-xs text-slate-500 mt-1.5">
                 {full ? 'Мест нет' : `Свободно: ${spotsLeft(event)}`}
@@ -501,7 +501,7 @@ export const EventPage: React.FC = () => {
             <button
               onClick={cancelParticipation}
               disabled={busy}
-              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-snow font-semibold disabled:opacity-60"
             >
               {my?.status === 'PENDING' ? 'Отозвать' : 'Отменить участие'}
             </button>

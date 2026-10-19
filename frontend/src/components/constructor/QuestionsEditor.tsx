@@ -78,7 +78,7 @@ export const QuestionsEditor: React.FC<QuestionsEditorProps> = ({ questions, onC
                 type="checkbox"
                 checked={q.required}
                 onChange={(e) => update(i, { required: e.target.checked })}
-                className="w-4 h-4 accent-emerald-600"
+                className="w-4 h-4 accent-brand"
               />
               Обязательный
             </label>
@@ -101,7 +101,7 @@ export const QuestionsEditor: React.FC<QuestionsEditorProps> = ({ questions, onC
         <button
           type="button"
           onClick={add}
-          className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+          className="flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:text-brand-ink"
         >
           <Plus className="w-4 h-4" />
           Добавить вопрос

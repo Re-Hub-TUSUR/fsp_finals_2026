@@ -1,8 +1,119 @@
 @import "tailwindcss";
-@import "leaflet/dist/leaflet.css";
+
+/*
+ * Дизайн-система Sportikus (редизайн): чистые нейтрали + один акцент.
+ * Светлая тема — мятный акцент, тёмная — лаймовый. Тема — атрибут data-theme на <html>.
+ *
+ * Семантические цвета: brand*, page, surface*, ink, muted, line, hot*, flame, avatar*.
+ * Шкала slate и white переопределены под палитру редизайна и инвертируются в тёмной теме,
+ * поэтому существующие экраны на slate-* / bg-white переключаются вместе с темой.
+ */
+@custom-variant dark (&:where([data-theme="dark"], [data-theme="dark"] *));
+
+@theme {
+  --font-sans: "Onest", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+
+  --color-page: #f4f5f7;
+  --color-surface: #f2f4f7;
+  --color-surface-2: #e3e7ec;
+  --color-ink: #0e1116;
+  --color-muted: #5e6670;
+  --color-line: #e3e6ea;
+
+  --color-brand: #0bd68a;
+  --color-brand-hover: #07b875;
+  --color-on-brand: #ffffff;
+  --color-brand-tint: #e8fcf4;
+  --color-brand-tint-2: #d2f7e8;
+  --color-brand-ink: #057a50;
+  --color-brand-line: #9debcb;
+
+  --color-hot: #0bd68a;
+  --color-hot-tint: #0bd68a;
+  --color-hot-ink: #ffffff;
+  --color-flame: #ff7a45;
+
+  --color-avatar-bg: #f0f2f5;
+  --color-avatar-ink: #1a1e24;
+  --color-pin-ring: #ffffff;
+
+  --color-snow: #ffffff;
+  --color-white: #ffffff;
+  --color-slate-50: #f4f5f7;
+  --color-slate-100: #f2f4f7;
+  --color-slate-200: #e3e6ea;
+  --color-slate-300: #d0d5dc;
+  --color-slate-400: #98a0a9;
+  --color-slate-500: #5e6670;
+  --color-slate-600: #4b535d;
+  --color-slate-700: #323840;
+  --color-slate-800: #1f242b;
+  --color-slate-900: #0e1116;
+
+  --shadow-card: 0 6px 20px rgba(20, 30, 45, 0.1);
+}
+
+:root[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-page: #15171a;
+  --color-surface: #2a2e32;
+  --color-surface-2: #34393e;
+  --color-ink: #f2f4f5;
+  --color-muted: #9aa0a6;
+  --color-line: #373c41;
+
+  --color-brand: #ddf55e;
+  --color-brand-hover: #cbe645;
+  --color-on-brand: #111315;
+  --color-brand-tint: #2a3220;
+  --color-brand-tint-2: #344026;
+  --color-brand-ink: #ddf55e;
+  --color-brand-line: #56622c;
+
+  --color-hot: #f4a383;
+  --color-hot-tint: #4a2c24;
+  --color-hot-ink: #f8b89c;
+  --color-flame: #f4a383;
+
+  --color-avatar-bg: #2a2e32;
+  --color-avatar-ink: #e6e8ea;
+  --color-pin-ring: #1c1f22;
+
+  --color-white: #1c1f22;
+  --color-slate-50: #232629;
+  --color-slate-100: #2a2e32;
+  --color-slate-200: #373c41;
+  --color-slate-300: #464b51;
+  --color-slate-400: #7c838a;
+  --color-slate-500: #9aa0a6;
+  --color-slate-600: #b3b8bd;
+  --color-slate-700: #cfd3d7;
+  --color-slate-800: #e3e6e8;
+  --color-slate-900: #f2f4f5;
+
+  /* Статусные тинты (ошибки, ожидание, модерация) приглушаем под тёмный фон */
+  --color-red-50: #3a2224;
+  --color-red-100: #4a2a2c;
+  --color-red-200: #6a3436;
+  --color-red-700: #f3a5a5;
+  --color-red-800: #f6b9b9;
+  --color-red-900: #fbd0d0;
+  --color-amber-50: #362d1a;
+  --color-amber-100: #44381d;
+  --color-amber-200: #64522a;
+  --color-amber-700: #f5cf7a;
+  --color-amber-800: #f8d98f;
+  --color-amber-900: #fbe4ac;
+  --color-purple-50: #2e2540;
+  --color-purple-100: #3a2e52;
+  --color-purple-700: #cdb5fa;
+  --color-purple-900: #e3d6fd;
+
+  --shadow-card: 0 8px 28px rgba(0, 0, 0, 0.45);
+}
 
 :root {
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
   font-size: 16px;
   line-height: 1.5;
   color-scheme: light;
@@ -11,29 +122,173 @@
 body {
   margin: 0;
   padding: 0;
-  background-color: #f8fafc;
-  color: #0f172a;
+  font-family: var(--font-sans);
+  background-color: var(--color-page);
+  color: var(--color-ink);
   -webkit-tap-highlight-color: transparent;
+  transition: background-color 0.25s, color 0.25s;
 }
 
-/* Ensure map container has height */
-.leaflet-container {
-  width: 100%;
-  height: 100%;
-  z-index: 10;
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
-/* Custom Blink-style map pins */
-.blink-pin {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+/* Метки мероприятий поверх карты 2GIS (src/lib/mapPins.ts) — по референсу редизайна.
+   Позиционирует MapGL, поэтому у корня метки нет transform/position-смещений. */
+.sp-pin {
   position: relative;
   cursor: pointer;
-  transform: translate(-50%, -100%);
+  font-family: var(--font-sans);
+}
+
+.sp-pin-face {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  overflow: hidden;
+  background: var(--color-avatar-bg);
+  color: var(--color-avatar-ink);
+  border: 3px solid var(--color-pin-ring);
+  box-shadow: 0 6px 16px rgba(6, 12, 30, 0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 14px;
+  line-height: 1;
+  letter-spacing: -0.02em;
   transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.blink-pin:hover {
-  transform: translate(-50%, -105%) scale(1.08);
+.sp-pin-face img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.sp-pin:hover .sp-pin-face {
+  transform: scale(1.08);
+}
+
+.sp-pin.is-selected .sp-pin-face {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  font-size: 16px;
+}
+
+.sp-pin.is-full .sp-pin-face {
+  filter: grayscale(1);
+  opacity: 0.6;
+}
+
+.sp-pin-pulse {
+  position: absolute;
+  inset: -8px;
+  border-radius: 50%;
+  background: var(--color-brand);
+  animation: sp-pulse 1.8s ease-out infinite;
+}
+
+.sp-pin-badge {
+  position: absolute;
+  top: -4px;
+  right: -4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  border: 2px solid var(--color-pin-ring);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 2px 6px rgba(6, 12, 30, 0.3);
+  color: #fff;
+}
+
+.sp-pin-badge--hot {
+  background: var(--color-flame);
+}
+
+.sp-pin-badge--live {
+  background: var(--color-brand);
+}
+
+.sp-pin-badge--live i {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--color-on-brand);
+}
+
+.sp-pin-badge--mine {
+  top: auto;
+  right: auto;
+  bottom: -4px;
+  left: -4px;
+  background: var(--color-ink);
+  color: var(--color-white);
+}
+
+.sp-pin-caption {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  background: var(--color-white);
+  color: var(--color-ink);
+  font-weight: 600;
+  font-size: 12px;
+  line-height: 1;
+  padding: 7px 10px;
+  border-radius: 10px;
+  box-shadow: 0 4px 12px rgba(6, 12, 30, 0.25);
+}
+
+.sp-cluster .sp-pin-face {
+  background: var(--color-brand);
+  color: var(--color-on-brand);
+  box-shadow: 0 0 0 6px color-mix(in oklab, var(--color-brand) 24%, transparent), 0 6px 16px rgba(6, 12, 30, 0.28);
+}
+
+.sp-me {
+  position: relative;
+  width: 18px;
+  height: 18px;
+}
+
+.sp-me-halo {
+  position: absolute;
+  inset: -14px;
+  border-radius: 50%;
+  background: color-mix(in oklab, var(--color-brand) 18%, transparent);
+}
+
+.sp-me-dot {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  background: var(--color-brand);
+  border: 3px solid var(--color-pin-ring);
+  box-shadow: 0 2px 8px rgba(6, 12, 30, 0.35);
+}
+
+@keyframes sp-pulse {
+  0% {
+    transform: scale(0.7);
+    opacity: 0.45;
+  }
+  100% {
+    transform: scale(1.9);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sp-pin-pulse {
+    animation: none;
+    opacity: 0.22;
+  }
 }

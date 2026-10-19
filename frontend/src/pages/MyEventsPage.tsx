@@ -66,7 +66,7 @@ export const MyEventsPage: React.FC = () => {
         <h1 className="text-3xl font-bold text-slate-900">Мои события</h1>
         <Link
           to="/events/new"
-          className="flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-sm font-semibold"
+          className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand px-4 py-2.5 rounded-xl text-sm font-semibold"
         >
           <PlusCircle className="w-4 h-4" /> Создать
         </Link>
@@ -79,7 +79,7 @@ export const MyEventsPage: React.FC = () => {
         <TabButton active={tab === 'organizing'} onClick={() => setTab('organizing')}>
           Я организую ({managed.length})
           {pendingTotal > 0 && (
-            <span className="ml-2 bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pendingTotal}</span>
+            <span className="ml-2 bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pendingTotal}</span>
           )}
         </TabButton>
       </div>
@@ -104,7 +104,7 @@ export const MyEventsPage: React.FC = () => {
                 <li key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link to={`/events/${p.event.id}`} className="font-bold text-lg text-slate-900 hover:text-emerald-700">
+                      <Link to={`/events/${p.event.id}`} className="font-bold text-lg text-slate-900 hover:text-brand-ink">
                         {p.event.title}
                       </Link>
                       <div className="mt-1 space-y-0.5 text-sm text-slate-600">
@@ -146,7 +146,7 @@ export const MyEventsPage: React.FC = () => {
             <li key={e.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="min-w-0">
-                  <Link to={`/events/${e.id}`} className="font-bold text-lg text-slate-900 hover:text-emerald-700">
+                  <Link to={`/events/${e.id}`} className="font-bold text-lg text-slate-900 hover:text-brand-ink">
                     {e.title}
                   </Link>
                   <div className="text-sm text-slate-600 mt-1">
@@ -162,7 +162,7 @@ export const MyEventsPage: React.FC = () => {
                 >
                   Заявки
                   {!!e.pendingCount && (
-                    <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{e.pendingCount}</span>
+                    <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{e.pendingCount}</span>
                   )}
                 </Link>
               </div>
@@ -184,7 +184,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     aria-selected={active}
     onClick={onClick}
     className={`pb-3 text-base font-semibold border-b-2 transition-colors ${
-      active ? 'border-emerald-600 text-emerald-700' : 'border-transparent text-slate-500 hover:text-slate-800'
+      active ? 'border-brand text-brand-ink' : 'border-transparent text-slate-500 hover:text-slate-800'
     }`}
   >
     {children}
@@ -194,7 +194,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
 const Empty: React.FC<{ text: string; linkTo: string; linkText: string }> = ({ text, linkTo, linkText }) => (
   <div className="text-center py-14 text-slate-500">
     <p>{text}</p>
-    <Link to={linkTo} className="inline-block mt-3 text-emerald-700 font-semibold hover:underline">
+    <Link to={linkTo} className="inline-block mt-3 text-brand-ink font-semibold hover:underline">
       {linkText}
     </Link>
   </div>

@@ -101,7 +101,7 @@ export const OrgDetailsForm: React.FC<OrgDetailsFormProps> = ({ value, onChange 
               type="checkbox"
               checked={value.medicalCertificateRequired === true}
               onChange={(e) => set({ medicalCertificateRequired: e.target.checked })}
-              className="w-5 h-5 accent-emerald-600"
+              className="w-5 h-5 accent-brand"
             />
             Нужна медицинская справка
           </label>
@@ -110,7 +110,7 @@ export const OrgDetailsForm: React.FC<OrgDetailsFormProps> = ({ value, onChange 
               type="checkbox"
               checked={value.insuranceRequired === true}
               onChange={(e) => set({ insuranceRequired: e.target.checked })}
-              className="w-5 h-5 accent-emerald-600"
+              className="w-5 h-5 accent-brand"
             />
             Нужна страховка
           </label>
@@ -178,7 +178,7 @@ export const OrgDetailsForm: React.FC<OrgDetailsFormProps> = ({ value, onChange 
             <button
               type="button"
               onClick={() => setProgram([...program, { time: '', title: '' }])}
-              className="flex items-center gap-1.5 text-sm font-semibold text-emerald-700 hover:text-emerald-800"
+              className="flex items-center gap-1.5 text-sm font-semibold text-brand-ink hover:text-brand-ink"
             >
               <Plus className="w-4 h-4" />
               Добавить пункт

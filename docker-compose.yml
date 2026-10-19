@@ -40,6 +40,10 @@ services:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+      args:
+        VITE_2GIS_KEY: ${VITE_2GIS_KEY:-}
+        VITE_2GIS_STYLE_ID: ${VITE_2GIS_STYLE_ID:-}
+        VITE_2GIS_STYLE_ID_DARK: ${VITE_2GIS_STYLE_ID_DARK:-}
     container_name: sportikus-frontend
     restart: always
     depends_on:

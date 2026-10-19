@@ -13,7 +13,7 @@ type Target = { kind: 'org'; item: AdminOrganization } | { kind: 'event'; item: 
 
 const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: string }> = {
   PENDING: { label: 'На рассмотрении', cls: 'bg-amber-100 text-amber-800' },
-  APPROVED: { label: 'Одобрено', cls: 'bg-emerald-100 text-emerald-700' },
+  APPROVED: { label: 'Одобрено', cls: 'bg-brand-tint-2 text-brand-ink' },
   REJECTED: { label: 'Отклонено', cls: 'bg-red-100 text-red-700' },
 };
 
@@ -85,7 +85,7 @@ export const AdminPage: React.FC = () => {
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shadow-md">
+        <div className="w-10 h-10 rounded-xl bg-purple-600 text-snow flex items-center justify-center shadow-md">
           <ShieldAlert className="w-6 h-6" />
         </div>
         <div>
@@ -97,7 +97,7 @@ export const AdminPage: React.FC = () => {
       <div className="flex border-b border-slate-200 gap-6 mb-6">
         <button onClick={() => setTab('orgs')} className={tabClass(tab === 'orgs')}>
           <Building2 className="w-4 h-4" />
-          Организации {pending > 0 && <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
+          Организации {pending > 0 && <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
         </button>
         <button onClick={() => setTab('events')} className={tabClass(tab === 'events')}>
           <Ban className="w-4 h-4" />
@@ -141,7 +141,7 @@ export const AdminPage: React.FC = () => {
                   <button
                     onClick={() => run(() => adminApi.approveOrg(org.id))}
                     disabled={busy}
-                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-sm"
+                    className="flex items-center gap-1.5 bg-brand hover:bg-brand-hover text-on-brand px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-sm"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Одобрить
@@ -176,8 +176,8 @@ export const AdminPage: React.FC = () => {
               }`}
             >
               <div className="min-w-0">
-                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{ev.sport.name}</span>
-                <Link to={`/events/${ev.id}`} className="block font-semibold text-slate-900 hover:text-emerald-700 mt-1">
+                <span className="text-xs font-bold text-brand-ink bg-brand-tint px-2 py-0.5 rounded">{ev.sport.name}</span>
+                <Link to={`/events/${ev.id}`} className="block font-semibold text-slate-900 hover:text-brand-ink mt-1">
                   {ev.title}
                 </Link>
                 <p className="text-sm text-slate-500">
@@ -244,7 +244,7 @@ export const AdminPage: React.FC = () => {
                     : adminApi.unpublish(target.item.id, reason.trim()),
                 )
               }
-              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-snow font-semibold disabled:opacity-50"
             >
               {target.kind === 'org' ? 'Подтвердить отказ' : 'Снять с публикации'}
             </button>

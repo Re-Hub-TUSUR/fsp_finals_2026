@@ -96,7 +96,7 @@ export const ManageEventPage: React.FC = () => {
       <div className="max-w-md mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
         <ShieldAlert className="w-10 h-10 text-red-600 mx-auto mb-2" />
         <p className="text-red-900 font-semibold">{error ?? 'Мероприятие не найдено'}</p>
-        <Link to="/my" className="inline-block mt-4 text-emerald-700 font-semibold">
+        <Link to="/my" className="inline-block mt-4 text-brand-ink font-semibold">
           ← Мои события
         </Link>
       </div>
@@ -134,7 +134,7 @@ export const ManageEventPage: React.FC = () => {
               onClick={() => decide(p, 'CONFIRMED')}
               disabled={busyId === p.id || full}
               title={full ? 'Все места заняты' : undefined}
-              className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-200 disabled:text-slate-400 text-white px-4 py-2.5 rounded-xl text-sm font-semibold"
+              className="flex items-center gap-1.5 bg-brand hover:bg-brand-hover disabled:bg-slate-200 disabled:text-slate-400 text-on-brand px-4 py-2.5 rounded-xl text-sm font-semibold"
             >
               <Check className="w-4 h-4" />
               {p.status === 'REJECTED' ? 'Всё же принять' : 'Принять'}
@@ -230,7 +230,7 @@ export const ManageEventPage: React.FC = () => {
             <button
               onClick={() => decide(rejecting, 'REJECTED', reason)}
               disabled={busyId === rejecting.id}
-              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-snow font-semibold disabled:opacity-60"
             >
               {rejecting.status === 'CONFIRMED' ? 'Исключить' : 'Отклонить'}
             </button>

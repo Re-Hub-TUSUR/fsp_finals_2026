@@ -32,7 +32,7 @@ const Section: React.FC<{ n: number; title: string; hint?: string; children: Rea
 }) => (
   <section className="bg-white rounded-2xl border border-slate-200 p-5 md:p-6 shadow-sm">
     <div className="flex items-start gap-3 mb-4">
-      <span className="w-8 h-8 shrink-0 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-sm">
+      <span className="w-8 h-8 shrink-0 rounded-full bg-brand text-on-brand font-bold flex items-center justify-center text-sm">
         {n}
       </span>
       <div>
@@ -267,7 +267,7 @@ export const CreateEventPage: React.FC = () => {
                     aria-pressed={active}
                     className={`text-left rounded-xl border p-3.5 transition-all ${
                       active
-                        ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20'
+                        ? 'border-brand bg-brand-tint ring-2 ring-brand/20'
                         : 'border-slate-200 hover:border-slate-300 hover:bg-slate-50'
                     }`}
                   >
@@ -312,7 +312,7 @@ export const CreateEventPage: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setCustomSport((v) => !v)}
-                  className="text-sm text-emerald-700 hover:text-emerald-800 font-semibold"
+                  className="text-sm text-brand-ink hover:text-brand-ink font-semibold"
                 >
                   {customSport ? '← Выбрать из списка' : '+ Свой вид спорта'}
                 </button>
@@ -326,7 +326,7 @@ export const CreateEventPage: React.FC = () => {
                     placeholder="Например: Петанк, Падел, Скандинавская ходьба"
                     value={customSportName}
                     onChange={(e) => setCustomSportName(e.target.value)}
-                    className={`${inputClass} border-emerald-400`}
+                    className={`${inputClass} border-brand-line`}
                   />
                   <p className="text-xs text-slate-500 mt-1">
                     Новый вид сразу появится в общем списке и фильтрах для всех.
@@ -425,7 +425,7 @@ export const CreateEventPage: React.FC = () => {
                     key={mode}
                     className={`cursor-pointer rounded-xl border p-3.5 transition-all ${
                       joinMode === mode
-                        ? 'border-emerald-500 bg-emerald-50 ring-2 ring-emerald-500/20'
+                        ? 'border-brand bg-brand-tint ring-2 ring-brand/20'
                         : 'border-slate-200 hover:bg-slate-50'
                     }`}
                   >
@@ -610,7 +610,7 @@ export const CreateEventPage: React.FC = () => {
             className={`px-6 py-3 rounded-xl font-semibold text-base shadow-sm flex items-center justify-center gap-2 ${
               blocked || submitting
                 ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-emerald-600 hover:bg-emerald-700 text-white'
+                : 'bg-brand hover:bg-brand-hover text-on-brand'
             }`}
           >
             {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
@@ -624,7 +624,7 @@ export const CreateEventPage: React.FC = () => {
 
 const TONES = {
   amber: 'bg-amber-50 border-amber-200 text-amber-900',
-  emerald: 'bg-emerald-50 border-emerald-200 text-emerald-900',
+  emerald: 'bg-brand-tint border-brand-line text-brand-ink',
   red: 'bg-red-50 border-red-200 text-red-900',
 } as const;
 
