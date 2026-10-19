@@ -4,7 +4,23 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { citiesApi } from '../api';
 import type { City } from '../types';
-import { ChevronDown, List, LogIn, LogOut, Map as MapIcon, MapPin, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-react';
+import {
+  CalendarCheck,
+  ChevronDown,
+  List,
+  LogIn,
+  LogOut,
+  Map as MapIcon,
+  MapPin,
+  Moon,
+  Plus,
+  Search,
+  ShieldCheck,
+  Sparkles,
+  Sun,
+  UserRound,
+  X,
+} from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
 const Logo: React.FC = () => (
@@ -12,7 +28,8 @@ const Logo: React.FC = () => (
     <span className="w-[38px] h-[38px] rounded-[10px] bg-brand text-on-brand flex items-center justify-center">
       <img src="/logo-s.png" alt="" className="h-[22px] w-auto" />
     </span>
-    <span className="text-[22px] sm:text-2xl font-extrabold tracking-[-0.03em] text-ink">Sportikus</span>
+    {/* Пока рядом вкладки и поиск не помещаются целиком (md–xl), оставляем только знак */}
+    <span className="text-[22px] sm:text-2xl font-extrabold tracking-[-0.03em] text-ink md:max-xl:hidden">Sportikus</span>
   </Link>
 );
 
@@ -58,7 +75,7 @@ export const Navbar: React.FC = () => {
   const isActive = (path: string) => location.pathname === path;
   // Вкладки с подчёркиванием во всю высоту шапки (макет «Карта и Лента»)
   const linkClass = (active: boolean) =>
-    `h-full -mb-px px-3.5 flex items-center gap-2 border-b-[3px] text-base transition-all ${
+    `h-full -mb-px px-2.5 xl:px-3 2xl:px-3.5 flex items-center gap-2 border-b-[3px] text-base whitespace-nowrap transition-all ${
       active
         ? 'border-brand text-ink font-bold shadow-[inset_0_-3px_10px_rgba(4,215,147,0.35)] dark:shadow-[inset_0_-3px_10px_rgba(213,244,91,0.25)]'
         : 'border-transparent text-muted font-semibold hover:text-ink'
@@ -91,17 +108,23 @@ export const Navbar: React.FC = () => {
   return (
     <nav className="bg-card border-b border-line-2 relative z-40 max-w-full overflow-hidden">
       <div className="px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 max-w-full">
-        <div className="flex-1 self-stretch flex items-center gap-4 min-w-0">
+        <div className="flex-1 self-stretch flex items-center gap-2 lg:gap-3 2xl:gap-4 min-w-0">
           <Logo />
 
-          <button type="button" onClick={() => setCityOpen(true)} className="hidden xl:flex shrink-0 h-[42px] px-2.5 items-center gap-1.5 rounded-[10px] text-[15px] font-semibold text-ink hover:bg-surface">
+          {/* Только значок: название города не помещается на ноутбуках, оно — в подсказке */}
+          <button
+            type="button"
+            onClick={() => setCityOpen(true)}
+            aria-label={`Город: ${cityName}. Выбрать другой`}
+            title={cityName}
+            className="hidden md:flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-[10px] text-ink hover:bg-surface"
+          >
             <MapPin className="w-[18px] h-[18px]" />
-            {cityName}
             <ChevronDown className="w-4 h-4 text-muted" />
           </button>
 
           {onHome && (
-            <label className="hidden lg:flex flex-1 min-w-[200px] max-w-[420px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
+            <label className="hidden lg:flex flex-1 min-w-[150px] max-w-[420px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
               <Search className="w-[19px] h-[19px] shrink-0" />
               <input
                 type="search"
@@ -126,28 +149,32 @@ export const Navbar: React.FC = () => {
 
           <div className="flex-1" />
 
+          {/* До lg вкладки — только иконки (подпись в подсказке и aria-label), иначе не помещаются */}
           <div className="hidden md:flex self-stretch gap-1 shrink-0">
-            <Link to={homeLink('map')} className={linkClass(homeView === 'map')}>
-              <MapIcon className="w-[18px] h-[18px]" />
-              Карта
+            <Link to={homeLink('map')} aria-label="Карта" title="Карта" className={linkClass(homeView === 'map')}>
+              <MapIcon className="w-[18px] h-[18px] shrink-0" />
+              <span className="hidden lg:inline">Карта</span>
             </Link>
-            <Link to={homeLink('list')} className={linkClass(homeView === 'list')}>
-              <List className="w-[18px] h-[18px]" />
-              Лента
+            <Link to={homeLink('list')} aria-label="Лента" title="Лента" className={linkClass(homeView === 'list')}>
+              <List className="w-[18px] h-[18px] shrink-0" />
+              <span className="hidden lg:inline">Лента</span>
             </Link>
             {currentUser && !isAdmin && !isOrganizer && (
-              <Link to="/recommended" className={linkClass(isActive('/recommended'))}>
-                Для вас
+              <Link to="/recommended" aria-label="Для вас" title="Для вас" className={linkClass(isActive('/recommended'))}>
+                <Sparkles className="w-[18px] h-[18px] shrink-0 lg:hidden" />
+                <span className="hidden lg:inline">Для вас</span>
               </Link>
             )}
             {currentUser && !isAdmin && (
-              <Link to="/my" className={linkClass(isActive('/my'))}>
-                Мои события
+              <Link to="/my" aria-label="Мои события" title="Мои события" className={linkClass(isActive('/my'))}>
+                <CalendarCheck className="w-[18px] h-[18px] shrink-0 lg:hidden" />
+                <span className="hidden lg:inline">Мои события</span>
               </Link>
             )}
             {isAdmin && (
-              <Link to="/admin" className={linkClass(isActive('/admin'))}>
-                Модерация
+              <Link to="/admin" aria-label="Модерация" title="Модерация" className={linkClass(isActive('/admin'))}>
+                <ShieldCheck className="w-[18px] h-[18px] shrink-0 lg:hidden" />
+                <span className="hidden lg:inline">Модерация</span>
               </Link>
             )}
           </div>
@@ -168,10 +195,12 @@ export const Navbar: React.FC = () => {
           {!isAdmin && (
             <Link
               to="/events/new"
-              className="hidden md:flex items-center gap-1.5 h-[42px] px-4 rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors"
+              aria-label="Создать мероприятие"
+              title="Создать мероприятие"
+              className="hidden md:flex items-center gap-1.5 h-[42px] px-[11px] xl:px-4 rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors shrink-0"
             >
               <Plus className="w-5 h-5" />
-              Создать
+              <span className="hidden xl:inline">Создать</span>
             </Link>
           )}
 
@@ -179,7 +208,8 @@ export const Navbar: React.FC = () => {
             <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0" title={currentUser.organizationName ?? currentUser.fullName}>
               <Link to="/profile" className="flex items-center gap-2.5 shrink-0" aria-label="Открыть профиль">
               <AccountAvatar key={`${currentUser.id}-${currentUser.avatarUrl ?? 'empty'}`} userId={currentUser.id} src={currentUser.avatarUrl} />
-              <span className="hidden xl:flex flex-col leading-tight">
+              {/* На ноутбуках имя не помещается рядом с вкладками — оно в подсказке над аватаром */}
+              <span className="hidden 2xl:flex flex-col leading-tight">
                 <span className="text-sm font-semibold text-ink max-w-[180px] truncate">
                   {currentUser.organizationName ?? currentUser.fullName}
                 </span>

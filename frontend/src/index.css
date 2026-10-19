@@ -266,6 +266,14 @@ body {
   display: none;
 }
 
+/* У каждого поиска есть своя кнопка «Очистить» — системный крестик Chrome/Safari не нужен */
+input[type='search']::-webkit-search-cancel-button,
+input[type='search']::-webkit-search-decoration {
+  -webkit-appearance: none;
+  appearance: none;
+  display: none;
+}
+
 /* Метки мероприятий поверх карты 2GIS (src/lib/mapPins.ts) — по макету «Карта и Лента»:
    плоские круги с пиктограммой спорта, без свечений и пульсации.
    Позиционирует MapGL, поэтому у корня метки нет transform/position-смещений. */
