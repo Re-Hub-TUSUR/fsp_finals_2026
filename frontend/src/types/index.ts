@@ -29,6 +29,11 @@ export interface Profile {
   events: SportEvent[];
 }
 
+export interface Achievement {
+  code: string; title: string; description: string; icon: string;
+  progress: number; target: number; completed: boolean;
+}
+
 export type FriendshipState = 'NONE' | 'OUTGOING_PENDING' | 'INCOMING_PENDING' | 'FRIENDS';
 
 export interface FriendRequest {

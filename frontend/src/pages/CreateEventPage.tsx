@@ -18,6 +18,7 @@ import type {
 } from '../types';
 import { FieldInput, inputClass, labelClass, pruneValues } from '../components/FieldInput';
 import { LocationPicker } from '../components/LocationPicker';
+import { geocodeAddress } from '../lib/mapgl';
 import { QuestionsEditor } from '../components/constructor/QuestionsEditor';
 import { CustomFieldsEditor } from '../components/constructor/CustomFieldsEditor';
 import { OrgDetailsForm } from '../components/constructor/OrgDetailsForm';
@@ -70,6 +71,7 @@ export const CreateEventPage: React.FC = () => {
   const [start, setStart] = useState(() => toLocalInput(defaultStart()));
   const [end, setEnd] = useState(() => toLocalInput(new Date(defaultStart().getTime() + 2 * 3600000)));
   const [address, setAddress] = useState('');
+  const [addressSearch, setAddressSearch] = useState<'idle' | 'loading' | 'found' | 'missing'>('idle');
   const [coords, setCoords] = useState<[number, number]>(KRASNOYARSK);
   const [coordsTouched, setCoordsTouched] = useState(false);
   /** Ближайший город к точке сбора: его часовой пояс — местное время мероприятия. */
@@ -120,6 +122,33 @@ export const CreateEventPage: React.FC = () => {
     }, 300);
     return () => clearTimeout(t);
   }, [coords]);
+
+  useEffect(() => {
+    const query = address.trim();
+    if (query.length < 4) {
+      setAddressSearch('idle');
+      return;
+    }
+    let cancelled = false;
+    setAddressSearch('loading');
+    const timer = setTimeout(async () => {
+      try {
+        const home = preferences?.homeCity;
+        const result = await geocodeAddress(query, home ? { lat: home.lat, lng: home.lng } : undefined);
+        if (cancelled) return;
+        if (!result) return setAddressSearch('missing');
+        setCoordsTouched(true);
+        setCoords([result.lat, result.lng]);
+        setAddressSearch('found');
+      } catch {
+        if (!cancelled) setAddressSearch('missing');
+      }
+    }, 700);
+    return () => {
+      cancelled = true;
+      clearTimeout(timer);
+    };
+  }, [address, preferences?.homeCity]);
 
   const availableTemplates = useMemo(
     () => templates.filter((t) => !t.organizationOnly || isOrg),
@@ -439,6 +468,11 @@ export const CreateEventPage: React.FC = () => {
                 onChange={(e) => setAddress(e.target.value)}
                 className={inputClass}
               />
+              <p className="mt-1 text-xs text-slate-500" aria-live="polite">
+                {addressSearch === 'loading' && 'Ищем адрес на карте…'}
+                {addressSearch === 'found' && 'Точка найдена и отмечена на карте.'}
+                {addressSearch === 'missing' && 'Адрес не найден — уточните его или выберите точку на карте.'}
+              </p>
             </div>
             <LocationPicker
               lat={coords[0]}

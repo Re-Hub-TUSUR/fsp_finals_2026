@@ -2,12 +2,12 @@ import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
 import { Building2, Edit3, Mail, Save, ShieldCheck, UserRound, X } from 'lucide-react';
-import { friendsApi, profilesApi } from '../api';
+import { achievementsApi, friendsApi, profilesApi } from '../api';
 import { errorMessage } from '../api/client';
 import { EventCard } from '../components/EventCard';
 import { InterestsPanel } from '../components/InterestsPanel';
 import { useAuth } from '../context/AuthContext';
-import type { Friend, FriendRequest, FriendshipState, Profile } from '../types';
+import type { Achievement, Friend, FriendRequest, FriendshipState, Profile } from '../types';
 
 export function OwnProfilePage() {
   const { currentUser, ready } = useAuth();
@@ -29,7 +29,8 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
   const [error, setError] = useState('');
   const [friendRequests, setFriendRequests] = useState<FriendRequest[]>([]);
   const [friendBusy, setFriendBusy] = useState(false);
-  const [activeTab, setActiveTab] = useState<'profile' | 'friends'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'friends' | 'achievements'>('profile');
+  const [achievements, setAchievements] = useState<Achievement[]>([]);
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendsLoaded, setFriendsLoaded] = useState(false);
@@ -57,6 +58,11 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
       .finally(() => { if (!cancelled) setFriendsLoading(false); });
     return () => { cancelled = true; };
   }, [activeTab, friendsLoaded, ownUserProfile]);
+
+  useEffect(() => {
+    if (type !== 'users' || activeTab !== 'achievements') return;
+    achievementsApi.profile(id).then(setAchievements).catch((err) => setError(errorMessage(err)));
+  }, [activeTab, id, type]);
 
   const setFriendship = async (action: 'request' | 'remove' | 'accept' | 'reject', userId: number) => {
     setFriendBusy(true); setError('');
@@ -118,9 +124,10 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
       <div className="flex gap-3"><button disabled={saving} className="flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-on-brand disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Сохранение...' : 'Сохранить'}</button><button type="button" onClick={() => { setEditing(false); setImageFile(undefined); }} className="flex items-center gap-2 rounded-md border px-4 py-2"><X className="h-4 w-4" />Отмена</button></div>
       {error && <p className="text-sm text-red-700">{error}</p>}
     </form>}
-    {ownUserProfile && <nav className="mt-8 flex gap-2 border-b border-slate-200" aria-label="Разделы профиля">
+    {type === 'users' && <nav className="mt-8 flex gap-2 border-b border-slate-200" aria-label="Разделы профиля">
       <button type="button" onClick={() => setActiveTab('profile')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'profile' ? 'border-brand text-brand' : 'border-transparent text-slate-600'}`}>Профиль</button>
-      <button type="button" onClick={() => setActiveTab('friends')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'friends' ? 'border-brand text-brand' : 'border-transparent text-slate-600'}`}>Друзья{friendsLoaded ? ` · ${friends.length}` : ''}</button>
+      {ownUserProfile && <button type="button" onClick={() => setActiveTab('friends')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'friends' ? 'border-brand text-brand' : 'border-transparent text-slate-600'}`}>Друзья{friendsLoaded ? ` · ${friends.length}` : ''}</button>}
+      <button type="button" onClick={() => setActiveTab('achievements')} className={`border-b-2 px-4 py-3 text-sm font-semibold ${activeTab === 'achievements' ? 'border-brand text-brand' : 'border-transparent text-slate-600'}`}>Достижения</button>
     </nav>}
     {(!ownUserProfile || activeTab === 'profile') && <>
       {type === 'users' && profile.canEdit && <InterestsPanel />}
@@ -132,5 +139,6 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
       {friendsLoading && <p className="mt-5 text-slate-500">Загружаем друзей...</p>}
       {!friendsLoading && friendsLoaded && (friends.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{friends.map((friend) => <article key={friend.userId} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-200">{friend.avatarUrl && <img src={friend.avatarUrl} alt="" className="h-full w-full object-cover" />}</div><Link to={`/profiles/users/${friend.userId}`} className="min-w-0 flex-1 truncate font-semibold text-slate-900 hover:text-brand">{friend.fullName}</Link><button disabled={friendBusy} onClick={() => setFriendship('remove', friend.userId)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">Удалить</button></article>)}</div> : <p className="mt-5 text-slate-500">Пока нет подтверждённых друзей. Откройте профиль спортсмена, чтобы отправить заявку.</p>)}
     </section>}
+    {type === 'users' && activeTab === 'achievements' && <section className="pt-8"><div className="flex items-end justify-between"><h2 className="text-2xl font-bold">Достижения</h2><span className="text-sm text-muted">Получено {achievements.filter((a) => a.completed).length} из {achievements.length}</span></div><div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">{achievements.map((a) => <article key={a.code} className={`rounded-2xl border p-5 ${a.completed ? 'border-brand-line bg-brand-tint' : 'border-line bg-white'}`}><div className="flex items-start gap-3"><span className={`text-3xl ${a.completed ? '' : 'grayscale opacity-50'}`}>{a.icon}</span><div><h3 className="font-bold text-ink">{a.title}</h3><p className="mt-1 text-sm text-muted">{a.description}</p></div></div><div className="mt-4 h-2 overflow-hidden rounded-full bg-surface-2"><div className="h-full rounded-full bg-brand" style={{width:`${Math.min(100,a.progress/a.target*100)}%`}} /></div><p className="mt-2 text-xs font-semibold text-muted">{a.completed ? 'Выполнено' : `${a.progress} из ${a.target}`}</p></article>)}</div></section>}
   </div>;
 }

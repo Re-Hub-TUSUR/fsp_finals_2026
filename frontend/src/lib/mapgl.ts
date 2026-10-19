@@ -98,3 +98,22 @@ export function useMapgl(containerRef: RefObject<HTMLDivElement | null>, options
 
 /** Перевод из привычного [lat, lng] в формат 2GIS. */
 export const toLngLat = (lat: number, lng: number): LngLat => [lng, lat];
+
+interface GeocoderResponse {
+  result?: { items?: Array<{ full_name?: string; point?: { lat: number; lon: number } }> };
+}
+
+/** Находит координаты адреса через Geocoder API 2GIS. */
+export async function geocodeAddress(query: string, near?: { lat: number; lng: number }) {
+  if (!MAPGL_KEY) throw new Error('Не задан ключ 2GIS');
+  const url = new URL('https://catalog.api.2gis.com/3.0/items/geocode');
+  url.searchParams.set('q', query);
+  url.searchParams.set('fields', 'items.point');
+  url.searchParams.set('key', MAPGL_KEY);
+  if (near) url.searchParams.set('location', `${near.lng},${near.lat}`);
+  const response = await fetch(url);
+  if (!response.ok) throw new Error('Не удалось найти адрес');
+  const data = (await response.json()) as GeocoderResponse;
+  const item = data.result?.items?.find((candidate) => candidate.point);
+  return item?.point ? { lat: item.point.lat, lng: item.point.lon, name: item.full_name ?? query } : null;
+}

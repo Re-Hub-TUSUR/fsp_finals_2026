@@ -33,7 +33,9 @@ export const LocationPicker: React.FC<LocationPickerProps> = ({ lat, lng, onChan
 
   useEffect(() => {
     markerRef.current?.setCoordinates(toLngLat(lat, lng));
-  }, [lat, lng]);
+    instance?.map.setCenter(toLngLat(lat, lng), { duration: 500 });
+    if (instance && instance.map.getZoom() < 15) instance.map.setZoom(15, { duration: 500 });
+  }, [instance, lat, lng]);
 
   return (
     <div className="relative h-64 rounded-xl overflow-hidden border border-slate-300">

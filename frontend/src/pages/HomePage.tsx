@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { ChevronDown, LocateFixed, Loader2, Search, SearchX, X } from 'lucide-react';
-import type { RecommendationItem, Sport, SportEvent } from '../types';
+import type { City, RecommendationItem, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
 import { CarouselCard, CompactCard, CoverCard } from '../components/HomeCards';
 import { EventDetailPanel } from '../components/EventDetailPanel';
@@ -22,7 +22,7 @@ import {
 } from '../components/HomeFilters';
 import { Modal } from '../components/Modal';
 import { Chip } from '../components/ui';
-import { catalogApi, eventsApi, recommendationsApi } from '../api';
+import { catalogApi, citiesApi, eventsApi, recommendationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { spotsLeft } from '../utils/format';
@@ -55,6 +55,7 @@ export const HomePage: React.FC = () => {
   const q = params.get('q') ?? '';
 
   const [sports, setSports] = useState<Sport[]>([]);
+  const [cities, setCities] = useState<City[]>([]);
   const [filters, setFilters] = useState<HomeFilterState>(DEFAULT_FILTERS);
   const radiusTouched = useRef(false);
   const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
@@ -101,6 +102,7 @@ export const HomePage: React.FC = () => {
 
   useEffect(() => {
     catalogApi.sports().then(setSports).catch(() => setSports([]));
+    citiesApi.list().then(setCities).catch(() => setCities([]));
   }, []);
 
   // Если геолокация уже разрешена — сразу показываем расстояния, без лишнего запроса разрешения
@@ -128,9 +130,15 @@ export const HomePage: React.FC = () => {
 
   // Область загрузки: радиус от точки отсчёта; без радиуса на карте — видимая область,
   // в «Списке» (карта скрыта) — город: точка отсчёта или домашний город, иначе Красноярск
-  const cityCenter = origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
-  const fetchCenter = radiusOn && origin ? origin : view === 'list' ? cityCenter : viewport;
+  const selectedCity = cities.find((city) => String(city.id) === params.get('city'));
+  const selectedCityCenter = selectedCity ? { lat: selectedCity.lat, lng: selectedCity.lng } : null;
+  const cityCenter = selectedCityCenter ?? origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
+  const fetchCenter = selectedCityCenter ?? (radiusOn && origin ? origin : view === 'list' ? cityCenter : viewport);
   const fetchRadius = radiusOn ? RADIUS_FETCH_KM : view === 'list' ? CITY_RADIUS_KM : viewport.radiusKm;
+
+  useEffect(() => {
+    if (selectedCityCenter) setViewport({ ...selectedCityCenter, radiusKm: CITY_RADIUS_KM });
+  }, [selectedCityCenter?.lat, selectedCityCenter?.lng]);
 
   useEffect(() => {
     if (!ready) return;
@@ -401,6 +409,7 @@ export const HomePage: React.FC = () => {
         <section className={`${view === 'map' ? '' : 'hidden'} absolute inset-0 lg:left-[420px]`}>
           <BlinkMap
             events={visibleEvents}
+            center={selectedCityCenter}
             selectedEvent={selectedEvent}
             onSelectEvent={(e) => setSelectedId(e?.id ?? null)}
             me={me}

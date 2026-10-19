@@ -30,7 +30,8 @@ public class FriendshipService {
         User target = target(auth, userId);
         Friendship existing = friendshipRepository.findBetween(auth.id(), userId).orElse(null);
         if (existing != null) {
-            if (existing.getStatus() == FriendshipStatus.PENDING && existing.getRecipient().getId().equals(auth.id())) {
+            if (existing.getStatus() == FriendshipStatus.PENDING && existing.getRecipient() != null
+                    && existing.getRecipient().getId().equals(auth.id())) {
                 throw ApiException.conflict("Есть встречная заявка — примите или отклоните её");
             }
             throw ApiException.conflict("Заявка в друзья или дружба уже существует");
@@ -91,7 +92,9 @@ public class FriendshipService {
     @Transactional(readOnly = true)
     public FriendshipState state(Long viewerId, Long profileUserId) {
         if (viewerId == null || viewerId.equals(profileUserId)) return FriendshipState.NONE;
-        return friendshipRepository.findBetween(viewerId, profileUserId).map(f -> {
+        Long firstId = Math.min(viewerId, profileUserId);
+        Long secondId = Math.max(viewerId, profileUserId);
+        return friendshipRepository.findBetween(firstId, secondId).map(f -> {
             if (f.getStatus() == FriendshipStatus.ACCEPTED) return FriendshipState.FRIENDS;
             return f.getRequester().getId().equals(viewerId) ? FriendshipState.OUTGOING_PENDING : FriendshipState.INCOMING_PENDING;
         }).orElse(FriendshipState.NONE);

@@ -38,6 +38,8 @@ interface BlinkMapProps {
   onMore?: (event: SportEvent) => void;
   /** Фильтр «Радиус»: круг вокруг точки отсчёта; при смене карта подстраивается под круг */
   radius?: { center: LatLng; km: number } | null;
+  /** Центр, выбранный вне карты (например, через выбор города). */
+  center?: LatLng | null;
 }
 
 /** Круг радиуса в цвет акцента темы (MapGL принимает только hex) */
@@ -87,6 +89,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   showCard = true,
   onMore,
   radius = null,
+  center = null,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectEvent);
@@ -111,6 +114,13 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   });
 
   const selectedId = selectedEvent?.id;
+
+  useEffect(() => {
+    if (!instance || !center) return;
+    fitted.current = true;
+    instance.map.setCenter(toLngLat(center.lat, center.lng), { duration: 700 });
+    instance.map.setZoom(12, { duration: 700 });
+  }, [instance, center?.lat, center?.lng]);
 
   // Пересчёт кластеров после движения карты; клик по пустому месту снимает выбор
   useEffect(() => {
@@ -179,7 +189,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
 
   // При первой загрузке показываем все мероприятия
   useEffect(() => {
-    if (!instance || fitted.current || events.length === 0) return;
+    if (!instance || center || fitted.current || events.length === 0) return;
     fitted.current = true;
     if (events.length === 1) {
       instance.map.setCenter(toLngLat(events[0].lat, events[0].lng), { animate: false });

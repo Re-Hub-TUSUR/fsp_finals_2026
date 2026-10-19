@@ -19,7 +19,13 @@ import type {
   FriendRequest,
   Friend,
   FriendshipState,
+  Achievement,
 } from '../types';
+
+export const achievementsApi = {
+  profile: (id: number) => api.get<Achievement[]>(`/profiles/users/${id}/achievements`).then((r) => r.data),
+  mine: () => api.get<Achievement[]>('/me/achievements').then((r) => r.data),
+};
 
 export interface EventQuery {
   sport?: string[];

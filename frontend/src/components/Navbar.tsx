@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { Link, useLocation, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
+import { citiesApi } from '../api';
+import type { City } from '../types';
 import { ArrowUpRight, ChevronDown, List, LogIn, LogOut, Map as MapIcon, MapPin, Moon, Plus, Search, Sparkles, Sun, UserRound, X } from 'lucide-react';
 
 const Logo: React.FC = () => (
@@ -41,6 +43,12 @@ export const Navbar: React.FC = () => {
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
+  const [cities, setCities] = useState<City[]>([]);
+  const [cityOpen, setCityOpen] = useState(false);
+  const [cityQuery, setCityQuery] = useState('');
+  useEffect(() => { citiesApi.list().then(setCities).catch(() => setCities([])); }, []);
+  const selectedCity = cities.find((city) => String(city.id) === params.get('city'));
+  const cityName = selectedCity?.name ?? preferences?.homeCity?.name ?? 'Красноярск';
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
   const onHome = location.pathname === '/' || location.pathname === '/events';
@@ -81,11 +89,11 @@ export const Navbar: React.FC = () => {
         <div className="flex-1 flex items-center gap-4 lg:gap-5 min-w-0">
           <Logo />
 
-          <span className="hidden xl:flex shrink-0 h-11 px-3 items-center gap-2 rounded-[14px] bg-surface text-[15px] font-semibold text-ink">
+          <button type="button" onClick={() => setCityOpen(true)} className="hidden xl:flex shrink-0 h-11 px-3 items-center gap-2 rounded-[14px] bg-surface text-[15px] font-semibold text-ink">
             <MapPin className="w-[18px] h-[18px] text-muted" />
-            {preferences?.homeCity?.name ?? 'Красноярск'}
+            {cityName}
             <ChevronDown className="w-4 h-4 text-muted" />
-          </span>
+          </button>
 
           {onHome && (
             <label className="hidden lg:flex flex-1 min-w-[200px] max-w-[460px] h-[46px] items-center gap-2.5 pl-3.5 pr-1.5 rounded-[14px] bg-surface text-muted focus-within:ring-2 focus-within:ring-brand/40">
@@ -183,6 +191,7 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
+      {cityOpen && <div className="fixed inset-0 z-[2100] bg-black/40 flex items-start justify-center p-4 pt-24" onMouseDown={() => setCityOpen(false)}><div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onMouseDown={(e) => e.stopPropagation()}><h2 className="text-xl font-bold text-ink">Выберите город</h2><input autoFocus value={cityQuery} onChange={(e) => setCityQuery(e.target.value)} placeholder="Введите название города" className="mt-4 w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:ring-2 focus:ring-brand"/><div className="mt-3 max-h-72 overflow-auto">{cities.filter((c) => c.name.toLowerCase().includes(cityQuery.trim().toLowerCase())).map((city) => <button key={city.id} type="button" onClick={() => { const p=new URLSearchParams(params); p.set('city', String(city.id)); setParams(p); setCityOpen(false); setCityQuery(''); }} className="block w-full rounded-xl px-3 py-3 text-left hover:bg-surface"><b>{city.name}</b>{city.region && <span className="ml-2 text-sm text-muted">{city.region}</span>}</button>)}</div></div></div>}
     </nav>
   );
 };

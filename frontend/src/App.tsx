@@ -14,6 +14,7 @@ import { AdminPage } from './pages/AdminPage';
 import { RecommendedPage } from './pages/RecommendedPage';
 import { AuthPage } from './pages/AuthPage';
 import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
+import { AchievementToast } from './components/AchievementToast';
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
 function PageFade({ children }: { children: ReactNode }) {
@@ -32,6 +33,7 @@ function App() {
         <BrowserRouter>
           {/* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */}
           <div className="h-dvh flex flex-col bg-page text-ink font-sans">
+            <AchievementToast />
             {/* Демо-панель для жюри: вход под любым сидовым аккаунтом в 1 клик */}
             <DemoRoleBar />
 

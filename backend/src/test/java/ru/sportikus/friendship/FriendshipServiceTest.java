@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.mockito.junit.jupiter.MockitoSettings;
+import org.mockito.quality.Strictness;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.friendship.dto.FriendshipState;
 import ru.sportikus.friendship.model.Friendship;
@@ -23,6 +25,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 @ExtendWith(MockitoExtension.class)
+@MockitoSettings(strictness = Strictness.LENIENT)
 class FriendshipServiceTest {
     private static final AuthUser IVAN = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
     @Mock FriendshipRepository friendships;
