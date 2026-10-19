@@ -34,6 +34,18 @@ cd ../backend && mvn spring-boot:run
 | `npm run build` | Проверка типов (`tsc -b`) и production-сборка в `dist/` |
 | `npm run preview` | Просмотр собранной версии |
 | `npm run lint` | Проверка oxlint |
+| `npm run test` | Автотесты (Vitest + Testing Library), один прогон |
+| `npm run test:watch` | Автотесты в watch-режиме |
+
+## Автотесты
+
+Vitest + React Testing Library + jsdom (конфиг — `vitest.config.ts`, setup — `src/test/setup.ts`). Покрыты:
+
+- `src/utils/*.test.ts` — чистая логика: форматирование времени/цены/плюрализация, геометрия (расстояние, адрес), статусы мероприятия, автопроверка.
+- Компоненты конструктора форм (`FieldInput`, `TagInput`, `CustomFieldsEditor`, `QuestionsEditor`), карточки мероприятий (`EventCard`, `MapEventCard`, `EventBits`), диалог записи (`JoinDialog`) — рендер и пользовательские сценарии (клики, ввод, валидация).
+- `CreateEventPage` — регрессионный тест на баг «белый экран при выборе свободного входа» (sr-only radio без `position: relative` на обёртке).
+
+Тесты, трогающие 2GIS (`LocationPicker`) или сеть (`../api`, `AuthContext`), мокают эти модули — SDK карты не грузится в jsdom.
 
 ## Переменные окружения
 
