@@ -5,6 +5,7 @@ import {
   CalendarPlus,
   CheckCheck,
   CheckCircle2,
+  Hourglass,
   Inbox,
   Loader2,
   UserCheck,
@@ -120,6 +121,10 @@ export const NotificationBell: React.FC = () => {
         return <XCircle className="w-5 h-5 text-rose-500 shrink-0 mt-0.5" />;
       case 'EVENT_INVITE':
         return <CalendarPlus className="w-5 h-5 text-brand shrink-0 mt-0.5" />;
+      case 'WAITLIST_SPOT_AVAILABLE':
+        return <Hourglass className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />;
+      case 'WAITLIST_SPOT_TAKEN':
+        return <Hourglass className="w-5 h-5 text-muted shrink-0 mt-0.5" />;
       case 'FRIEND_REQUEST':
         return <UserPlus className="w-5 h-5 text-blue-500 shrink-0 mt-0.5" />;
       case 'FRIEND_ACCEPTED':

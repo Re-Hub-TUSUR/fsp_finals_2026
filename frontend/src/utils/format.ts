@@ -17,6 +17,7 @@ export const PARTICIPATION_LABELS: Record<ParticipationStatus, string> = {
   CONFIRMED: 'Участие подтверждено',
   REJECTED: 'Заявка отклонена',
   CANCELLED: 'Запись отменена',
+  WAITLISTED: 'В очереди',
 };
 
 export const PARTICIPATION_STYLES: Record<ParticipationStatus, string> = {
@@ -24,6 +25,7 @@ export const PARTICIPATION_STYLES: Record<ParticipationStatus, string> = {
   CONFIRMED: 'bg-brand-tint-2 text-brand-ink border-brand-line',
   REJECTED: 'bg-red-100 text-red-700 border-red-200',
   CANCELLED: 'bg-slate-100 text-slate-600 border-slate-200',
+  WAITLISTED: 'bg-sky-100 text-sky-800 border-sky-200',
 };
 
 /** Время показываем в часовом поясе места проведения: страна большая, у участника и события он может отличаться. */

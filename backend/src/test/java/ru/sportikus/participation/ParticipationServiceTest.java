@@ -38,6 +38,8 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.never;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -102,20 +104,151 @@ class ParticipationServiceTest {
     }
 
     @Test
-    void cannotJoinUnpublishedFullOrClosedEvent() {
+    void cannotJoinUnpublishedOrClosedEvent() {
         event.setStatus(EventStatus.UNPUBLISHED);
         assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
                 .isInstanceOf(ApiException.class).hasMessageContaining("снято с публикации");
 
         event.setStatus(EventStatus.PUBLISHED);
-        when(participationRepository.countByEventIdAndStatus(EVENT_ID, ParticipationStatus.CONFIRMED)).thenReturn(2L);
-        assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
-                .isInstanceOf(ApiException.class).hasMessageContaining("места заняты");
-
-        when(participationRepository.countByEventIdAndStatus(EVENT_ID, ParticipationStatus.CONFIRMED)).thenReturn(0L);
         event.setRegistrationDeadline(Instant.now().minusSeconds(60));
         assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
                 .isInstanceOf(ApiException.class).hasMessageContaining("закрыт");
+    }
+
+    // ----------------------------------------------------------------- очередь
+
+    private Participation waiting(long id, long userId, ParticipationStatus status) {
+        return Participation.builder().id(id).event(event)
+                .user(User.builder().id(userId).fullName("Ждущий " + userId).build()).status(status).build();
+    }
+
+    /** Число подтверждённых на последовательных вызовах (если значений несколько). */
+    private void seats(long first, long... next) {
+        Long[] rest = java.util.Arrays.stream(next).boxed().toArray(Long[]::new);
+        when(participationRepository.countByEventIdAndStatus(EVENT_ID, ParticipationStatus.CONFIRMED))
+                .thenReturn(first, rest);
+    }
+
+    private void queue(Participation... waiters) {
+        when(participationRepository.countByEventIdAndStatus(EVENT_ID, ParticipationStatus.WAITLISTED))
+                .thenReturn((long) waiters.length);
+        when(participationRepository.findByEventIdAndStatusOrderByCreatedAtAsc(EVENT_ID, ParticipationStatus.WAITLISTED))
+                .thenReturn(List.of(waiters));
+    }
+
+    @Test
+    void fullEventPutsApplicantIntoQueueAndKeepsTheAnswers() {
+        event.setJoinMode(JoinMode.OPEN);
+        seats(2);
+        ParticipationResponse r = service.join(PARTICIPANT, EVENT_ID, new JoinRequest("Хочу", null, null));
+        assertThat(r.status()).isEqualTo(ParticipationStatus.WAITLISTED);
+        assertThat(r.message()).isEqualTo("Хочу");
+        assertThat(r.ticketCode()).isNull();
+    }
+
+    @Test
+    void newcomerDoesNotJumpTheQueueWhenSeatIsFree() {
+        event.setJoinMode(JoinMode.OPEN);
+        seats(1);
+        queue(waiting(31L, 3L, ParticipationStatus.WAITLISTED));
+        assertThat(service.join(PARTICIPANT, EVENT_ID, emptyJoin()).status()).isEqualTo(ParticipationStatus.WAITLISTED);
+    }
+
+    @Test
+    void cancellingConfirmedParticipantNotifiesEveryoneInQueue() {
+        Participation leaving = waiting(7L, 2L, ParticipationStatus.CONFIRMED);
+        Participation w1 = waiting(31L, 3L, ParticipationStatus.WAITLISTED);
+        Participation w2 = waiting(32L, 4L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(leaving));
+        seats(1);
+        queue(w1, w2);
+
+        service.cancel(PARTICIPANT, EVENT_ID);
+
+        verify(notificationService).notifyWaitlistSpot(w1.getUser(), event);
+        verify(notificationService).notifyWaitlistSpot(w2.getUser(), event);
+    }
+
+    @Test
+    void cancellingPendingRequestDoesNotNotifyTheQueue() {
+        Participation pending = waiting(7L, 2L, ParticipationStatus.PENDING);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(pending));
+        queue(waiting(31L, 3L, ParticipationStatus.WAITLISTED));
+
+        service.cancel(PARTICIPANT, EVENT_ID);
+
+        verify(notificationService, never()).notifyWaitlistSpot(any(), any());
+    }
+
+    @Test
+    void queuedUserCanLeaveTheQueueWithoutNotifyingAnyone() {
+        Participation w = waiting(7L, 2L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(w));
+        queue(w);
+
+        assertThat(service.cancel(PARTICIPANT, EVENT_ID).status()).isEqualTo(ParticipationStatus.CANCELLED);
+        verify(notificationService, never()).notifyWaitlistSpot(any(), any());
+    }
+
+    @Test
+    void organizerRejectingConfirmedParticipantNotifiesTheQueue() {
+        Participation confirmed = waiting(7L, 2L, ParticipationStatus.CONFIRMED);
+        Participation w = waiting(31L, 3L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findWithUserById(7L)).thenReturn(Optional.of(confirmed));
+        seats(1);
+        queue(w);
+
+        service.decide(ORGANIZER, EVENT_ID, 7L, new DecisionRequest(ParticipationStatus.REJECTED, null));
+
+        verify(notificationService).notifyWaitlistSpot(w.getUser(), event);
+    }
+
+    @Test
+    void firstResponderTakesTheFreedSeatInOpenEvent() {
+        event.setJoinMode(JoinMode.OPEN);
+        Participation me = waiting(7L, 2L, ParticipationStatus.WAITLISTED);
+        Participation other = waiting(31L, 3L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(me));
+        seats(1, 2);
+        queue(me, other);
+
+        ParticipationResponse r = service.join(PARTICIPANT, EVENT_ID, emptyJoin());
+
+        assertThat(r.status()).isEqualTo(ParticipationStatus.CONFIRMED);
+        assertThat(r.ticketCode()).isNotNull();
+        // место ушло — остальным в очереди сообщают, но сам откликнувшийся без уведомления
+        verify(notificationService).notifyWaitlistSpotTaken(me.getUser(), event);
+        verify(notificationService).notifyWaitlistSpotTaken(other.getUser(), event);
+    }
+
+    @Test
+    void claimOnFullEventIsRejectedAsSeatTaken() {
+        Participation me = waiting(7L, 2L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(me));
+        seats(2);
+
+        assertThatThrownBy(() -> service.join(PARTICIPANT, EVENT_ID, emptyJoin()))
+                .isInstanceOf(ApiException.class).hasMessageContaining("заняли");
+        assertThat(me.getStatus()).isEqualTo(ParticipationStatus.WAITLISTED);
+    }
+
+    @Test
+    void claimInApprovalEventSendsARequestToTheOrganizer() {
+        Participation me = waiting(7L, 2L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findByEventIdAndUserId(EVENT_ID, 2L)).thenReturn(Optional.of(me));
+        seats(1);
+
+        assertThat(service.join(PARTICIPANT, EVENT_ID, emptyJoin()).status()).isEqualTo(ParticipationStatus.PENDING);
+        verify(notificationService, never()).notifyWaitlistSpotTaken(any(), any());
+    }
+
+    @Test
+    void organizerCannotConfirmSomeoneFromTheQueue() {
+        Participation w = waiting(7L, 2L, ParticipationStatus.WAITLISTED);
+        when(participationRepository.findWithUserById(7L)).thenReturn(Optional.of(w));
+        assertThatThrownBy(() -> service.decide(ORGANIZER, EVENT_ID, 7L,
+                new DecisionRequest(ParticipationStatus.CONFIRMED, null)))
+                .isInstanceOf(ApiException.class).hasMessageContaining("очереди");
     }
 
     @Test

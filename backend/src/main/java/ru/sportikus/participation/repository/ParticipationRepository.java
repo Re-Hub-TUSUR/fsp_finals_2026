@@ -26,7 +26,8 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
             select p.event.id as eventId, p.status as status, count(p) as cnt
             from Participation p
             where p.event.id in :eventIds and p.status in (ru.sportikus.participation.model.ParticipationStatus.CONFIRMED,
-                                                           ru.sportikus.participation.model.ParticipationStatus.PENDING)
+                                                           ru.sportikus.participation.model.ParticipationStatus.PENDING,
+                                                           ru.sportikus.participation.model.ParticipationStatus.WAITLISTED)
             group by p.event.id, p.status
             """)
     List<StatusCount> countByEvents(@Param("eventIds") Collection<Long> eventIds);
@@ -60,6 +61,10 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
 
     @EntityGraph(attributePaths = "user")
     List<Participation> findByEventIdOrderByCreatedAtAsc(Long eventId);
+
+    /** Очередь на мероприятие в порядке постановки. */
+    @EntityGraph(attributePaths = "user")
+    List<Participation> findByEventIdAndStatusOrderByCreatedAtAsc(Long eventId, ParticipationStatus status);
 
     @EntityGraph(attributePaths = {"event", "event.sport", "event.organizerUser", "event.organizerOrg", "event.template", "event.city"})
     List<Participation> findByUserIdOrderByCreatedAtDesc(Long userId);

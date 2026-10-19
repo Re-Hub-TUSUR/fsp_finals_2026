@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ChevronRight, Clock, Loader2, MapPin, Wallet, X } from 'lucide-react';
 import type { SportEvent } from '../types';
-import { eventsApi } from '../api';
+import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import { SKILL_LABELS, formatPrice, registrationClosesAt } from '../utils/format';
@@ -79,11 +79,39 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
     }
   };
 
+  /** Отклик из очереди: место свободно — занимаем сразу, без анкеты (она сохранена при постановке в очередь). */
+  const claimSpot = async () => {
+    setLoadingJoin(true);
+    setError(null);
+    try {
+      await participationApi.join(event.id, {});
+    } catch (e) {
+      setError(errorMessage(e, 'Не удалось занять место'));
+    } finally {
+      setLoadingJoin(false);
+      onChanged();
+    }
+  };
+
   const primaryClass = 'flex-[1.4] h-14 rounded-[18px] text-[17px] font-bold flex items-center justify-center gap-2 transition-colors';
   const primary = event.canManage ? (
     <Link to={`/events/${event.id}/manage`} className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover`}>
       Управлять
     </Link>
+  ) : my?.status === 'WAITLISTED' ? (
+    isFull(event) ? (
+      <span className={`${primaryClass} bg-sky-100 text-sky-800`}>Вы в очереди</span>
+    ) : (
+      <button
+        type="button"
+        onClick={() => void claimSpot()}
+        disabled={loadingJoin}
+        className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-70`}
+      >
+        {loadingJoin && <Loader2 className="w-5 h-5 animate-spin" />}
+        Занять место
+      </button>
+    )
   ) : my ? (
     <span className={`${primaryClass} bg-brand-tint text-brand-ink`}>
       {my.status === 'CONFIRMED' ? 'Вы записаны ✓' : my.status === 'PENDING' ? 'Заявка отправлена' : 'Заявка отклонена'}
@@ -92,8 +120,6 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
     <Link to="/auth" className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover`}>
       Войти и записаться
     </Link>
-  ) : isFull(event) ? (
-    <span className={`${primaryClass} bg-surface-2 text-muted`}>Мест нет</span>
   ) : closed ? (
     <span className={`${primaryClass} bg-surface-2 text-muted`}>Запись закрыта</span>
   ) : (
@@ -104,7 +130,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
       className={`${primaryClass} bg-brand text-on-brand hover:bg-brand-hover disabled:opacity-70`}
     >
       {loadingJoin && <Loader2 className="w-5 h-5 animate-spin" />}
-      {event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться'}
+      {isFull(event) ? 'Встать в очередь' : event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться'}
     </button>
   );
 
@@ -226,6 +252,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
       {joinEvent && (
         <JoinDialog
           event={joinEvent}
+          waitlist={isFull(event)}
           onClose={() => setJoinEvent(null)}
           onDone={() => {
             setJoinEvent(null);

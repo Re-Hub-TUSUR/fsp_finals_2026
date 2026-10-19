@@ -45,6 +45,7 @@ public record EventResponse(
 
         int capacity,
         int confirmedCount,
+        int waitlistCount,
         JoinMode joinMode,
         SkillLevel skillLevel,
         BigDecimal price,
@@ -79,7 +80,7 @@ public record EventResponse(
                 id, title, description, sport, template,
                 organizerName, organizerAvatar, byOrganization, organizationId, organizerUserId,
                 startTime, endTime, lat, lng, address, cityName, timeZone,
-                capacity, confirmedCount, joinMode, skillLevel, price, registrationDeadline, minAge, maxAge,
+                capacity, confirmedCount, waitlistCount, joinMode, skillLevel, price, registrationDeadline, minAge, maxAge,
                 requiredEquipment, status, unpublishReason,
                 fields, details, customFields, registrationFields, orgDetails,
                 friends, mine, manager, pendingCount, moderation);

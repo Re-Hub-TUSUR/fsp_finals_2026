@@ -7,5 +7,7 @@ public enum NotificationType {
     FRIEND_REQUEST,
     FRIEND_ACCEPTED,
     NEW_COMMENT,
+    WAITLIST_SPOT_AVAILABLE,
+    WAITLIST_SPOT_TAKEN,
     SYSTEM
 }

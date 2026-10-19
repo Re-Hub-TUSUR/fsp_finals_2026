@@ -75,6 +75,8 @@ export type NotificationType =
   | 'FRIEND_REQUEST'
   | 'FRIEND_ACCEPTED'
   | 'NEW_COMMENT'
+  | 'WAITLIST_SPOT_AVAILABLE'
+  | 'WAITLIST_SPOT_TAKEN'
   | 'SYSTEM';
 
 export interface AppNotification {
@@ -140,7 +142,7 @@ export interface EventModeration {
   model?: string;
   checkedAt?: string;
 }
-export type ParticipationStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED';
+export type ParticipationStatus = 'PENDING' | 'CONFIRMED' | 'REJECTED' | 'CANCELLED' | 'WAITLISTED';
 
 /** Конструктор: описание одного поля формы (поле шаблона или вопрос участнику). */
 export type FieldType = 'TEXT' | 'TEXTAREA' | 'NUMBER' | 'SELECT' | 'MULTISELECT' | 'BOOLEAN';
@@ -234,6 +236,8 @@ export interface SportEvent {
   timeZone?: string;
   capacity: number;
   confirmedCount: number;
+  /** Сколько человек стоит в очереди на освободившееся место. */
+  waitlistCount?: number;
   joinMode: JoinMode;
   skillLevel: SkillLevel;
   price?: number;

@@ -25,7 +25,7 @@ public class EventMapper {
     private final ParticipationRepository participationRepository;
     private final OrganizationRepository organizationRepository;
 
-    private record Counts(int confirmed, int pending) {
+    private record Counts(int confirmed, int pending, int waitlisted) {
     }
 
     /** Лёгкое представление для списков и карты. Вызывать внутри транзакции. */
@@ -45,7 +45,7 @@ public class EventMapper {
                 : participationRepository.findByUserIdAndEventIdIn(viewerId, ids).stream()
                         .collect(Collectors.toMap(p -> p.getEvent().getId(), p -> p));
         return events.stream()
-                .map(e -> build(e, counts.getOrDefault(e.getId(), new Counts(0, 0)), mine.get(e.getId()),
+                .map(e -> build(e, counts.getOrDefault(e.getId(), new Counts(0, 0, 0)), mine.get(e.getId()),
                         friends.getOrDefault(e.getId(), List.of()), false, viewerId, includePending, includeModeration))
                 .toList();
     }
@@ -80,7 +80,7 @@ public class EventMapper {
 
     /** Полная карточка; с результатом автопроверки — для администратора. */
     public EventResponse toDetails(Event event, Long viewerId, boolean includeModeration) {
-        Counts counts = loadCounts(List.of(event.getId())).getOrDefault(event.getId(), new Counts(0, 0));
+        Counts counts = loadCounts(List.of(event.getId())).getOrDefault(event.getId(), new Counts(0, 0, 0));
         Participation mine = viewerId == null ? null
                 : participationRepository.findByEventIdAndUserId(event.getId(), viewerId).orElse(null);
         return build(event, counts, mine, loadFriends(List.of(event.getId()), viewerId).getOrDefault(event.getId(), List.of()),
@@ -90,15 +90,17 @@ public class EventMapper {
     private Map<Long, Counts> loadCounts(List<Long> ids) {
         Map<Long, int[]> acc = new HashMap<>();
         for (ParticipationRepository.StatusCount row : participationRepository.countByEvents(ids)) {
-            int[] c = acc.computeIfAbsent(row.getEventId(), k -> new int[2]);
+            int[] c = acc.computeIfAbsent(row.getEventId(), k -> new int[3]);
             if (row.getStatus() == ParticipationStatus.CONFIRMED) {
                 c[0] = row.getCnt().intValue();
+            } else if (row.getStatus() == ParticipationStatus.WAITLISTED) {
+                c[2] = row.getCnt().intValue();
             } else {
                 c[1] = row.getCnt().intValue();
             }
         }
         Map<Long, Counts> result = new HashMap<>();
-        acc.forEach((id, c) -> result.put(id, new Counts(c[0], c[1])));
+        acc.forEach((id, c) -> result.put(id, new Counts(c[0], c[1], c[2])));
         return result;
     }
 
@@ -133,7 +135,7 @@ public class EventMapper {
                 byOrg ? null : e.getOrganizerUser().getId(),
                 e.getStartTime(), e.getEndTime(), e.getLat(), e.getLng(), e.getAddress(),
                 e.getCity() == null ? null : e.getCity().getName(), e.getTimeZone(),
-                e.getCapacity(), counts.confirmed(), e.getJoinMode(), e.getSkillLevel(), e.getPrice(),
+                e.getCapacity(), counts.confirmed(), counts.waitlisted(), e.getJoinMode(), e.getSkillLevel(), e.getPrice(),
                 e.getRegistrationDeadline(), e.getMinAge(), e.getMaxAge(), e.getRequiredEquipment(),
                 e.getStatus(), e.getUnpublishReason(),
                 detailed ? e.getFields() : null,

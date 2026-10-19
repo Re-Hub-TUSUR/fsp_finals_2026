@@ -10,7 +10,7 @@ describe('RouteButton', () => {
     fireEvent.click(screen.getByRole('button', { name: /Маршрут/ }));
     const links = screen.getAllByRole('link');
     expect(links.map((l) => l.textContent)).toEqual(['2GIS', 'Яндекс Карты', 'Google Maps']);
-    expect(links[0].getAttribute('href')).toBe('https://2gis.ru/routeSearch/rsType/car/to/92.85,56.01');
+    expect(links[0].getAttribute('href')).toBe('https://2gis.ru/directions/points/%7C92.85,56.01');
     links.forEach((l) => expect(l.getAttribute('target')).toBe('_blank'));
   });
 

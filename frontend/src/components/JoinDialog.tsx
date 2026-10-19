@@ -12,13 +12,15 @@ interface JoinDialogProps {
   onClose: () => void;
   /** Вызывается после успешной отправки, чтобы страница перечитала состояние. */
   onDone: () => void;
+  /** Мест нет: заявка ставит в очередь, место достанется первому откликнувшемуся. */
+  waitlist?: boolean;
 }
 
 /**
  * Подтверждение участия. Участник видит, что именно подтверждает: время, место, цену,
  * требования организатора и отвечает на анкету. При режиме «по заявке» решение примет организатор.
  */
-export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }) => {
+export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone, waitlist = false }) => {
   const needsApproval = event.joinMode === 'APPROVAL';
   const org = event.orgDetails;
   const hasRequirements =
@@ -57,7 +59,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
   };
 
   return (
-    <Modal title={needsApproval ? 'Подать заявку' : 'Записаться'} onClose={onClose}>
+    <Modal title={waitlist ? 'Встать в очередь' : needsApproval ? 'Подать заявку' : 'Записаться'} onClose={onClose}>
       <form onSubmit={submit} className="space-y-5">
         <div className="rounded-xl bg-slate-50 border border-slate-200 p-4 space-y-1.5">
           <div className="font-bold text-slate-900">{event.title}</div>
@@ -76,12 +78,16 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
 
         <div
           className={`flex gap-3 rounded-xl border p-4 text-sm ${
-            needsApproval ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-brand-tint border-brand-line text-brand-ink'
+            waitlist || needsApproval
+              ? 'bg-amber-50 border-amber-200 text-amber-900'
+              : 'bg-brand-tint border-brand-line text-brand-ink'
           }`}
         >
           <ShieldCheck className="w-5 h-5 shrink-0 mt-0.5" />
           <p>
-            {needsApproval
+            {waitlist
+              ? 'Сейчас мест нет. Вы встанете в очередь: когда место освободится, мы пришлём уведомление, и оно достанется тому, кто откликнется первым. Место не закрепляется, пока вы его не займёте.'
+              : needsApproval
               ? 'Организатор рассмотрит заявку и подтвердит участие. Место закрепляется только после подтверждения — статус будет виден в карточке и в «Моих событиях».'
               : 'Вход свободный: вы будете записаны сразу и займёте место.'}
           </p>
@@ -159,7 +165,7 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone }
             className="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
           >
             {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
-            {needsApproval ? 'Отправить заявку' : 'Подтвердить запись'}
+            {waitlist ? 'Встать в очередь' : needsApproval ? 'Отправить заявку' : 'Подтвердить запись'}
           </button>
         </div>
       </form>

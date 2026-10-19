@@ -37,8 +37,13 @@ import java.util.Map;
  *  OPEN      join ──────────────────────────────▶ CONFIRMED
  *  APPROVAL  join ─▶ PENDING ─ организатор ─▶ CONFIRMED | REJECTED
  *  CONFIRMED ─ организатор ─▶ REJECTED (исключение)      REJECTED ─ организатор ─▶ CONFIRMED
- *  PENDING | CONFIRMED ─ участник ─▶ CANCELLED           CANCELLED ─ участник (повторно) ─▶ PENDING | CONFIRMED
+ *  PENDING | CONFIRMED | WAITLISTED ─ участник ─▶ CANCELLED
+ *  CANCELLED ─ участник (повторно) ─▶ PENDING | CONFIRMED (или WAITLISTED, если мест нет / есть очередь)
+ *  мест нет ─ join ─▶ WAITLISTED ─ место освободилось, участник откликнулся первым ─▶ PENDING | CONFIRMED
  * </pre>
+ * Очередь: когда место освобождается, оповещаются все ожидающие, место получает первый откликнувшийся
+ * (повторный join из WAITLISTED), остальным приходит «Место заняли». Таймеров нет — неактивный человек
+ * очередь не задерживает.
  * Все операции над местами выполняются под блокировкой строки мероприятия, поэтому последнее
  * место не может быть выдано дважды.
  */
@@ -83,8 +88,15 @@ public class ParticipationService {
                 case CONFIRMED -> throw ApiException.conflict("Вы уже участвуете в этом мероприятии");
                 case PENDING -> throw ApiException.conflict("Ваша заявка уже отправлена и ждёт решения организатора");
                 case REJECTED -> throw ApiException.conflict("Организатор отклонил вашу заявку");
-                case CANCELLED -> { /* можно записаться заново */ }
+                case CANCELLED, WAITLISTED -> { /* записаться заново / откликнуться на освободившееся место */ }
             }
+        }
+
+        long confirmed = participationRepository.countByEventIdAndStatus(eventId, ParticipationStatus.CONFIRMED);
+        boolean full = confirmed >= event.getCapacity();
+        boolean claim = existing != null && existing.getStatus() == ParticipationStatus.WAITLISTED;
+        if (claim) {
+            return claimSpot(event, user, existing, full, now);
         }
 
         if (event.requiresAcknowledgement() && !Boolean.TRUE.equals(req.acceptedRequirements())) {
@@ -93,15 +105,14 @@ public class ParticipationService {
         Map<String, Object> answers = fieldValidator.validateValues(
                 event.getRegistrationFields(), req.answers(), "Анкета участника");
 
-        long confirmed = participationRepository.countByEventIdAndStatus(eventId, ParticipationStatus.CONFIRMED);
-        if (confirmed >= event.getCapacity()) {
-            throw ApiException.conflict("Все места заняты");
-        }
-
-        boolean instant = event.getJoinMode() == JoinMode.OPEN;
+        // Мест нет или уже есть очередь — встаём в неё, чтобы не обгонять ожидающих
+        boolean queued = full
+                || participationRepository.countByEventIdAndStatus(eventId, ParticipationStatus.WAITLISTED) > 0;
+        boolean instant = !queued && event.getJoinMode() == JoinMode.OPEN;
         ParticipationStatus previous = existing == null ? null : existing.getStatus();
         Participation p = existing != null ? existing : Participation.builder().event(event).user(user).build();
-        p.setStatus(instant ? ParticipationStatus.CONFIRMED : ParticipationStatus.PENDING);
+        p.setStatus(queued ? ParticipationStatus.WAITLISTED
+                : instant ? ParticipationStatus.CONFIRMED : ParticipationStatus.PENDING);
         if (instant && p.getTicketCode() == null) {
             p.setTicketCode(generateTicketCode());
         }
@@ -115,12 +126,53 @@ public class ParticipationService {
         return ParticipationResponse.withUser(saved);
     }
 
+    /** Отклик из очереди: место уже освободилось — занимаем (или подаём заявку), иначе «место заняли». */
+    private ParticipationResponse claimSpot(Event event, User user, Participation p, boolean full, Instant now) {
+        if (full) {
+            throw ApiException.conflict("Место уже заняли");
+        }
+        boolean instant = event.getJoinMode() == JoinMode.OPEN;
+        p.setStatus(instant ? ParticipationStatus.CONFIRMED : ParticipationStatus.PENDING);
+        if (instant && p.getTicketCode() == null) {
+            p.setTicketCode(generateTicketCode());
+        }
+        p.setDecidedAt(instant ? now : null);
+        Participation saved = participationRepository.save(p);
+        events.publishEvent(new ParticipationChangedEvent(user.getId(), event.getId(),
+                ParticipationStatus.WAITLISTED, saved.getStatus()));
+        if (instant && participationRepository.countByEventIdAndStatus(event.getId(), ParticipationStatus.CONFIRMED)
+                >= event.getCapacity()) {
+            // Место ушло — остальным в очереди об этом сообщаем
+            for (Participation other : participationRepository
+                    .findByEventIdAndStatusOrderByCreatedAtAsc(event.getId(), ParticipationStatus.WAITLISTED)) {
+                notificationService.notifyWaitlistSpotTaken(other.getUser(), event);
+            }
+        }
+        return ParticipationResponse.withUser(saved);
+    }
+
+    /** Освободилось место: оповещаем всех из очереди, место получит первый откликнувшийся. */
+    private void offerFreedSeat(Event event) {
+        if (event.getStatus() != EventStatus.PUBLISHED || !Instant.now().isBefore(event.registrationClosesAt())) {
+            return;
+        }
+        if (participationRepository.countByEventIdAndStatus(event.getId(), ParticipationStatus.CONFIRMED)
+                >= event.getCapacity()) {
+            return;
+        }
+        for (Participation waiting : participationRepository
+                .findByEventIdAndStatusOrderByCreatedAtAsc(event.getId(), ParticipationStatus.WAITLISTED)) {
+            notificationService.notifyWaitlistSpot(waiting.getUser(), event);
+        }
+    }
+
     @Transactional
     public ParticipationResponse cancel(AuthUser auth, Long eventId) {
         Event event = lockEvent(eventId);
         Participation p = participationRepository.findByEventIdAndUserId(eventId, auth.id())
                 .orElseThrow(() -> ApiException.notFound("Вы не записаны на это мероприятие"));
-        if (p.getStatus() != ParticipationStatus.PENDING && p.getStatus() != ParticipationStatus.CONFIRMED) {
+        if (p.getStatus() != ParticipationStatus.PENDING && p.getStatus() != ParticipationStatus.CONFIRMED
+                && p.getStatus() != ParticipationStatus.WAITLISTED) {
             throw ApiException.conflict("Запись уже неактивна");
         }
         if (!Instant.now().isBefore(event.getEndTime())) {
@@ -132,6 +184,9 @@ public class ParticipationService {
         p.setDecidedBy(null);
         Participation saved = participationRepository.save(p);
         events.publishEvent(new ParticipationChangedEvent(auth.id(), eventId, previous, ParticipationStatus.CANCELLED));
+        if (previous == ParticipationStatus.CONFIRMED) {
+            offerFreedSeat(event);
+        }
         return ParticipationResponse.withUser(saved);
     }
 
@@ -173,6 +228,9 @@ public class ParticipationService {
                 if (from == ParticipationStatus.CANCELLED) {
                     throw ApiException.conflict("Участник отменил запись");
                 }
+                if (from == ParticipationStatus.WAITLISTED) {
+                    throw ApiException.conflict("Участник в очереди — место он займёт сам, когда оно освободится");
+                }
                 long confirmed = participationRepository.countByEventIdAndStatus(eventId, ParticipationStatus.CONFIRMED);
                 if (confirmed >= event.getCapacity()) {
                     throw ApiException.conflict("Все места заняты — подтвердить ещё одну заявку нельзя");
@@ -197,6 +255,9 @@ public class ParticipationService {
         Participation saved = participationRepository.save(p);
         events.publishEvent(new ParticipationChangedEvent(p.getUser().getId(), eventId, from, req.decision()));
         notificationService.notifyParticipationDecision(p.getUser(), event, req.decision() == ParticipationStatus.CONFIRMED, req.comment());
+        if (from == ParticipationStatus.CONFIRMED && req.decision() == ParticipationStatus.REJECTED) {
+            offerFreedSeat(event);
+        }
         return ParticipationResponse.withUser(saved);
     }
 

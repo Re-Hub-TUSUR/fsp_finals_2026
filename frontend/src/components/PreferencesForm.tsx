@@ -20,7 +20,7 @@ const SKILLS: SkillLevel[] = ['NOVICE', 'AMATEUR', 'PRO'];
 
 const chip = (active: boolean) =>
   `px-3 py-2 rounded-xl text-sm font-medium border transition-colors ${
-    active ? 'bg-emerald-600 border-emerald-600 text-white' : 'bg-white border-slate-300 text-slate-700 hover:bg-slate-50'
+    active ? 'bg-ink border-ink text-white' : 'bg-card border-line text-ink hover:bg-surface'
   }`;
 
 /**
@@ -125,7 +125,7 @@ export const PreferencesForm: React.FC<PreferencesFormProps> = ({ initial, submi
             max={100}
             value={distance}
             onChange={(e) => setDistance(Number(e.target.value))}
-            className="w-full accent-emerald-600 mt-3"
+            className="w-full accent-brand mt-3"
           />
         </div>
       </div>
@@ -200,7 +200,7 @@ export const PreferencesForm: React.FC<PreferencesFormProps> = ({ initial, submi
         <button
           type="submit"
           disabled={saving}
-          className="px-6 py-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
+          className="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
         >
           {saving && <Loader2 className="w-5 h-5 animate-spin" />}
           {submitLabel}

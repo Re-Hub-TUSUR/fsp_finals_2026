@@ -52,6 +52,19 @@ describe('JoinDialog', () => {
     });
   });
 
+  it('offers to join the queue when the event is full', async () => {
+    const user = userEvent.setup();
+    vi.mocked(participationApi.join).mockResolvedValue({} as never);
+    const onDone = vi.fn();
+    render(<JoinDialog event={baseEvent({ joinMode: 'OPEN' })} waitlist onClose={vi.fn()} onDone={onDone} />);
+
+    expect(screen.getByText(/Сейчас мест нет/)).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: 'Встать в очередь' }));
+
+    await waitFor(() => expect(onDone).toHaveBeenCalled());
+    expect(participationApi.join).toHaveBeenCalledTimes(1);
+  });
+
   it('blocks submission when a required question is unanswered', async () => {
     const user = userEvent.setup();
     render(

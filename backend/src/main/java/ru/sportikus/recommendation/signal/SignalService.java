@@ -83,7 +83,7 @@ public class SignalService {
         if (isActive && !wasActive && e.previous() != ParticipationStatus.REJECTED) {
             delta = JOIN;
             logRepository.logAction(e.userId(), e.eventId(), "JOIN");
-        } else if (e.current() == ParticipationStatus.CANCELLED) {
+        } else if (e.current() == ParticipationStatus.CANCELLED && e.previous() != ParticipationStatus.WAITLISTED) {
             delta = CANCEL;
         }
         if (delta != 0) {

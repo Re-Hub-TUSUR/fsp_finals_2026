@@ -77,6 +77,7 @@ export const ManageEventPage: React.FC = () => {
     () => ({
       pending: items.filter((p) => p.status === 'PENDING'),
       confirmed: items.filter((p) => p.status === 'CONFIRMED'),
+      waitlisted: items.filter((p) => p.status === 'WAITLISTED'),
       other: items.filter((p) => p.status === 'REJECTED' || p.status === 'CANCELLED'),
     }),
     [items],
@@ -258,6 +259,8 @@ export const ManageEventPage: React.FC = () => {
       <div className="space-y-8">
         {event.joinMode === 'APPROVAL' && section('Ждут решения', groups.pending, 'Новых заявок нет.')}
         {section('Участники', groups.confirmed, 'Пока никого нет.')}
+        {groups.waitlisted.length > 0 &&
+          section(`Очередь (${groups.waitlisted.length})`, groups.waitlisted, '')}
         {groups.other.length > 0 && section('Отклонённые и отменённые', groups.other, '')}
       </div>
 

@@ -10,6 +10,7 @@ import {
   Clock,
   FileText,
   Globe,
+  Hourglass,
   Loader2,
   Mail,
   MapPin,
@@ -119,6 +120,21 @@ export const EventPage: React.FC = () => {
       setActionError(errorMessage(e));
     } finally {
       setBusy(false);
+    }
+  };
+
+  /** Отклик из очереди: место занимает первый откликнувшийся, остальным сервер отвечает «Место уже заняли». */
+  const claimSpot = async () => {
+    if (!event) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await participationApi.join(event.id, {});
+    } catch (e) {
+      setActionError(errorMessage(e));
+    } finally {
+      setBusy(false);
+      await load();
     }
   };
 
@@ -301,7 +317,56 @@ export const EventPage: React.FC = () => {
     }
     if (ended) return <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4">Мероприятие уже завершилось.</p>;
     if (closed) return <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4">Приём заявок закрыт.</p>;
-    if (full) return <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-4">Все места заняты.</p>;
+    if (my?.status === 'WAITLISTED') {
+      return (
+        <div className="space-y-3">
+          {full ? (
+            <div className="rounded-xl bg-sky-50 border border-sky-200 p-4 text-sky-900">
+              <div className="flex items-center gap-2 font-bold">
+                <Hourglass className="w-5 h-5" /> Вы в очереди
+              </div>
+              <p className="text-sm mt-1">
+                Сейчас мест нет. Когда место освободится, придёт уведомление — оно достанется тому, кто откликнется первым.
+              </p>
+            </div>
+          ) : (
+            <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
+              <div className="flex items-center gap-2 font-bold">
+                <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Освободилось место!
+              </div>
+              <p className="text-sm mt-1">Займите его, пока не опередили.</p>
+              <button
+                onClick={() => void claimSpot()}
+                disabled={busy}
+                className="mt-3 w-full bg-brand hover:bg-brand-hover text-on-brand font-bold py-3 rounded-xl shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
+              >
+                {busy && <Loader2 className="w-5 h-5 animate-spin" />}
+                {event.joinMode === 'APPROVAL' ? 'Подать заявку на место' : 'Занять место'}
+              </button>
+            </div>
+          )}
+          <button onClick={() => setCancelOpen(true)} className="w-full text-sm font-semibold text-red-700 hover:bg-red-50 py-2.5 rounded-xl">
+            Выйти из очереди
+          </button>
+        </div>
+      );
+    }
+    if (full) {
+      return (
+        <div className="space-y-2">
+          <div className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-4">
+            Все места заняты. Встаньте в очередь — если кто-то откажется, мы сообщим вам.
+            {!!event.waitlistCount && <span className="block text-xs mt-1 opacity-80">Сейчас в очереди: {event.waitlistCount}</span>}
+          </div>
+          <button
+            onClick={() => setJoinOpen(true)}
+            className="w-full bg-brand hover:bg-brand-hover text-on-brand font-bold text-lg py-3.5 rounded-xl shadow-sm active:scale-[0.99] transition"
+          >
+            Встать в очередь
+          </button>
+        </div>
+      );
+    }
     return (
       <div className="space-y-2">
         <button
@@ -689,6 +754,7 @@ export const EventPage: React.FC = () => {
       {joinOpen && (
         <JoinDialog
           event={event}
+          waitlist={full}
           onClose={() => setJoinOpen(false)}
           onDone={() => {
             setJoinOpen(false);
@@ -697,11 +763,16 @@ export const EventPage: React.FC = () => {
         />
       )}
       {cancelOpen && (
-        <Modal title={my?.status === 'PENDING' ? 'Отозвать заявку?' : 'Отменить участие?'} onClose={() => setCancelOpen(false)}>
+        <Modal
+          title={my?.status === 'PENDING' ? 'Отозвать заявку?' : my?.status === 'WAITLISTED' ? 'Выйти из очереди?' : 'Отменить участие?'}
+          onClose={() => setCancelOpen(false)}
+        >
           <p className="text-slate-700 mb-5">
             {my?.status === 'PENDING'
               ? 'Организатор больше не увидит вашу заявку. Позже можно подать её снова.'
-              : 'Место освободится для других участников. Позже можно записаться снова, если останутся места.'}
+              : my?.status === 'WAITLISTED'
+                ? 'Вы больше не будете получать уведомления об освободившихся местах. Позже можно встать в очередь снова.'
+                : 'Место освободится для других участников. Позже можно записаться снова, если останутся места.'}
           </p>
           {actionError && <p className="text-sm text-red-700 mb-3">{actionError}</p>}
           <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">

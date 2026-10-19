@@ -236,9 +236,26 @@ describe('eventAction', () => {
   it('picks the label by join mode, fullness and own participation', () => {
     expect(eventAction(baseEvent()).label).toBe('Записаться');
     expect(eventAction(baseEvent({ joinMode: 'APPROVAL' })).label).toBe('Подать заявку');
-    expect(eventAction(baseEvent({ confirmedCount: 10 }))).toMatchObject({ label: 'Мест нет', joinable: false });
+    expect(eventAction(baseEvent({ confirmedCount: 10 }))).toMatchObject({ label: 'Встать в очередь', joinable: true });
     const mine = baseEvent({ myParticipation: { status: 'PENDING' } as SportEvent['myParticipation'] });
     expect(eventAction(mine)).toMatchObject({ label: 'Заявка отправлена', joinable: false });
+  });
+});
+
+describe('eventAction: waitlist', () => {
+  const queued = (confirmedCount: number) =>
+    baseEvent({ capacity: 10, confirmedCount, myParticipation: { status: 'WAITLISTED' } as SportEvent['myParticipation'] });
+
+  it('queued user of a full event just waits', () => {
+    expect(eventAction(queued(10))).toMatchObject({ label: 'Вы в очереди', joinable: false });
+  });
+
+  it('queued user can claim a freed seat', () => {
+    expect(eventAction(queued(9))).toMatchObject({ label: 'Занять место', joinable: true });
+  });
+
+  it('a queued user does not count as a participant', () => {
+    expect(isMine(queued(9))).toBe(false);
   });
 });
 
@@ -268,7 +285,7 @@ describe('rowTime', () => {
 describe('routeLinks', () => {
   it('builds routes to the point with the coordinate order each service expects', () => {
     const byId = Object.fromEntries(routeLinks(56.01, 92.85).map((l) => [l.id, l.url]));
-    expect(byId['2gis']).toBe('https://2gis.ru/routeSearch/rsType/car/to/92.85,56.01');
+    expect(byId['2gis']).toBe('https://2gis.ru/directions/points/%7C92.85,56.01');
     expect(byId.yandex).toBe('https://yandex.ru/maps/?rtext=~56.01,92.85&rtt=auto');
     expect(byId.google).toBe('https://www.google.com/maps/dir/?api=1&destination=56.01,92.85');
   });

@@ -2,6 +2,7 @@ import React, { useEffect, useRef } from 'react';
 import { Navigation } from 'lucide-react';
 import { toLngLat, useMapgl } from '../lib/mapgl';
 import { MapFallback } from './MapFallback';
+import { routeUrl } from '../utils/eventView';
 
 /** Небольшая статичная карта 2GIS с точкой сбора и ссылкой на маршрут. */
 export const MiniMap: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) => {
@@ -25,7 +26,7 @@ export const MiniMap: React.FC<{ lat: number; lng: number }> = ({ lat, lng }) =>
       <div ref={containerRef} className="w-full h-full pointer-events-none" />
       {error && <MapFallback message={error} />}
       <a
-        href={`https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`}
+        href={routeUrl(lat, lng)}
         target="_blank"
         rel="noopener noreferrer"
         className="absolute top-2 right-2 flex items-center gap-1.5 bg-white/95 hover:bg-white text-slate-800 text-xs font-semibold px-2.5 py-1.5 rounded-lg shadow border border-slate-200"

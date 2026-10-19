@@ -9,6 +9,7 @@ describe('ParticipationBadge', () => {
     ['CONFIRMED', 'Участие подтверждено'],
     ['REJECTED', 'Заявка отклонена'],
     ['CANCELLED', 'Запись отменена'],
+    ['WAITLISTED', 'В очереди'],
   ];
 
   it.each(cases)('renders the Russian label for %s', (status, label) => {

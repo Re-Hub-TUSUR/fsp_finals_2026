@@ -146,6 +146,33 @@ public class NotificationService {
         }
     }
 
+    /** В мероприятии освободилось место — оповещаем очередь; место получит тот, кто откликнется первым. */
+    @Transactional
+    public void notifyWaitlistSpot(User waiting, Event event) {
+        create(
+                waiting,
+                NotificationType.WAITLIST_SPOT_AVAILABLE,
+                "Освободилось место!",
+                "На «" + event.getTitle() + "» освободилось место. Успейте занять его первым.",
+                "/events/" + event.getId(),
+                null,
+                event
+        );
+    }
+
+    @Transactional
+    public void notifyWaitlistSpotTaken(User waiting, Event event) {
+        create(
+                waiting,
+                NotificationType.WAITLIST_SPOT_TAKEN,
+                "Место заняли",
+                "Освободившееся место на «" + event.getTitle() + "» уже занял другой участник. Вы остаётесь в очереди.",
+                "/events/" + event.getId(),
+                null,
+                event
+        );
+    }
+
     @Transactional
     public void notifyFriendRequest(User requester, User recipient) {
         create(

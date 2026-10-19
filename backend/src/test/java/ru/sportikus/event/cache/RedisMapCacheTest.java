@@ -48,7 +48,7 @@ class RedisMapCacheTest {
                 "Анна", null, false, null, 7L,
                 Instant.parse("2030-01-01T07:00:00Z"), Instant.parse("2030-01-01T08:00:00Z"),
                 55.75, 37.61, "Парк", "Москва", "Europe/Moscow",
-                10, 3, JoinMode.OPEN, SkillLevel.ANY, BigDecimal.ZERO, null, null, null, null,
+                10, 3, 0, JoinMode.OPEN, SkillLevel.ANY, BigDecimal.ZERO, null, null, null, null,
                 EventStatus.PUBLISHED, null,
                 null, null, null, null, null,
                 List.of(), null, null, null, null);

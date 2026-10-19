@@ -80,7 +80,10 @@ export function seatText(event: Pick<SportEvent, 'capacity' | 'confirmedCount'>)
   return `${left <= 2 ? 'Осталось' : 'Свободно'} ${left} из ${event.capacity}`;
 }
 
-/** Главное действие по событию: запись, заявка, «мест нет» или уже записан. */
+/** Пользователь стоит в очереди на мероприятие. */
+export const isWaitlisted = (event: Pick<SportEvent, 'myParticipation'>) => event.myParticipation?.status === 'WAITLISTED';
+
+/** Главное действие по событию: запись, заявка, очередь или уже записан. */
 export function eventAction(event: SportEvent): { label: string; cls: string; joinable: boolean } {
   if (isMine(event))
     return {
@@ -88,7 +91,12 @@ export function eventAction(event: SportEvent): { label: string; cls: string; jo
       cls: 'bg-brand-tint text-brand-ink',
       joinable: false,
     };
-  if (isFull(event)) return { label: 'Мест нет', cls: 'bg-surface-2 text-muted', joinable: false };
+  if (isWaitlisted(event))
+    // Освободилось место — очередь может его занять, кто первый откликнется
+    return isFull(event)
+      ? { label: 'Вы в очереди', cls: 'bg-surface-2 text-muted', joinable: false }
+      : { label: 'Занять место', cls: 'bg-brand text-on-brand hover:bg-brand-hover', joinable: true };
+  if (isFull(event)) return { label: 'Встать в очередь', cls: 'bg-surface-2 text-ink hover:bg-surface', joinable: true };
   return {
     label: event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться',
     cls: 'bg-brand text-on-brand hover:bg-brand-hover',
@@ -253,7 +261,8 @@ export const sameWhen = (a: When, b: When) =>
   (a.kind !== 'range' || (b.kind === 'range' && a.from === b.from && (a.to ?? a.from) === (b.to ?? b.from)));
 
 /** Ссылка на построение маршрута в 2GIS. */
-export const routeUrl = (lat: number, lng: number) => `https://2gis.ru/routeSearch/rsType/car/to/${lng},${lat}`;
+// Формат /directions/points/<откуда>|<куда> сохраняет точку; старый /routeSearch/... 2GIS сводил к странице города
+export const routeUrl = (lat: number, lng: number) => `https://2gis.ru/directions/points/%7C${lng},${lat}`;
 
 /** Построение маршрута до точки в разных картах (2GIS принимает lng,lat; остальные — lat,lng). */
 export const routeLinks = (lat: number, lng: number) => [

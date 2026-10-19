@@ -156,10 +156,10 @@ export const MyEventsPage: React.FC = () => {
                       </button>
                     </div>
                   )}
-                  {(p.status === 'PENDING' || p.status === 'CONFIRMED') && new Date(p.event.endTime) > new Date() && (
+                  {(p.status === 'PENDING' || p.status === 'CONFIRMED' || p.status === 'WAITLISTED') && new Date(p.event.endTime) > new Date() && (
                     <div className="mt-3 text-right">
                       <button onClick={() => cancel(p)} className="text-sm font-semibold text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg">
-                        {p.status === 'PENDING' ? 'Отозвать заявку' : 'Отменить участие'}
+                        {p.status === 'PENDING' ? 'Отозвать заявку' : p.status === 'WAITLISTED' ? 'Выйти из очереди' : 'Отменить участие'}
                       </button>
                     </div>
                   )}
