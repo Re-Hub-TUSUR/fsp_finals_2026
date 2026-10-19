@@ -21,8 +21,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         <div className="absolute right-4 bottom-4"><FriendsAttending event={event} dark /></div>
       </EventCover>
       <div className="p-[18px] flex flex-col flex-1">
-        <div className="text-sm font-medium text-muted">{event.confirmedCount}/{event.capacity}</div>
-        <h3 className="mt-2 font-bold text-ink text-[21px] leading-tight hover:text-brand-ink transition-colors"><Link to={`/events/${event.id}`}>{event.title}</Link></h3>
+        <h3 className="font-bold text-ink text-[21px] leading-tight hover:text-brand-ink transition-colors"><Link to={`/events/${event.id}`}>{event.title}</Link></h3>
         <div className="mt-4 space-y-2 text-sm text-ink">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
