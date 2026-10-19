@@ -70,6 +70,7 @@ export const eventsApi = {
       .then((r) => r.data),
   get: (id: number | string) => api.get<SportEvent>(`/events/${id}`).then((r) => r.data),
   create: (payload: CreateEventPayload) => api.post<SportEvent>('/events', payload).then((r) => r.data),
+  complete: (id: number) => api.post<SportEvent>(`/events/${id}/complete`).then((r) => r.data),
   icsUrl: (id: number) => `${api.defaults.baseURL}/events/${id}/ics`,
 };
 

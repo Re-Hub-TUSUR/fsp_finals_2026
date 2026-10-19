@@ -5,5 +5,6 @@ public enum EventStatus {
     UNPUBLISHED,
     CANCELLED,
     /** Идёт автоматическая проверка (несколько секунд): мероприятие пока скрыто из каталога. */
-    MODERATION
+    MODERATION,
+    ARCHIVED
 }

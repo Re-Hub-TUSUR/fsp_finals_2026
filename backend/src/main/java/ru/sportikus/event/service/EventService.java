@@ -171,6 +171,26 @@ public class EventService {
         return mapper.toDetails(eventRepository.save(event), auth.id());
     }
 
+    @Transactional
+    public EventResponse complete(AuthUser auth, Long eventId) {
+        Event event = eventRepository.findForUpdate(eventId)
+                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        if (!EventAccess.isManager(event, auth.id())) {
+            throw ApiException.forbidden("Завершить мероприятие может только его создатель");
+        }
+        if (Instant.now().isBefore(event.getEndTime())) {
+            throw ApiException.conflict("Завершить мероприятие можно только после времени окончания");
+        }
+        if (event.getStatus() == ru.sportikus.event.model.EventStatus.ARCHIVED) {
+            throw ApiException.conflict("Мероприятие уже находится в архиве");
+        }
+        if (event.getStatus() != ru.sportikus.event.model.EventStatus.PUBLISHED) {
+            throw ApiException.conflict("Снятое или отменённое мероприятие нельзя завершить");
+        }
+        event.setStatus(ru.sportikus.event.model.EventStatus.ARCHIVED);
+        return mapper.toDetails(event, auth.id());
+    }
+
     /**
      * От чьего имени публикуется мероприятие. Обычный пользователь — от своего имени,
      * организатор — от имени организации, но только после одобрения администратором.

@@ -86,6 +86,12 @@ public class EventController {
         return created;
     }
 
+    @PostMapping("/{id}/complete")
+    @Operation(summary = "Завершить мероприятие и перенести его в архив")
+    public EventResponse complete(@PathVariable Long id) {
+        return eventService.complete(CurrentUser.require(), id);
+    }
+
     @GetMapping("/{id}/ics")
     @Operation(summary = "Экспорт мероприятия в календарь (.ics) для iOS и Google Calendar")
     public ResponseEntity<String> exportIcs(@PathVariable Long id) {

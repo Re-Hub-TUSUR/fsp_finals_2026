@@ -61,6 +61,7 @@ export const EventPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [joinOpen, setJoinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
+  const [completeOpen, setCompleteOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -97,6 +98,20 @@ export const EventPage: React.FC = () => {
     }
   };
 
+  const completeEvent = async () => {
+    if (!event) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      setEvent(await eventsApi.complete(event.id));
+      setCompleteOpen(false);
+    } catch (e) {
+      setActionError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="flex justify-center py-20 text-slate-400">
@@ -122,7 +137,8 @@ export const EventPage: React.FC = () => {
   const ended = new Date(event.endTime) <= now;
   const closed = ended || registrationClosesAt(event) <= now;
   const full = event.confirmedCount >= event.capacity;
-  const unpublished = event.status !== 'PUBLISHED';
+  const archived = event.status === 'ARCHIVED';
+  const unpublished = event.status !== 'PUBLISHED' && !archived;
   const onReview = event.status === 'MODERATION';
   const autoRejected = isAutoRejected(event);
   const ages = formatAges(event.minAge, event.maxAge);
@@ -132,6 +148,9 @@ export const EventPage: React.FC = () => {
     .filter((x) => x.text !== null);
 
   const panel = (() => {
+    if (archived) {
+      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.</div>;
+    }
     if (unpublished) {
       return (
         <div className={`rounded-xl border p-4 ${onReview ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-red-50 border-red-200 text-red-900'}`}>
@@ -172,6 +191,14 @@ export const EventPage: React.FC = () => {
               </span>
             )}
           </Link>
+          {ended && (
+            <button
+              onClick={() => setCompleteOpen(true)}
+              className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white hover:bg-slate-800"
+            >
+              Завершить событие
+            </button>
+          )}
         </div>
       );
     }
@@ -569,6 +596,16 @@ export const EventPage: React.FC = () => {
             >
               {my?.status === 'PENDING' ? 'Отозвать' : 'Отменить участие'}
             </button>
+          </div>
+        </Modal>
+      )}
+      {completeOpen && (
+        <Modal title="Завершить событие?" onClose={() => setCompleteOpen(false)}>
+          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.</p>
+          {actionError && <p className="mt-3 text-sm text-red-700">{actionError}</p>}
+          <div className="mt-5 flex justify-end gap-3">
+            <button type="button" onClick={() => setCompleteOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold">Отмена</button>
+            <button type="button" disabled={busy} onClick={completeEvent} className="rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-50">{busy ? 'Завершение...' : 'Завершить'}</button>
           </div>
         </Modal>
       )}

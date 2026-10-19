@@ -37,7 +37,7 @@ export interface Sport {
 
 export type JoinMode = 'OPEN' | 'APPROVAL';
 export type SkillLevel = 'NOVICE' | 'AMATEUR' | 'PRO' | 'ANY';
-export type EventStatus = 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'MODERATION';
+export type EventStatus = 'PUBLISHED' | 'UNPUBLISHED' | 'CANCELLED' | 'MODERATION' | 'ARCHIVED';
 
 /** Автопроверка мероприятия: фильтр запрещённых тем → при сомнении проверка ИИ. */
 export type ModerationStatus = 'CLEAN' | 'PENDING' | 'FLAGGED' | 'REJECTED' | 'REVIEWED';
