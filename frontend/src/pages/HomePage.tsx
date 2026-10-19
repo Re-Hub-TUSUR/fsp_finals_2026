@@ -1,190 +1,180 @@
-import React, { useState } from 'react';
-import type { SportEvent } from '../types';
+import React, { useEffect, useState } from 'react';
+import type { JoinMode, SkillLevel, Sport, SportEvent } from '../types';
 import { BlinkMap } from '../components/BlinkMap';
 import { EventCard } from '../components/EventCard';
-import { Map as MapIcon, List, Search } from 'lucide-react';
+import { Loader2, List, Map as MapIcon, Search, SearchX } from 'lucide-react';
+import { catalogApi, eventsApi } from '../api';
+import { errorMessage } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import { JOIN_MODE_LABELS, SKILL_LABELS } from '../utils/format';
 
-const INITIAL_EVENTS: SportEvent[] = [
-  {
-    id: 1,
-    title: 'Утренний забег на о. Татышев',
-    description: 'Легкий темповый бег 5 км по живописным дорожкам острова. Разминка и чай после финиша.',
-    sport: { id: 3, name: 'Бег', slug: 'beg', isCustom: false },
-    organizerName: 'СК «Енисей»',
-    organizerAvatar: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=120',
-    isOrganization: true,
-    startTime: new Date(Date.now() + 2 * 3600 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 3.5 * 3600 * 1000).toISOString(),
-    lat: 56.0235,
-    lng: 92.9351,
-    address: 'Красноярск, остров Татышев, павильон дирекции',
-    capacity: 20,
-    confirmedCount: 1,
-    joinMode: 'OPEN',
-    skillLevel: 'ANY',
-    requiredEquipment: 'Кроссовки для бега, вода',
-    status: 'PUBLISHED',
-  },
-  {
-    id: 2,
-    title: 'Дворовый футбол 5x5',
-    description: 'Собираем 2 команды для дружеского матча. Нужен вратарь и пара полевых игроков.',
-    sport: { id: 1, name: 'Футбол', slug: 'futbol', isCustom: false },
-    organizerName: 'Иван Иванов',
-    organizerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120',
-    isOrganization: false,
-    startTime: new Date(Date.now() + 4 * 3600 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 6 * 3600 * 1000).toISOString(),
-    lat: 56.0125,
-    lng: 92.8680,
-    address: 'Красноярск, ул. Ленина, д. 118 (коробка во дворе)',
-    capacity: 10,
-    confirmedCount: 1,
-    joinMode: 'OPEN',
-    skillLevel: 'AMATEUR',
-    requiredEquipment: 'Кроссовки с грунтовой подошвой, щитки по желанию',
-    status: 'PUBLISHED',
-  },
-  {
-    id: 3,
-    title: 'Товарищеский турнир по настольному теннису',
-    description: 'Играем на вылет до двух побед. Запись по предварительной заявке, уровень от любителя.',
-    sport: { id: 5, name: 'Настольный теннис', slug: 'nastolnyj-tennis', isCustom: false },
-    organizerName: 'Алексей Профи',
-    organizerAvatar: 'https://images.unsplash.com/photo-1570295999919-56ceb5ecca61?w=120',
-    isOrganization: false,
-    startTime: new Date(Date.now() + 24 * 3600 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 27 * 3600 * 1000).toISOString(),
-    lat: 56.0410,
-    lng: 92.9150,
-    address: 'Красноярск, о. Отдыха, Дворец спорта им. Ивана Ярыгина',
-    capacity: 8,
-    confirmedCount: 0,
-    joinMode: 'APPROVAL',
-    skillLevel: 'AMATEUR',
-    requiredEquipment: 'Своя ракетка (пара мячей есть)',
-    status: 'PUBLISHED',
-  },
-  {
-    id: 4,
-    title: 'Воркаут тренировка и разбор базы',
-    description: 'Учимся правильным подтягиваниям, выходам силой и базовой статике. Приглашаются новички!',
-    sport: { id: 7, name: 'Воркаут', slug: 'vorkaut', isCustom: true },
-    organizerName: 'Иван Иванов',
-    organizerAvatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120',
-    isOrganization: false,
-    startTime: new Date(Date.now() + 29 * 3600 * 1000).toISOString(),
-    endTime: new Date(Date.now() + 31 * 3600 * 1000).toISOString(),
-    lat: 56.0090,
-    lng: 92.8720,
-    address: 'Красноярск, Центральная набережная Енисея, площадка воркаута',
-    capacity: 15,
-    confirmedCount: 0,
-    joinMode: 'OPEN',
-    skillLevel: 'NOVICE',
-    requiredEquipment: 'Перчатки, бутылка воды',
-    status: 'PUBLISHED',
-  },
-];
+const selectClass =
+  'px-3 py-2 text-sm border border-slate-200 rounded-xl bg-white text-slate-700 outline-none focus:border-emerald-500';
 
 export const HomePage: React.FC = () => {
+  const { currentUser, ready } = useAuth();
   const [viewMode, setViewMode] = useState<'map' | 'list'>('map');
-  const [selectedSport, setSelectedSport] = useState<string>('all');
-  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [sports, setSports] = useState<Sport[]>([]);
+  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedQuery, setDebouncedQuery] = useState('');
+  const [skill, setSkill] = useState<SkillLevel | ''>('');
+  const [joinMode, setJoinMode] = useState<JoinMode | ''>('');
+  const [events, setEvents] = useState<SportEvent[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<SportEvent | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  const sports = [
-    { slug: 'all', name: 'Все виды' },
-    { slug: 'beg', name: 'Бег' },
-    { slug: 'futbol', name: 'Футбол' },
-    { slug: 'nastolnyj-tennis', name: 'Настольный теннис' },
-    { slug: 'vorkaut', name: 'Воркаут' },
-  ];
+  useEffect(() => {
+    catalogApi.sports().then(setSports).catch(() => setSports([]));
+  }, []);
 
-  const filteredEvents = INITIAL_EVENTS.filter((e) => {
-    if (selectedSport !== 'all' && e.sport.slug !== selectedSport) return false;
-    if (searchQuery.trim() !== '') {
-      const q = searchQuery.toLowerCase();
-      return (
-        e.title.toLowerCase().includes(q) ||
-        e.description.toLowerCase().includes(q) ||
-        e.address.toLowerCase().includes(q)
-      );
-    }
-    return true;
-  });
+  useEffect(() => {
+    const t = setTimeout(() => setDebouncedQuery(searchQuery.trim()), 300);
+    return () => clearTimeout(t);
+  }, [searchQuery]);
+
+  useEffect(() => {
+    if (!ready) return;
+    let cancelled = false;
+    setLoading(true);
+    eventsApi
+      .list({
+        sport: selectedSports,
+        q: debouncedQuery || undefined,
+        skillLevel: skill || undefined,
+        joinMode: joinMode || undefined,
+      })
+      .then((list) => {
+        if (cancelled) return;
+        setEvents(list);
+        setError(null);
+        setSelectedEvent((prev) => (prev ? (list.find((e) => e.id === prev.id) ?? null) : null));
+      })
+      .catch((e) => !cancelled && setError(errorMessage(e, 'Не удалось загрузить мероприятия')))
+      .finally(() => !cancelled && setLoading(false));
+    return () => {
+      cancelled = true;
+    };
+    // currentUser?.id — чтобы после смены роли обновились статусы «Вы участвуете»
+  }, [ready, currentUser?.id, selectedSports, debouncedQuery, skill, joinMode]);
+
+  const toggleSport = (slug: string) =>
+    setSelectedSports((prev) => (prev.includes(slug) ? prev.filter((s) => s !== slug) : [...prev, slug]));
+
+  const pill = (active: boolean) =>
+    `px-3.5 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-all ${
+      active
+        ? 'bg-emerald-600 text-white shadow-sm'
+        : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
+    }`;
 
   return (
     <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-      {/* Top Controls: Search, Filters, View Switcher */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-6">
-        <div className="flex items-center gap-2 flex-1 max-w-md bg-white border border-slate-200 rounded-xl px-3 py-2 shadow-sm focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-4">
+        <div className="flex items-center gap-2 flex-1 max-w-md bg-white border border-slate-200 rounded-xl px-3 py-2.5 shadow-sm focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/20 transition-all">
           <Search className="w-5 h-5 text-slate-400 shrink-0" />
           <input
-            type="text"
+            type="search"
+            aria-label="Поиск мероприятий"
             placeholder="Поиск по названию, адресу, описанию..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full text-sm outline-none bg-transparent text-slate-800 placeholder-slate-400"
+            className="w-full text-base outline-none bg-transparent text-slate-800 placeholder-slate-400"
           />
         </div>
 
-        {/* View Switcher: Map / List */}
-        <div className="flex items-center bg-slate-200/80 p-1 rounded-xl self-start md:self-auto">
-          <button
-            onClick={() => setViewMode('map')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === 'map'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+        <div className="flex items-center gap-2 flex-wrap">
+          <select
+            aria-label="Уровень подготовки"
+            value={skill}
+            onChange={(e) => setSkill(e.target.value as SkillLevel | '')}
+            className={selectClass}
           >
-            <MapIcon className="w-4 h-4" />
-            <span>Карта Blink</span>
-          </button>
-          <button
-            onClick={() => setViewMode('list')}
-            className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-              viewMode === 'list'
-                ? 'bg-white text-slate-900 shadow-sm'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
+            <option value="">Любой уровень</option>
+            {(['NOVICE', 'AMATEUR', 'PRO'] as SkillLevel[]).map((s) => (
+              <option key={s} value={s}>
+                {SKILL_LABELS[s]}
+              </option>
+            ))}
+          </select>
+          <select
+            aria-label="Режим записи"
+            value={joinMode}
+            onChange={(e) => setJoinMode(e.target.value as JoinMode | '')}
+            className={selectClass}
           >
-            <List className="w-4 h-4" />
-            <span>Список ({filteredEvents.length})</span>
-          </button>
+            <option value="">Любая запись</option>
+            {(['OPEN', 'APPROVAL'] as JoinMode[]).map((m) => (
+              <option key={m} value={m}>
+                {JOIN_MODE_LABELS[m]}
+              </option>
+            ))}
+          </select>
+
+          <div className="flex items-center bg-slate-200/80 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode('map')}
+              aria-pressed={viewMode === 'map'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === 'map' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <MapIcon className="w-4 h-4" />
+              <span>Карта</span>
+            </button>
+            <button
+              onClick={() => setViewMode('list')}
+              aria-pressed={viewMode === 'list'}
+              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-semibold transition-all ${
+                viewMode === 'list' ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-600 hover:text-slate-900'
+              }`}
+            >
+              <List className="w-4 h-4" />
+              <span>Список ({events.length})</span>
+            </button>
+          </div>
         </div>
       </div>
 
-      {/* Sport Category Pills */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-4 mb-4 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-3 mb-3">
+        <button onClick={() => setSelectedSports([])} className={pill(selectedSports.length === 0)}>
+          Все виды
+        </button>
         {sports.map((s) => (
-          <button
-            key={s.slug}
-            onClick={() => setSelectedSport(s.slug)}
-            className={`px-3.5 py-1.5 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${
-              selectedSport === s.slug
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50'
-            }`}
-          >
+          <button key={s.slug} onClick={() => toggleSport(s.slug)} className={pill(selectedSports.includes(s.slug))}>
             {s.name}
           </button>
         ))}
       </div>
 
-      {/* Main Content Area */}
+      {error && (
+        <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+          {error}
+        </div>
+      )}
+
       {viewMode === 'map' ? (
-        <div className="h-[calc(100vh-250px)] min-h-[500px]">
-          <BlinkMap
-            events={filteredEvents}
-            selectedEvent={selectedEvent}
-            onSelectEvent={setSelectedEvent}
-          />
+        <div className="relative h-[calc(100vh-290px)] min-h-[480px]">
+          <BlinkMap events={events} selectedEvent={selectedEvent} onSelectEvent={setSelectedEvent} />
+          {loading && (
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 z-[1000] bg-white/95 shadow rounded-full px-3 py-1.5 text-sm text-slate-600 flex items-center gap-2">
+              <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
+            </div>
+          )}
+        </div>
+      ) : loading && events.length === 0 ? (
+        <div className="flex justify-center py-16 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      ) : events.length === 0 ? (
+        <div className="text-center py-16 text-slate-500">
+          <SearchX className="w-10 h-10 mx-auto mb-2 text-slate-300" />
+          Ничего не найдено. Попробуйте изменить фильтры.
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredEvents.map((event) => (
+          {events.map((event) => (
             <EventCard key={event.id} event={event} />
           ))}
         </div>

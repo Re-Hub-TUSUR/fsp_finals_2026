@@ -1,65 +1,86 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link } from 'react-router-dom';
+import { Ban, Building2, CheckCircle, Loader2, RotateCcw, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { ShieldAlert, CheckCircle, XCircle, Ban, Building2 } from 'lucide-react';
+import { adminApi } from '../api';
+import { errorMessage } from '../api/client';
+import type { AdminOrganization, SportEvent } from '../types';
+import { Modal } from '../components/Modal';
+import { inputClass, labelClass } from '../components/FieldInput';
+import { formatShortDateTime } from '../utils/format';
 
-interface OrgRequest {
-  id: number;
-  name: string;
-  description: string;
-  ownerName: string;
-  status: 'PENDING' | 'APPROVED' | 'REJECTED';
-}
+type Target = { kind: 'org'; item: AdminOrganization } | { kind: 'event'; item: SportEvent };
+
+const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: string }> = {
+  PENDING: { label: 'На рассмотрении', cls: 'bg-amber-100 text-amber-800' },
+  APPROVED: { label: 'Одобрено', cls: 'bg-emerald-100 text-emerald-700' },
+  REJECTED: { label: 'Отклонено', cls: 'bg-red-100 text-red-700' },
+};
 
 export const AdminPage: React.FC = () => {
-  const { currentUser } = useAuth();
-  const [activeTab, setActiveTab] = useState<'orgs' | 'events' | 'comments'>('orgs');
+  const { currentUser, ready } = useAuth();
+  const [tab, setTab] = useState<'orgs' | 'events'>('orgs');
+  const [orgs, setOrgs] = useState<AdminOrganization[]>([]);
+  const [events, setEvents] = useState<SportEvent[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [target, setTarget] = useState<Target | null>(null);
+  const [reason, setReason] = useState('');
+  const [busy, setBusy] = useState(false);
 
-  const [orgs, setOrgs] = useState<OrgRequest[]>([
-    {
-      id: 2,
-      name: 'Шахматный клуб «Ладья»',
-      description: 'Городской клуб любителей шахмат и интеллектуальных видов спорта на о. Татышев.',
-      ownerName: 'Гроссмейстер Ладьи (ladya@sport.ru)',
-      status: 'PENDING',
-    },
-    {
-      id: 3,
-      name: 'Подпольный боксерский клуб',
-      description: 'Спарринги в подвале без тренера и экипировки.',
-      ownerName: 'Алексей Профи (pro@sport.ru)',
-      status: 'REJECTED',
-    },
-  ]);
+  const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
-  const [rejectDialogId, setRejectDialogId] = useState<number | null>(null);
-  const [rejectReason, setRejectReason] = useState('');
+  const load = useCallback(async () => {
+    try {
+      const [o, e] = await Promise.all([adminApi.organizations(), adminApi.events()]);
+      setOrgs(o);
+      setEvents(e);
+      setError(null);
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
-  const handleApproveOrg = (id: number) => {
-    setOrgs((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: 'APPROVED' } : o))
-    );
+  useEffect(() => {
+    if (ready && isAdmin) void load();
+    else if (ready) setLoading(false);
+  }, [ready, isAdmin, load]);
+
+  const run = async (action: () => Promise<unknown>) => {
+    setBusy(true);
+    setError(null);
+    try {
+      await action();
+      setTarget(null);
+      setReason('');
+      await load();
+    } catch (err) {
+      setError(errorMessage(err));
+    } finally {
+      setBusy(false);
+    }
   };
 
-  const handleRejectOrg = (id: number) => {
-    if (!rejectReason.trim()) return;
-    setOrgs((prev) =>
-      prev.map((o) => (o.id === id ? { ...o, status: 'REJECTED' } : o))
-    );
-    setRejectDialogId(null);
-    setRejectReason('');
-  };
-
-  if (currentUser.role !== 'ROLE_ADMIN') {
+  if (!ready) return null;
+  if (!isAdmin) {
     return (
       <div className="max-w-md mx-auto my-12 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
         <ShieldAlert className="w-12 h-12 text-red-600 mx-auto mb-3" />
         <h2 className="text-lg font-bold text-red-900 mb-1">Доступ ограничен</h2>
-        <p className="text-xs text-red-700">
-          Данный раздел доступен только Администратору. Переключите роль в верхней панели на «🛡️ Администратор».
+        <p className="text-sm text-red-700">
+          Раздел доступен только администратору. Переключите роль в верхней панели на «🛡️ Администратор».
         </p>
       </div>
     );
   }
+
+  const pending = orgs.filter((o) => o.status === 'PENDING').length;
+  const tabClass = (active: boolean) =>
+    `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
+      active ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+    }`;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
@@ -69,40 +90,32 @@ export const AdminPage: React.FC = () => {
         </div>
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Панель администратора</h1>
-          <p className="text-xs text-slate-500">
-            Модерация организаций, событий и комментариев (Финал Чемпионата России)
-          </p>
+          <p className="text-sm text-slate-500">Модерация организаций и мероприятий</p>
         </div>
       </div>
 
-      {/* Tabs */}
-      <div className="flex border-b border-slate-200 gap-4 mb-6">
-        <button
-          onClick={() => setActiveTab('orgs')}
-          className={`pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 ${
-            activeTab === 'orgs'
-              ? 'border-purple-600 text-purple-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
+      <div className="flex border-b border-slate-200 gap-6 mb-6">
+        <button onClick={() => setTab('orgs')} className={tabClass(tab === 'orgs')}>
           <Building2 className="w-4 h-4" />
-          Заявки организаций ({orgs.filter(o => o.status === 'PENDING').length})
+          Организации {pending > 0 && <span className="bg-amber-500 text-white text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
         </button>
-        <button
-          onClick={() => setActiveTab('events')}
-          className={`pb-3 text-sm font-semibold transition-all border-b-2 flex items-center gap-2 ${
-            activeTab === 'events'
-              ? 'border-purple-600 text-purple-600'
-              : 'border-transparent text-slate-500 hover:text-slate-800'
-          }`}
-        >
+        <button onClick={() => setTab('events')} className={tabClass(tab === 'events')}>
           <Ban className="w-4 h-4" />
-          Снятие с публикации (Сценарий 6)
+          Мероприятия ({events.length})
         </button>
       </div>
 
-      {/* Tab: Organizations */}
-      {activeTab === 'orgs' && (
+      {error && (
+        <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
+          {error}
+        </div>
+      )}
+
+      {loading ? (
+        <div className="flex justify-center py-16 text-slate-400">
+          <Loader2 className="w-8 h-8 animate-spin" />
+        </div>
+      ) : tab === 'orgs' ? (
         <div className="space-y-4">
           {orgs.map((org) => (
             <div
@@ -110,102 +123,133 @@ export const AdminPage: React.FC = () => {
               className="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div>
-                <div className="flex items-center gap-2">
+                <div className="flex flex-wrap items-center gap-2">
                   <h3 className="font-bold text-slate-900">{org.name}</h3>
-                  <span
-                    className={`text-[10px] font-bold px-2 py-0.5 rounded-full uppercase ${
-                      org.status === 'APPROVED'
-                        ? 'bg-emerald-100 text-emerald-700'
-                        : org.status === 'REJECTED'
-                        ? 'bg-red-100 text-red-700'
-                        : 'bg-amber-100 text-amber-800'
-                    }`}
-                  >
-                    {org.status === 'PENDING' ? 'На рассмотрении' : org.status === 'APPROVED' ? 'Одобрено' : 'Отклонено'}
+                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase ${ORG_STATUS[org.status].cls}`}>
+                    {ORG_STATUS[org.status].label}
                   </span>
                 </div>
-                <p className="text-xs text-slate-600 mt-1">{org.description}</p>
-                <span className="text-[11px] text-slate-400 mt-2 block">
-                  Владелец: {org.ownerName}
+                <p className="text-sm text-slate-600 mt-1">{org.description}</p>
+                <span className="text-xs text-slate-400 mt-2 block">
+                  Владелец: {org.ownerName} ({org.ownerEmail})
                 </span>
+                {org.rejectReason && <span className="text-xs text-red-600 mt-1 block">Причина отказа: {org.rejectReason}</span>}
               </div>
 
-              {org.status === 'PENDING' && (
-                <div className="flex items-center gap-2 self-end md:self-auto">
+              <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+                {org.status !== 'APPROVED' && (
                   <button
-                    onClick={() => handleApproveOrg(org.id)}
-                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-xl text-xs font-semibold shadow-sm transition-colors"
+                    onClick={() => run(() => adminApi.approveOrg(org.id))}
+                    disabled={busy}
+                    className="flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white px-3.5 py-2.5 rounded-xl text-sm font-semibold shadow-sm"
                   >
                     <CheckCircle className="w-4 h-4" />
                     Одобрить
                   </button>
+                )}
+                {org.status !== 'REJECTED' && (
                   <button
-                    onClick={() => setRejectDialogId(org.id)}
-                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 px-3 py-1.5 rounded-xl text-xs font-semibold transition-colors"
+                    onClick={() => {
+                      setReason('');
+                      setTarget({ kind: 'org', item: org });
+                    }}
+                    className="flex items-center gap-1.5 bg-red-50 hover:bg-red-100 text-red-700 px-3.5 py-2.5 rounded-xl text-sm font-semibold"
                   >
                     <XCircle className="w-4 h-4" />
                     Отклонить
                   </button>
-                </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="space-y-3">
+          <p className="text-sm text-slate-500">
+            Снятое с публикации мероприятие исчезает с карты и из поиска; по прямой ссылке видна причина, запись закрыта.
+          </p>
+          {events.map((ev) => (
+            <div
+              key={ev.id}
+              className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+                ev.status === 'PUBLISHED' ? 'border-slate-200' : 'border-red-200 bg-red-50/40'
+              }`}
+            >
+              <div className="min-w-0">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded">{ev.sport.name}</span>
+                <Link to={`/events/${ev.id}`} className="block font-semibold text-slate-900 hover:text-emerald-700 mt-1">
+                  {ev.title}
+                </Link>
+                <p className="text-sm text-slate-500">
+                  {ev.organizerName} · {formatShortDateTime(ev.startTime)}
+                </p>
+                {ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1">Снято: {ev.unpublishReason}</p>}
+              </div>
+              {ev.status === 'PUBLISHED' ? (
+                <button
+                  onClick={() => {
+                    setReason('');
+                    setTarget({ kind: 'event', item: ev });
+                  }}
+                  className="text-sm bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-4 py-2.5 rounded-xl shrink-0"
+                >
+                  Снять с публикации
+                </button>
+              ) : (
+                <button
+                  onClick={() => run(() => adminApi.publish(ev.id))}
+                  disabled={busy}
+                  className="flex items-center gap-1.5 text-sm bg-slate-100 text-slate-700 hover:bg-slate-200 font-semibold px-4 py-2.5 rounded-xl shrink-0"
+                >
+                  <RotateCcw className="w-4 h-4" /> Вернуть
+                </button>
               )}
             </div>
           ))}
-
-          {/* Rejection Modal */}
-          {rejectDialogId && (
-            <div className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center p-4 z-50">
-              <div className="bg-white rounded-2xl p-6 max-w-md w-full shadow-2xl">
-                <h3 className="font-bold text-slate-900 text-base mb-2">
-                  Причина отклонения заявки
-                </h3>
-                <textarea
-                  rows={3}
-                  placeholder="Обязательно укажите причину для организатора..."
-                  value={rejectReason}
-                  onChange={(e) => setRejectReason(e.target.value)}
-                  className="w-full text-xs p-3 border border-slate-300 rounded-xl outline-none focus:border-red-500 mb-4"
-                />
-                <div className="flex justify-end gap-2">
-                  <button
-                    onClick={() => {
-                      setRejectDialogId(null);
-                      setRejectReason('');
-                    }}
-                    className="text-xs px-3 py-2 text-slate-600 hover:bg-slate-100 rounded-lg"
-                  >
-                    Отмена
-                  </button>
-                  <button
-                    onClick={() => handleRejectOrg(rejectDialogId)}
-                    className="text-xs px-4 py-2 bg-red-600 hover:bg-red-700 text-white font-semibold rounded-lg shadow-sm"
-                  >
-                    Подтвердить отказ
-                  </button>
-                </div>
-              </div>
-            </div>
-          )}
         </div>
       )}
 
-      {/* Tab: Events Moderation (Scenario 6) */}
-      {activeTab === 'events' && (
-        <div className="bg-white p-6 rounded-2xl border border-slate-200">
-          <h3 className="font-bold text-slate-900 mb-2">Модерация мероприятий (Сценарий 6 ТЗ)</h3>
-          <p className="text-xs text-slate-500 mb-4">
-            При снятии события с публикации оно мгновенно исчезает с карты и каталога. По прямой ссылке отображается причина снятия.
-          </p>
-          <div className="border border-slate-200 rounded-xl p-4 flex items-center justify-between">
-            <div>
-              <span className="text-xs font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">Воркаут</span>
-              <h4 className="font-semibold text-slate-800 text-sm mt-1">Воркаут тренировка и разбор базы</h4>
-              <p className="text-xs text-slate-500">Организатор: Иван Иванов</p>
-            </div>
-            <button className="text-xs bg-red-50 text-red-600 hover:bg-red-100 font-semibold px-3 py-2 rounded-xl transition-colors">
-              Снять с публикации
+      {target && (
+        <Modal
+          title={target.kind === 'org' ? `Отклонить «${target.item.name}»` : 'Снять с публикации'}
+          onClose={() => setTarget(null)}
+        >
+          {target.kind === 'event' && <p className="text-slate-700 mb-3">{target.item.title}</p>}
+          <label htmlFor="reason" className={labelClass}>
+            Причина (увидит автор) <span className="text-red-500">*</span>
+          </label>
+          <textarea
+            id="reason"
+            rows={3}
+            maxLength={500}
+            autoFocus
+            value={reason}
+            onChange={(e) => setReason(e.target.value)}
+            className={inputClass}
+            placeholder={target.kind === 'org' ? 'Например: не указана площадка' : 'Например: недопустимое место сбора'}
+          />
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end mt-5">
+            <button
+              onClick={() => setTarget(null)}
+              className="px-5 py-3 rounded-xl border border-slate-300 font-semibold text-slate-700 hover:bg-slate-50"
+            >
+              Отмена
+            </button>
+            <button
+              disabled={busy || !reason.trim()}
+              onClick={() =>
+                run(() =>
+                  target.kind === 'org'
+                    ? adminApi.rejectOrg(target.item.id, reason.trim())
+                    : adminApi.unpublish(target.item.id, reason.trim()),
+                )
+              }
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-50"
+            >
+              {target.kind === 'org' ? 'Подтвердить отказ' : 'Снять с публикации'}
             </button>
           </div>
-        </div>
+        </Modal>
       )}
     </div>
   );

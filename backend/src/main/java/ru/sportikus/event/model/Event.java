@@ -2,11 +2,21 @@ package ru.sportikus.event.model;
 
 import jakarta.persistence.*;
 import lombok.*;
+import org.hibernate.annotations.JdbcTypeCode;
+import org.hibernate.type.SqlTypes;
+import ru.sportikus.form.CustomField;
+import ru.sportikus.form.FieldDef;
 import ru.sportikus.organization.model.Organization;
 import ru.sportikus.sport.model.Sport;
+import ru.sportikus.template.model.EventTemplate;
 import ru.sportikus.user.model.User;
 
+import java.math.BigDecimal;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 
 @Entity
 @Table(name = "events")
@@ -27,9 +37,13 @@ public class Event {
     @Column(columnDefinition = "TEXT")
     private String description;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "sport_id", nullable = false)
     private Sport sport;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "template_id")
+    private EventTemplate template;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "organizer_user_id")
@@ -58,20 +72,65 @@ public class Event {
     @Builder.Default
     private Integer capacity = 10;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "join_mode", nullable = false)
     @Builder.Default
-    private String joinMode = "OPEN"; // OPEN or APPROVAL
+    private JoinMode joinMode = JoinMode.APPROVAL;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "skill_level", nullable = false)
     @Builder.Default
-    private String skillLevel = "ANY"; // NOVICE, AMATEUR, PRO, ANY
+    private SkillLevel skillLevel = SkillLevel.ANY;
 
     @Column(name = "required_equipment", columnDefinition = "TEXT")
     private String requiredEquipment;
 
+    /** Стоимость участия; null — бесплатно. */
+    @Column(precision = 10, scale = 2)
+    private BigDecimal price;
+
+    @Column(name = "registration_deadline")
+    private Instant registrationDeadline;
+
+    @Column(name = "min_age")
+    private Integer minAge;
+
+    @Column(name = "max_age")
+    private Integer maxAge;
+
+    /** Снимок описаний полей шаблона на момент создания — мероприятие остаётся самодостаточным. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private List<FieldDef> fields = new ArrayList<>();
+
+    /** Значения полей шаблона: key → value. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private Map<String, Object> details = new LinkedHashMap<>();
+
+    /** Поля, добавленные автором вручную. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "custom_fields", nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private List<CustomField> customFields = new ArrayList<>();
+
+    /** Вопросы, на которые отвечает участник при подаче заявки. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "registration_fields", nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private List<FieldDef> registrationFields = new ArrayList<>();
+
+    /** Дополнительные сведения организации; null у мероприятий частных лиц. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "org_details", columnDefinition = "jsonb")
+    private OrgDetails orgDetails;
+
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
-    private String status = "PUBLISHED"; // PUBLISHED, UNPUBLISHED, CANCELLED
+    private EventStatus status = EventStatus.PUBLISHED;
 
     @Column(name = "unpublish_reason", columnDefinition = "TEXT")
     private String unpublishReason;
@@ -79,4 +138,18 @@ public class Event {
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();
+
+    public boolean isByOrganization() {
+        return organizerOrg != null;
+    }
+
+    /** Последний момент, когда можно подать заявку. */
+    public Instant registrationClosesAt() {
+        return registrationDeadline != null ? registrationDeadline : startTime;
+    }
+
+    /** Нужно ли участнику подтвердить ознакомление с требованиями (документы, справка, страховка). */
+    public boolean requiresAcknowledgement() {
+        return orgDetails != null && orgDetails.hasParticipationRequirements();
+    }
 }

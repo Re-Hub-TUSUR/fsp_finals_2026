@@ -1,0 +1,523 @@
+import React, { useCallback, useEffect, useState } from 'react';
+import { Link, useParams } from 'react-router-dom';
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Banknote,
+  Building2,
+  CalendarPlus,
+  CheckCircle2,
+  Clock,
+  FileText,
+  Globe,
+  Loader2,
+  Mail,
+  MapPin,
+  Phone,
+  ShieldAlert,
+  Trophy,
+  User as UserIcon,
+  Users,
+} from 'lucide-react';
+import { eventsApi, participationApi } from '../api';
+import { errorMessage } from '../api/client';
+import { useAuth } from '../context/AuthContext';
+import type { SportEvent } from '../types';
+import { JoinDialog } from '../components/JoinDialog';
+import { MiniMap } from '../components/MiniMap';
+import { Modal } from '../components/Modal';
+import { displayValue } from '../components/FieldInput';
+import {
+  JOIN_MODE_LABELS,
+  SKILL_LABELS,
+  formatAges,
+  formatDateTime,
+  formatPrice,
+  formatShortDateTime,
+  registrationClosesAt,
+  spotsLeft,
+} from '../utils/format';
+
+const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.ReactNode }> = ({ icon, label, children }) => (
+  <div className="flex items-start gap-3">
+    <span className="mt-0.5 text-slate-400 shrink-0">{icon}</span>
+    <div>
+      <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{label}</div>
+      <div className="text-base text-slate-900">{children}</div>
+    </div>
+  </div>
+);
+
+export const EventPage: React.FC = () => {
+  const { id } = useParams();
+  const { currentUser, ready } = useAuth();
+  const [event, setEvent] = useState<SportEvent | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [joinOpen, setJoinOpen] = useState(false);
+  const [cancelOpen, setCancelOpen] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [actionError, setActionError] = useState<string | null>(null);
+
+  const load = useCallback(async () => {
+    if (!id) return;
+    try {
+      setEvent(await eventsApi.get(id));
+      setError(null);
+    } catch (e) {
+      setError(errorMessage(e, 'Не удалось загрузить мероприятие'));
+    } finally {
+      setLoading(false);
+    }
+  }, [id]);
+
+  useEffect(() => {
+    if (!ready) return;
+    setLoading(true);
+    void load();
+  }, [load, ready, currentUser?.id]);
+
+  const cancelParticipation = async () => {
+    if (!event) return;
+    setBusy(true);
+    setActionError(null);
+    try {
+      await participationApi.cancel(event.id);
+      setCancelOpen(false);
+      await load();
+    } catch (e) {
+      setActionError(errorMessage(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="flex justify-center py-20 text-slate-400">
+        <Loader2 className="w-8 h-8 animate-spin" />
+      </div>
+    );
+  }
+  if (error || !event) {
+    return (
+      <div className="max-w-md mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
+        <AlertTriangle className="w-10 h-10 text-red-600 mx-auto mb-2" />
+        <p className="text-red-900 font-semibold">{error ?? 'Мероприятие не найдено'}</p>
+        <Link to="/" className="inline-block mt-4 text-emerald-700 font-semibold">
+          ← К каталогу
+        </Link>
+      </div>
+    );
+  }
+
+  const org = event.orgDetails;
+  const my = event.myParticipation;
+  const now = new Date();
+  const ended = new Date(event.endTime) <= now;
+  const closed = ended || registrationClosesAt(event) <= now;
+  const full = event.confirmedCount >= event.capacity;
+  const unpublished = event.status !== 'PUBLISHED';
+  const ages = formatAges(event.minAge, event.maxAge);
+  const filled = Math.min(100, Math.round((event.confirmedCount / event.capacity) * 100));
+  const templateFacts = (event.fields ?? [])
+    .map((f) => ({ field: f, text: displayValue(f, event.details?.[f.key]) }))
+    .filter((x) => x.text !== null);
+
+  const panel = (() => {
+    if (unpublished) {
+      return (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-900">
+          <div className="flex items-center gap-2 font-bold">
+            <ShieldAlert className="w-5 h-5" /> Снято с публикации
+          </div>
+          <p className="text-sm mt-1">{event.unpublishReason || 'Нарушение правил площадки'}</p>
+          <p className="text-xs mt-2 opacity-80">Запись недоступна.</p>
+        </div>
+      );
+    }
+    if (event.canManage) {
+      return (
+        <div className="space-y-3">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-900 text-sm">
+            <b>Вы организатор этого мероприятия.</b>
+            {event.joinMode === 'APPROVAL' && (
+              <p className="mt-1">
+                {event.pendingCount
+                  ? `Заявок ждут вашего решения: ${event.pendingCount}.`
+                  : 'Новых заявок пока нет.'}
+              </p>
+            )}
+          </div>
+          <Link
+            to={`/events/${event.id}/manage`}
+            className="block text-center bg-emerald-600 hover:bg-emerald-700 text-white font-semibold py-3 rounded-xl"
+          >
+            Заявки и участники
+            {!!event.pendingCount && (
+              <span className="ml-2 bg-white text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-full">
+                {event.pendingCount}
+              </span>
+            )}
+          </Link>
+        </div>
+      );
+    }
+    if (currentUser?.role === 'ROLE_ADMIN') {
+      return (
+        <p className="text-sm text-slate-600 bg-slate-50 border border-slate-200 rounded-xl p-4">
+          Администратор не участвует в мероприятиях — модерация доступна в разделе «Модерация».
+        </p>
+      );
+    }
+    if (my?.status === 'CONFIRMED') {
+      return (
+        <div className="space-y-3">
+          <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-emerald-900">
+            <div className="flex items-center gap-2 font-bold">
+              <CheckCircle2 className="w-5 h-5" /> Вы участвуете!
+            </div>
+            {my.decisionComment && <p className="text-sm mt-1">Организатор: «{my.decisionComment}»</p>}
+          </div>
+          {!ended && (
+            <button onClick={() => setCancelOpen(true)} className="w-full text-sm font-semibold text-red-700 hover:bg-red-50 py-2.5 rounded-xl">
+              Отменить участие
+            </button>
+          )}
+        </div>
+      );
+    }
+    if (my?.status === 'PENDING') {
+      return (
+        <div className="space-y-3">
+          <div className="rounded-xl bg-amber-50 border border-amber-200 p-4 text-amber-900">
+            <div className="flex items-center gap-2 font-bold">
+              <Clock className="w-5 h-5" /> Заявка на рассмотрении
+            </div>
+            <p className="text-sm mt-1">Организатор ещё не принял решение. Место закрепится после подтверждения.</p>
+          </div>
+          <button onClick={() => setCancelOpen(true)} className="w-full text-sm font-semibold text-red-700 hover:bg-red-50 py-2.5 rounded-xl">
+            Отозвать заявку
+          </button>
+        </div>
+      );
+    }
+    if (my?.status === 'REJECTED') {
+      return (
+        <div className="rounded-xl bg-red-50 border border-red-200 p-4 text-red-900">
+          <div className="font-bold">Заявка отклонена организатором</div>
+          {my.decisionComment && <p className="text-sm mt-1">Причина: «{my.decisionComment}»</p>}
+        </div>
+      );
+    }
+    if (ended) return <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4">Мероприятие уже завершилось.</p>;
+    if (closed) return <p className="text-sm text-slate-600 bg-slate-50 rounded-xl p-4">Приём заявок закрыт.</p>;
+    if (full) return <p className="text-sm text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-4">Все места заняты.</p>;
+    return (
+      <div className="space-y-2">
+        <button
+          onClick={() => setJoinOpen(true)}
+          className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-lg py-3.5 rounded-xl shadow-sm active:scale-[0.99] transition"
+        >
+          {event.joinMode === 'APPROVAL' ? 'Подать заявку' : 'Записаться'}
+        </button>
+        {my?.status === 'CANCELLED' && <p className="text-xs text-slate-500 text-center">Вы отменяли запись — можно записаться снова.</p>}
+        <p className="text-xs text-slate-500 text-center">
+          {event.joinMode === 'APPROVAL'
+            ? 'Участие подтверждает организатор'
+            : 'Вход свободный — запись подтверждается сразу'}
+        </p>
+      </div>
+    );
+  })();
+
+  return (
+    <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
+      <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
+        <ArrowLeft className="w-4 h-4" /> К каталогу
+      </Link>
+
+      {unpublished && (
+        <div className="mb-5 p-4 rounded-xl bg-red-50 border border-red-200 text-red-900 flex gap-3">
+          <ShieldAlert className="w-6 h-6 shrink-0" />
+          <div>
+            <b>Мероприятие снято с публикации администратором.</b>
+            <p className="text-sm mt-0.5">Причина: {event.unpublishReason || 'Нарушение правил площадки'}</p>
+          </div>
+        </div>
+      )}
+
+      <div className="grid lg:grid-cols-[1fr_360px] gap-5 lg:gap-6 items-start">
+        <div className="contents lg:flex lg:flex-col lg:gap-5 min-w-0">
+          <div className="order-1 lg:order-none bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+            <div className="flex flex-wrap items-center gap-2 mb-3">
+              <span className="text-xs font-bold uppercase tracking-wider text-emerald-700 bg-emerald-50 px-2.5 py-1 rounded-lg border border-emerald-200">
+                {event.sport.name}
+              </span>
+              {event.template && event.template.code !== 'free' && (
+                <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                  {event.template.icon} {event.template.name}
+                </span>
+              )}
+              <span className="text-xs font-medium text-slate-600 bg-slate-100 px-2.5 py-1 rounded-lg">
+                {SKILL_LABELS[event.skillLevel]}
+              </span>
+              {event.byOrganization && (
+                <span className="text-xs font-bold text-white bg-slate-900 px-2.5 py-1 rounded-lg flex items-center gap-1">
+                  <Building2 className="w-3.5 h-3.5" /> Организация
+                </span>
+              )}
+            </div>
+            <h1 className="text-3xl font-bold text-slate-900 leading-tight">{event.title}</h1>
+            <div className="flex items-center gap-2.5 mt-3">
+              <img src={event.organizerAvatar} alt="" className="w-9 h-9 rounded-full object-cover bg-slate-200" />
+              <span className="text-slate-700">
+                Организатор: <b>{event.organizerName}</b>
+              </span>
+            </div>
+            {event.description && (
+              <p className="text-base text-slate-700 mt-5 whitespace-pre-line leading-relaxed">{event.description}</p>
+            )}
+          </div>
+
+          <div className="order-3 lg:order-none space-y-5 min-w-0">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+            <h2 className="text-lg font-bold text-slate-900 mb-4">Основное</h2>
+            <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+              <Fact icon={<Clock className="w-5 h-5" />} label="Когда">
+                {formatDateTime(event.startTime)} – {new Date(event.endTime).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+              </Fact>
+              <Fact icon={<MapPin className="w-5 h-5" />} label="Где">
+                {event.address}
+              </Fact>
+              <Fact icon={<Banknote className="w-5 h-5" />} label="Стоимость">
+                {formatPrice(event.price)}
+              </Fact>
+              <Fact icon={<UserIcon className="w-5 h-5" />} label="Запись">
+                {JOIN_MODE_LABELS[event.joinMode]}
+              </Fact>
+              {ages && (
+                <Fact icon={<Users className="w-5 h-5" />} label="Возраст">
+                  {ages}
+                </Fact>
+              )}
+              {event.registrationDeadline && (
+                <Fact icon={<CalendarPlus className="w-5 h-5" />} label="Приём заявок до">
+                  {formatShortDateTime(event.registrationDeadline)}
+                </Fact>
+              )}
+              {event.requiredEquipment && (
+                <div className="sm:col-span-2">
+                  <Fact icon={<FileText className="w-5 h-5" />} label="Что взять с собой">
+                    {event.requiredEquipment}
+                  </Fact>
+                </div>
+              )}
+            </div>
+            <div className="mt-5 space-y-2">
+              <MiniMap lat={event.lat} lng={event.lng} />
+            </div>
+          </div>
+
+          {(templateFacts.length > 0 || (event.customFields?.length ?? 0) > 0) && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-4">
+                {event.template && event.template.code !== 'free' ? event.template.name : 'Детали'}
+              </h2>
+              <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
+                {templateFacts.map(({ field, text }) => (
+                  <div key={field.key} className={field.type === 'TEXTAREA' ? 'sm:col-span-2' : ''}>
+                    <dt className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{field.label}</dt>
+                    <dd className="text-base text-slate-900 whitespace-pre-line">{text}</dd>
+                  </div>
+                ))}
+                {event.customFields?.map((f, i) => (
+                  <div key={`c${i}`}>
+                    <dt className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{f.label}</dt>
+                    <dd className="text-base text-slate-900">{f.value}</dd>
+                  </div>
+                ))}
+              </dl>
+            </div>
+          )}
+
+          {org && (
+            <div className="bg-white rounded-2xl border border-slate-200 p-5 md:p-7 shadow-sm">
+              <h2 className="text-lg font-bold text-slate-900 mb-4 flex items-center gap-2">
+                <Building2 className="w-5 h-5 text-slate-500" /> Сведения организатора
+              </h2>
+              <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
+                {org.contactName && (
+                  <Fact icon={<UserIcon className="w-5 h-5" />} label="Контактное лицо">
+                    {org.contactName}
+                  </Fact>
+                )}
+                {org.contactPhone && (
+                  <Fact icon={<Phone className="w-5 h-5" />} label="Телефон">
+                    <a href={`tel:${org.contactPhone.replace(/[^+\d]/g, '')}`} className="text-emerald-700 hover:underline">
+                      {org.contactPhone}
+                    </a>
+                  </Fact>
+                )}
+                {org.contactEmail && (
+                  <Fact icon={<Mail className="w-5 h-5" />} label="E-mail">
+                    <a href={`mailto:${org.contactEmail}`} className="text-emerald-700 hover:underline break-all">
+                      {org.contactEmail}
+                    </a>
+                  </Fact>
+                )}
+                {org.website && (
+                  <Fact icon={<Globe className="w-5 h-5" />} label="Сайт / регламент">
+                    <a href={org.website} target="_blank" rel="noopener noreferrer" className="text-emerald-700 hover:underline break-all">
+                      {org.website}
+                    </a>
+                  </Fact>
+                )}
+                {org.venueName && (
+                  <Fact icon={<MapPin className="w-5 h-5" />} label="Площадка">
+                    {org.venueName}
+                  </Fact>
+                )}
+                {org.prizes && (
+                  <Fact icon={<Trophy className="w-5 h-5" />} label="Призы">
+                    {org.prizes}
+                  </Fact>
+                )}
+              </div>
+
+              {(org.medicalCertificateRequired || org.insuranceRequired || (org.requiredDocuments?.length ?? 0) > 0) && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-2">Требования к участникам</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {org.medicalCertificateRequired && <Chip tone="amber">Медицинская справка</Chip>}
+                    {org.insuranceRequired && <Chip tone="amber">Страховка</Chip>}
+                    {org.requiredDocuments?.map((d) => (
+                      <Chip key={d} tone="amber">
+                        {d}
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {(org.program?.length ?? 0) > 0 && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-2">Программа</h3>
+                  <ol className="border-l-2 border-emerald-200 ml-2 space-y-2.5">
+                    {org.program!.map((p, i) => (
+                      <li key={i} className="pl-4 relative">
+                        <span className="absolute -left-[7px] top-2 w-3 h-3 rounded-full bg-emerald-500 border-2 border-white" />
+                        {p.time && <span className="font-semibold text-slate-900 mr-2">{p.time}</span>}
+                        <span className="text-slate-700">{p.title}</span>
+                      </li>
+                    ))}
+                  </ol>
+                </div>
+              )}
+
+              {(org.facilities?.length ?? 0) > 0 && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-2">На площадке</h3>
+                  <div className="flex flex-wrap gap-2">
+                    {org.facilities!.map((f) => (
+                      <Chip key={f} tone="slate">
+                        {f}
+                      </Chip>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {org.cancellationPolicy && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-1">Условия отмены</h3>
+                  <p className="text-slate-700">{org.cancellationPolicy}</p>
+                </div>
+              )}
+              {org.sponsors && (
+                <div className="mt-5">
+                  <h3 className="text-sm font-semibold text-slate-700 mb-1">Партнёры</h3>
+                  <p className="text-slate-700">{org.sponsors}</p>
+                </div>
+              )}
+            </div>
+          )}
+          </div>
+        </div>
+
+        <aside className="order-2 lg:order-none lg:sticky lg:top-20 space-y-4">
+          <div className="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
+            <div>
+              <div className="flex items-end justify-between mb-1.5">
+                <span className="text-sm text-slate-500">Места</span>
+                <span className="text-lg font-bold text-slate-900">
+                  {event.confirmedCount} / {event.capacity}
+                </span>
+              </div>
+              <div className="h-2 rounded-full bg-slate-100 overflow-hidden" role="progressbar" aria-valuenow={filled} aria-valuemin={0} aria-valuemax={100}>
+                <div className={`h-full rounded-full ${full ? 'bg-amber-500' : 'bg-emerald-500'}`} style={{ width: `${filled}%` }} />
+              </div>
+              <p className="text-xs text-slate-500 mt-1.5">
+                {full ? 'Мест нет' : `Свободно: ${spotsLeft(event)}`}
+              </p>
+            </div>
+
+            {panel}
+            {actionError && <p className="text-sm text-red-700">{actionError}</p>}
+          </div>
+
+          <a
+            href={eventsApi.icsUrl(event.id)}
+            download
+            className="flex items-center justify-center gap-2 bg-white border border-slate-200 hover:bg-slate-50 rounded-xl py-3 text-sm font-semibold text-slate-700"
+          >
+            <CalendarPlus className="w-4 h-4" /> Добавить в календарь (.ics)
+          </a>
+        </aside>
+      </div>
+
+      {joinOpen && (
+        <JoinDialog
+          event={event}
+          onClose={() => setJoinOpen(false)}
+          onDone={() => {
+            setJoinOpen(false);
+            void load();
+          }}
+        />
+      )}
+      {cancelOpen && (
+        <Modal title={my?.status === 'PENDING' ? 'Отозвать заявку?' : 'Отменить участие?'} onClose={() => setCancelOpen(false)}>
+          <p className="text-slate-700 mb-5">
+            {my?.status === 'PENDING'
+              ? 'Организатор больше не увидит вашу заявку. Позже можно подать её снова.'
+              : 'Место освободится для других участников. Позже можно записаться снова, если останутся места.'}
+          </p>
+          {actionError && <p className="text-sm text-red-700 mb-3">{actionError}</p>}
+          <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
+            <button onClick={() => setCancelOpen(false)} className="px-5 py-3 rounded-xl border border-slate-300 font-semibold text-slate-700 hover:bg-slate-50">
+              Назад
+            </button>
+            <button
+              onClick={cancelParticipation}
+              disabled={busy}
+              className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-white font-semibold disabled:opacity-60"
+            >
+              {my?.status === 'PENDING' ? 'Отозвать' : 'Отменить участие'}
+            </button>
+          </div>
+        </Modal>
+      )}
+    </div>
+  );
+};
+
+const Chip: React.FC<{ tone: 'amber' | 'slate'; children: React.ReactNode }> = ({ tone, children }) => (
+  <span
+    className={`text-sm px-3 py-1 rounded-full border ${
+      tone === 'amber' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-slate-50 border-slate-200 text-slate-700'
+    }`}
+  >
+    {children}
+  </span>
+);

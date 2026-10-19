@@ -2,12 +2,21 @@ package ru.sportikus.admin.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+import ru.sportikus.admin.dto.AdminOrgDto;
+import ru.sportikus.admin.dto.ReasonRequest;
+import ru.sportikus.admin.service.AdminService;
+import ru.sportikus.event.dto.EventResponse;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/admin")
@@ -15,57 +24,41 @@ import java.util.Map;
 @Tag(name = "Admin", description = "Панель администратора: модерация организаций и мероприятий")
 public class AdminController {
 
+    private final AdminService adminService;
+
     @GetMapping("/organizations")
-    @Operation(summary = "Получить список заявок организаций по статусу")
-    public ResponseEntity<List<Map<String, Object>>> getOrgApplications(
-            @RequestParam(required = false, defaultValue = "PENDING") String status
-    ) {
-        return ResponseEntity.ok(List.of(
-            Map.of(
-                "id", 2,
-                "name", "Шахматный клуб Ладья",
-                "description", "Городской клуб любителей шахмат на о. Татышев",
-                "status", status
-            )
-        ));
+    @Operation(summary = "Организации (опционально по статусу PENDING / APPROVED / REJECTED)")
+    public List<AdminOrgDto> organizations(@RequestParam(required = false) String status) {
+        return adminService.organizations(status);
     }
 
     @PostMapping("/organizations/{id}/approve")
-    @Operation(summary = "Одобрить организацию (допуск к публикации)")
-    public ResponseEntity<Map<String, Object>> approveOrganization(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of(
-            "organizationId", id,
-            "status", "APPROVED",
-            "message", "Организация успешно допущена к созданию мероприятий без премодерации"
-        ));
+    @Operation(summary = "Допустить организацию к публикации мероприятий")
+    public AdminOrgDto approve(@PathVariable Long id) {
+        return adminService.approve(id);
     }
 
     @PostMapping("/organizations/{id}/reject")
-    @Operation(summary = "Отклонить заявку организации с обязательной причиной")
-    public ResponseEntity<Map<String, Object>> rejectOrganization(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body
-    ) {
-        String reason = body.getOrDefault("reason", "Причина не указана");
-        return ResponseEntity.ok(Map.of(
-            "organizationId", id,
-            "status", "REJECTED",
-            "reason", reason
-        ));
+    @Operation(summary = "Отклонить организацию с обязательной причиной")
+    public AdminOrgDto reject(@PathVariable Long id, @Valid @RequestBody ReasonRequest request) {
+        return adminService.reject(id, request.reason());
+    }
+
+    @GetMapping("/events")
+    @Operation(summary = "Все мероприятия, включая снятые с публикации")
+    public List<EventResponse> events() {
+        return adminService.events();
     }
 
     @PostMapping("/events/{id}/unpublish")
-    @Operation(summary = "Снять мероприятие с публикации админом (Сценарий 6 ТЗ)")
-    public ResponseEntity<Map<String, Object>> unpublishEvent(
-            @PathVariable Long id,
-            @RequestBody Map<String, String> body
-    ) {
-        String reason = body.getOrDefault("reason", "Нарушение правил площадки");
-        return ResponseEntity.ok(Map.of(
-            "eventId", id,
-            "status", "UNPUBLISHED",
-            "reason", reason,
-            "message", "Событие снято с публикации и скрыто из поиска и карты"
-        ));
+    @Operation(summary = "Снять мероприятие с публикации с обязательной причиной")
+    public EventResponse unpublish(@PathVariable Long id, @Valid @RequestBody ReasonRequest request) {
+        return adminService.unpublish(id, request.reason());
+    }
+
+    @PostMapping("/events/{id}/publish")
+    @Operation(summary = "Вернуть мероприятие в публикацию")
+    public EventResponse publish(@PathVariable Long id) {
+        return adminService.publish(id);
     }
 }

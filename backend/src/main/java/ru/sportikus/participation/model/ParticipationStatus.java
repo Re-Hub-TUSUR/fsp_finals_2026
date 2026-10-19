@@ -1,0 +1,12 @@
+package ru.sportikus.participation.model;
+
+public enum ParticipationStatus {
+    /** Заявка подана, ждёт решения организатора. */
+    PENDING,
+    /** Участие подтверждено — занимает место. */
+    CONFIRMED,
+    /** Организатор отклонил заявку (или исключил участника). */
+    REJECTED,
+    /** Участник отменил запись сам. */
+    CANCELLED
+}

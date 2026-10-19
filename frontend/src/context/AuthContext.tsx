@@ -1,67 +1,111 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import type { User } from '../types';
+import { authApi } from '../api';
+import { getToken, setToken } from '../api/client';
 
-export const DEMO_ACCOUNTS: Record<string, User> = {
-  user: {
-    id: 1,
-    email: 'user@sport.ru',
-    fullName: 'Иван Иванов',
-    role: 'ROLE_USER',
-    avatarUrl: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120'
-  },
-  enisey: {
-    id: 4,
-    email: 'enisey@sport.ru',
-    fullName: 'СК «Енисей»',
-    role: 'ROLE_ORGANIZER',
-    organizationId: 1,
-    orgStatus: 'APPROVED',
-    avatarUrl: 'https://images.unsplash.com/photo-1517649763962-0c623266ddc0?w=120'
-  },
-  ladya: {
-    id: 5,
-    email: 'ladya@sport.ru',
-    fullName: 'Клуб «Ладья»',
-    role: 'ROLE_ORGANIZER',
-    organizationId: 2,
-    orgStatus: 'PENDING',
-    avatarUrl: 'https://images.unsplash.com/photo-1529699211952-734e80c4d42b?w=120'
-  },
-  admin: {
-    id: 6,
-    email: 'admin@sport.ru',
-    fullName: 'Администратор платформы',
-    role: 'ROLE_ADMIN',
-    avatarUrl: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=120'
-  }
+export const DEMO_PASSWORD = 'password123';
+
+export type DemoRoleKey = 'user' | 'olga' | 'pro' | 'enisey' | 'ladya' | 'admin';
+
+/** Демо-аккаунты из сида БД: переключение роли = вход под этим аккаунтом по-настоящему (JWT). */
+export const DEMO_ACCOUNTS: Record<DemoRoleKey, { email: string; label: string; hint: string }> = {
+  user: { email: 'user@sport.ru', label: '🏃 Иван', hint: 'Пользователь — автор «Дворового футбола»' },
+  olga: { email: 'olga@sport.ru', label: '🙋 Ольга', hint: 'Пользователь-новичок' },
+  pro: { email: 'pro@sport.ru', label: '🎯 Алексей', hint: 'Пользователь-профи' },
+  enisey: { email: 'enisey@sport.ru', label: '🏆 СК «Енисей»', hint: 'Одобренная организация' },
+  ladya: { email: 'ladya@sport.ru', label: '⏳ Клуб «Ладья»', hint: 'Организация на модерации' },
+  admin: { email: 'admin@sport.ru', label: '🛡️ Администратор', hint: 'Модерация платформы' },
 };
 
+const ROLE_KEY = 'sportikus_demo_role';
+
 interface AuthContextType {
-  currentUser: User;
-  activeRoleKey: string;
-  switchRole: (roleKey: 'user' | 'enisey' | 'ladya' | 'admin') => void;
+  currentUser: User | null;
+  activeRoleKey: DemoRoleKey;
+  ready: boolean;
+  authError: string | null;
+  switchRole: (roleKey: DemoRoleKey) => Promise<void>;
+  /** Перечитать профиль (например, после одобрения организации администратором). */
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+function storedRole(): DemoRoleKey {
+  try {
+    const key = localStorage.getItem(ROLE_KEY) as DemoRoleKey | null;
+    if (key && key in DEMO_ACCOUNTS) return key;
+  } catch {
+    /* ignore */
+  }
+  return 'user';
+}
+
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [activeRoleKey, setActiveRoleKey] = useState<string>(() => {
-    return localStorage.getItem('sportikus_demo_role') || 'user';
-  });
+  const [currentUser, setCurrentUser] = useState<User | null>(null);
+  const [activeRoleKey, setActiveRoleKey] = useState<DemoRoleKey>(storedRole);
+  const [ready, setReady] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const currentUser = DEMO_ACCOUNTS[activeRoleKey] || DEMO_ACCOUNTS.user;
-
-  const switchRole = (roleKey: 'user' | 'enisey' | 'ladya' | 'admin') => {
+  const loginAs = useCallback(async (roleKey: DemoRoleKey) => {
+    const { token, user } = await authApi.login(DEMO_ACCOUNTS[roleKey].email, DEMO_PASSWORD);
+    setToken(token);
+    setCurrentUser(user);
     setActiveRoleKey(roleKey);
-    localStorage.setItem('sportikus_demo_role', roleKey);
-  };
+    setAuthError(null);
+    try {
+      localStorage.setItem(ROLE_KEY, roleKey);
+    } catch {
+      /* ignore */
+    }
+  }, []);
 
   useEffect(() => {
-    localStorage.setItem('sportikus_demo_role', activeRoleKey);
-  }, [activeRoleKey]);
+    let cancelled = false;
+    (async () => {
+      try {
+        if (getToken()) {
+          try {
+            const user = await authApi.me();
+            if (!cancelled) setCurrentUser(user);
+            return;
+          } catch {
+            setToken(null);
+          }
+        }
+        await loginAs(storedRole());
+      } catch {
+        if (!cancelled) setAuthError('Не удалось подключиться к серверу');
+      } finally {
+        if (!cancelled) setReady(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loginAs]);
+
+  const switchRole = useCallback(
+    async (roleKey: DemoRoleKey) => {
+      try {
+        await loginAs(roleKey);
+      } catch {
+        setAuthError('Не удалось войти под выбранной ролью');
+      }
+    },
+    [loginAs],
+  );
+
+  const refreshUser = useCallback(async () => {
+    try {
+      setCurrentUser(await authApi.me());
+    } catch {
+      /* оставляем прежний профиль */
+    }
+  }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, activeRoleKey, switchRole }}>
+    <AuthContext.Provider value={{ currentUser, activeRoleKey, ready, authError, switchRole, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );
