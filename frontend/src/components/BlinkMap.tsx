@@ -6,7 +6,7 @@ import { distanceKm, type LatLng } from '../utils/eventView';
 import { useTheme } from '../context/ThemeContext';
 import { MapFallback } from './MapFallback';
 import { MapEventCard } from './MapEventCard';
-import { Loader2, Minus, Moon, Plus, Sun } from 'lucide-react';
+import { Loader2, Minus, Plus } from 'lucide-react';
 
 export interface MapViewport extends LatLng {
   radiusKm: number;
@@ -97,7 +97,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   onViewportRef.current = onViewportChange;
   const lastPinClick = useRef(0);
   const fitted = useRef(false);
-  const { theme, toggleTheme } = useTheme();
+  const { theme } = useTheme();
 
   const [viewTick, setViewTick] = useState(0);
   const [is3d, setIs3d] = useState(true);
@@ -351,14 +351,6 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
               className={`${ctrlButton} text-sm font-extrabold ${is3d ? 'text-brand-ink' : ''}`}
             >
               3D
-            </button>
-            <button
-              type="button"
-              onClick={toggleTheme}
-              aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-              className={ctrlButton}
-            >
-              {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
             </button>
           </div>
           <div className={groupClass}>

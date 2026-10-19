@@ -110,7 +110,7 @@ export const NotificationBell: React.FC = () => {
       >
         <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
         {unreadCount > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-[18px] sm:min-w-[20px] h-[18px] sm:h-[20px] px-1 rounded-full bg-brand text-on-brand text-[10px] sm:text-[11px] font-extrabold flex items-center justify-center shadow-sm animate-pulse">
+          <span className="absolute -top-1 -right-1 min-w-[14px] h-[14px] px-[3px] rounded-full bg-brand text-on-brand text-[9px] leading-none font-extrabold flex items-center justify-center">
             {unreadCount > 99 ? '99+' : unreadCount}
           </span>
         )}
