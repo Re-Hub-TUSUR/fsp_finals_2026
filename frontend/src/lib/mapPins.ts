@@ -28,9 +28,8 @@ function element(html: string): HTMLElement {
 export function pinElement(event: SportEvent, selected: boolean): HTMLElement {
   const live = isLive(event);
   const size = selected ? PIN_SIZE_SELECTED : PIN_SIZE;
-  // Фото организатора не показываем на выбранной метке — там акцентная заливка с инициалами
   const face =
-    event.organizerAvatar && !selected
+    event.organizerAvatar
       ? `<img src="${escapeHtml(event.organizerAvatar)}" alt="" />`
       : escapeHtml(initials(event.organizerName));
 

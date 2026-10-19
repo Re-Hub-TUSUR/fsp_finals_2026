@@ -235,6 +235,10 @@ export const EventPage: React.FC = () => {
     );
   })();
 
+  const organizerProfileUrl = event.byOrganization
+    ? `/profiles/organizations/${event.organizationId}`
+    : `/profiles/users/${event.organizerUserId}`;
+
   return (
     <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
       <Link to="/" className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
@@ -273,12 +277,16 @@ export const EventPage: React.FC = () => {
               )}
             </div>
             <h1 className="text-3xl font-bold text-slate-900 leading-tight">{event.title}</h1>
-            <div className="flex items-center gap-2.5 mt-3">
+            <Link
+              to={organizerProfileUrl}
+              className="mt-3 inline-flex items-center gap-2.5 rounded-lg text-slate-700 transition-colors hover:text-brand-ink focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-brand"
+              aria-label={`Открыть профиль организатора ${event.organizerName}`}
+            >
               <img src={event.organizerAvatar} alt="" className="w-9 h-9 rounded-full object-cover bg-slate-200" />
-              <span className="text-slate-700">
-                Организатор: <b>{event.organizerName}</b>
+              <span>
+                Организатор: <b className="underline-offset-4 hover:underline">{event.organizerName}</b>
               </span>
-            </div>
+            </Link>
             {event.description && (
               <p className="text-base text-slate-700 mt-5 whitespace-pre-line leading-relaxed">{event.description}</p>
             )}

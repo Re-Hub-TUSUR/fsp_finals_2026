@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
@@ -12,6 +12,29 @@ const Logo: React.FC = () => (
     <span className="text-[22px] sm:text-[26px] font-extrabold tracking-[-0.03em] text-ink">Sportikus</span>
   </Link>
 );
+
+const AccountAvatar: React.FC<{ userId: number; src?: string }> = ({ userId, src }) => {
+  const [failed, setFailed] = useState(false);
+
+  return (
+    <span
+      key={`${userId}-${src ?? 'empty'}`}
+      className="w-11 h-11 rounded-full bg-surface text-ink flex items-center justify-center overflow-hidden shrink-0"
+    >
+      {src && !failed ? (
+        <img
+          key={`${userId}-${src}`}
+          src={src}
+          alt=""
+          className="w-full h-full object-cover"
+          onError={() => setFailed(true)}
+        />
+      ) : (
+        <UserRound className="w-5 h-5" />
+      )}
+    </span>
+  );
+};
 
 export const Navbar: React.FC = () => {
   const { currentUser, logout } = useAuth();
@@ -86,13 +109,7 @@ export const Navbar: React.FC = () => {
           {currentUser && (
             <div className="flex items-center gap-2.5" title={currentUser.organizationName ?? currentUser.fullName}>
               <Link to="/profile" className="flex items-center gap-2.5" aria-label="Открыть профиль">
-              <span className="w-11 h-11 rounded-full bg-surface text-ink flex items-center justify-center overflow-hidden shrink-0">
-                {currentUser.avatarUrl ? (
-                  <img src={currentUser.avatarUrl} alt="" className="w-full h-full object-cover" />
-                ) : (
-                  <UserRound className="w-5 h-5" />
-                )}
-              </span>
+              <AccountAvatar key={`${currentUser.id}-${currentUser.avatarUrl ?? 'empty'}`} userId={currentUser.id} src={currentUser.avatarUrl} />
               <span className="hidden xl:flex flex-col leading-tight">
                 <span className="text-sm font-semibold text-ink max-w-[180px] truncate">
                   {currentUser.organizationName ?? currentUser.fullName}
