@@ -23,6 +23,7 @@ import { useAuth } from '../context/AuthContext';
 import type { RecommendationItem, Recommendations } from '../types';
 import { Modal } from '../components/Modal';
 import { PreferencesForm } from '../components/PreferencesForm';
+import { InterestQuiz } from '../components/InterestQuiz';
 import { formatPrice, formatShortDateTime, isForeignZone, spotsLeft } from '../utils/format';
 
 const REASON_ICONS: Record<string, React.ReactNode> = {
@@ -57,6 +58,7 @@ export const RecommendedPage: React.FC = () => {
   const [geo, setGeo] = useState<GeoState>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
+  const [quizOpen, setQuizOpen] = useState(false);
   const [hidden, setHidden] = useState<RecommendationItem | null>(null);
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
@@ -193,9 +195,14 @@ export const RecommendedPage: React.FC = () => {
       {data?.coldStart && !data.needsLocation && (
         <div className="mb-5 p-4 rounded-[18px] bg-brand-tint border border-brand-line text-brand-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span>Пока мы мало о вас знаем, поэтому показываем популярное рядом. Отметьте интересы — подборка станет точнее.</span>
-          <button onClick={() => setPrefsOpen(true)} className="shrink-0 px-4 h-10 rounded-xl bg-brand text-on-brand hover:bg-brand-hover font-semibold text-sm transition-colors">
-            Указать интересы
-          </button>
+          <div className="flex shrink-0 flex-wrap gap-2">
+            <button onClick={() => setQuizOpen(true)} className="px-4 h-10 rounded-xl border border-brand-line bg-card text-brand-ink hover:bg-brand-tint-2 font-semibold text-sm transition-colors">
+              Пройти тест
+            </button>
+            <button onClick={() => setPrefsOpen(true)} className="px-4 h-10 rounded-xl bg-brand text-on-brand hover:bg-brand-hover font-semibold text-sm transition-colors">
+              Указать интересы
+            </button>
+          </div>
         </div>
       )}
 
@@ -209,7 +216,10 @@ export const RecommendedPage: React.FC = () => {
           <h2 className="text-xl font-bold text-ink">Где вы занимаетесь?</h2>
           <p className="text-muted mt-1 mb-5">Укажите город и интересы или разрешите определить местоположение.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <button onClick={() => setPrefsOpen(true)} className="px-5 h-12 rounded-xl bg-brand text-on-brand hover:bg-brand-hover font-semibold transition-colors">
+            <button onClick={() => setQuizOpen(true)} className="px-5 h-12 rounded-xl bg-brand text-on-brand hover:bg-brand-hover font-semibold transition-colors">
+              Пройти тест интересов
+            </button>
+            <button onClick={() => setPrefsOpen(true)} className="px-5 h-12 rounded-xl border border-line bg-card font-semibold text-ink hover:bg-surface transition-colors">
               Указать город и интересы
             </button>
             <button onClick={locateMe} className="px-5 h-12 rounded-xl border border-line bg-card font-semibold text-ink hover:bg-surface transition-colors">
@@ -258,6 +268,17 @@ export const RecommendedPage: React.FC = () => {
             ✕
           </button>
         </div>
+      )}
+
+      {quizOpen && (
+        <InterestQuiz
+          initial={preferences}
+          onClose={() => setQuizOpen(false)}
+          onSaved={async () => {
+            await refreshPreferences();
+            await load(geo);
+          }}
+        />
       )}
 
       {prefsOpen && (

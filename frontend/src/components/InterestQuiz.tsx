@@ -9,6 +9,8 @@ interface Props {
   initial?: Preferences | null;
   onClose: () => void;
   onSaved: () => Promise<void>;
+  /** Кнопка «Смотреть рекомендации» на финальном шаге; по умолчанию просто закрывает квиз. */
+  onFinish?: () => void;
 }
 
 type Mood = 'ENERGY' | 'BALANCE' | 'TEAM' | 'DISCOVERY';
@@ -35,16 +37,20 @@ const levels: Array<{ id: SkillLevel; emoji: string; title: string; text: string
 
 const toggle = <T,>(items: T[], item: T) => items.includes(item) ? items.filter((x) => x !== item) : [...items, item];
 
+const sameIds = (a: number[], b: number[]) => a.length === b.length && a.every((id) => b.includes(id));
+
 const SportGlyph = ({ name }: { name: string }) => <svg viewBox="0 0 24 24" className="h-7 w-7" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={sportIconPath(name)} /></svg>;
 
-export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved }) => {
+export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved, onFinish }) => {
   const [step, setStep] = useState(0);
   const [sports, setSports] = useState<Sport[]>([]);
   const [cities, setCities] = useState<City[]>([]);
   const [mood, setMood] = useState<Mood>();
   const [sportIds, setSportIds] = useState<number[]>(initial?.sports.map((s) => s.id) ?? []);
+  /** Виды спорта, которые подставило настроение: пока их не правили руками, смена настроения их заменяет. */
+  const [suggestedIds, setSuggestedIds] = useState<number[]>([]);
   const [preferredTimes, setPreferredTimes] = useState<PreferredTime[]>(initial?.preferredTimes ?? []);
-  const [skill, setSkill] = useState<SkillLevel>(initial?.skillLevel ?? 'NOVICE');
+  const [skill, setSkill] = useState<SkillLevel | undefined>(initial?.skillLevel);
   const [cityId, setCityId] = useState<number | ''>(initial?.homeCity?.id ?? '');
   const [distance, setDistance] = useState(initial?.maxDistanceKm ?? 20);
   const [freeOnly, setFreeOnly] = useState(initial?.maxPrice === 0);
@@ -58,18 +64,35 @@ export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved }) => 
   }, []);
 
   const suggested = useMemo(() => moods.find((item) => item.id === mood), [mood]);
-  const selectMood = (id: Mood) => {
-    setMood(id);
+
+  // Настроение подсказывает виды спорта: подставляем их, не затирая то, что человек уже выбрал сам
+  const applyMood = () => {
+    if (!suggested) return;
+    const suggestion = sports.filter((sport) => suggested.match.test(sport.name)).map((sport) => sport.id);
+    if (sportIds.length === 0 || sameIds(sportIds, suggestedIds)) {
+      setSportIds(suggestion);
+      setSuggestedIds(suggestion);
+    }
   };
 
-  const canNext = step === 0 ? !!mood : step === 1 ? sportIds.length > 0 : step === 2 ? preferredTimes.length > 0 : step === 4 ? cityId !== '' : true;
+  const next = () => {
+    if (step === 0) applyMood();
+    setStep((value) => value + 1);
+  };
+
+  const canNext = step === 0 ? !!mood : step === 1 ? sportIds.length > 0 : step === 2 ? preferredTimes.length > 0 : step === 3 ? !!skill : step === 4 ? cityId !== '' : true;
 
   const finish = async () => {
     setSaving(true); setError('');
     try {
+      // PUT заменяет предпочтения целиком, поэтому то, чего квиз не спрашивает, переносим из сохранённых:
+      // домашнюю точку (если город прежний) и заданный в форме бюджет
+      const sameCity = initial?.homeCity?.id === Number(cityId);
       await preferencesApi.update({
-        sportIds, skillLevel: skill, homeCityId: Number(cityId), maxDistanceKm: distance,
-        preferredTimes, maxPrice: freeOnly ? 0 : undefined, birthYear: initial?.birthYear,
+        sportIds, skillLevel: skill, homeCityId: Number(cityId),
+        homeLat: sameCity ? initial?.homeLat : undefined, homeLng: sameCity ? initial?.homeLng : undefined,
+        maxDistanceKm: distance, preferredTimes,
+        maxPrice: freeOnly ? 0 : initial?.maxPrice || undefined, birthYear: initial?.birthYear,
       });
       await onSaved(); setStep(5);
     } catch (err) { setError(errorMessage(err)); }
@@ -87,7 +110,7 @@ export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved }) => 
 
       <div className="flex flex-1 flex-col justify-center py-8 sm:py-12">
         {step === 0 && <QuizStep eyebrow="Начнём с ощущения" title="Чего вам сейчас хочется?" subtitle="Не думайте о конкретном спорте — выберите настроение.">
-          <div className="grid gap-3 sm:grid-cols-2">{moods.map((item) => <Choice key={item.id} active={mood === item.id} onClick={() => selectMood(item.id)} emoji={item.emoji} title={item.title} text={item.text} />)}</div>
+          <div className="grid gap-3 sm:grid-cols-2">{moods.map((item) => <Choice key={item.id} active={mood === item.id} onClick={() => setMood(item.id)} emoji={item.emoji} title={item.title} text={item.text} />)}</div>
         </QuizStep>}
 
         {step === 1 && <QuizStep eyebrow={suggested ? `Для настроения «${suggested.title.toLowerCase()}»` : 'Ваши активности'} title="Что хочется попробовать?" subtitle="Мы уже отметили несколько вариантов. Оставьте любимые — можно выбрать сколько угодно.">
@@ -112,10 +135,10 @@ export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved }) => 
           </div>
         </QuizStep>}
 
-        {step === 5 && <div className="mx-auto max-w-xl text-center"><div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-brand text-on-brand shadow-card"><Sparkles className="h-11 w-11" /></div><p className="mt-8 text-sm font-extrabold uppercase tracking-[.2em] text-brand-ink">Ваш профиль готов</p><h2 className="mt-3 text-4xl font-black text-ink sm:text-5xl">Мы поймали ваш ритм</h2><p className="mt-4 text-lg text-muted">Теперь лента «Для вас» будет учитывать ваши активности, уровень, расписание и расстояние.</p><button onClick={onClose} className="mt-8 rounded-2xl bg-brand px-7 py-3.5 font-bold text-on-brand hover:bg-brand-hover">Смотреть рекомендации</button></div>}
+        {step === 5 && <div className="mx-auto max-w-xl text-center"><div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-brand text-on-brand shadow-card"><Sparkles className="h-11 w-11" /></div><p className="mt-8 text-sm font-extrabold uppercase tracking-[.2em] text-brand-ink">Ваш профиль готов</p><h2 className="mt-3 text-4xl font-black text-ink sm:text-5xl">Мы поймали ваш ритм</h2><p className="mt-4 text-lg text-muted">Теперь лента «Для вас» будет учитывать ваши активности, уровень, расписание и расстояние.</p><button onClick={onFinish ?? onClose} className="mt-8 rounded-2xl bg-brand px-7 py-3.5 font-bold text-on-brand hover:bg-brand-hover">Смотреть рекомендации</button></div>}
       </div>
 
-      {step < 5 && <div className="flex items-center justify-between border-t border-line pt-5"><button disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className="flex items-center gap-2 rounded-xl px-4 py-3 font-semibold text-muted disabled:invisible"><ArrowLeft className="h-4 w-4" />Назад</button><div className="text-sm font-semibold text-muted">{step + 1} / 5</div><button disabled={!canNext || saving} onClick={() => step === 4 ? void finish() : setStep((value) => value + 1)} className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 font-bold text-on-brand disabled:opacity-40">{saving ? <Loader2 className="h-5 w-5 animate-spin" /> : step === 4 ? 'Собрать профиль' : <>Дальше<ArrowRight className="h-4 w-4" /></>}</button></div>}
+      {step < 5 && <div className="flex items-center justify-between border-t border-line pt-5"><button disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className="flex items-center gap-2 rounded-xl px-4 py-3 font-semibold text-muted disabled:invisible"><ArrowLeft className="h-4 w-4" />Назад</button><div className="text-sm font-semibold text-muted">{step + 1} / 5</div><button disabled={!canNext || saving} onClick={() => step === 4 ? void finish() : next()} className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 font-bold text-on-brand disabled:opacity-40">{saving ? <Loader2 className="h-5 w-5 animate-spin" /> : step === 4 ? 'Собрать профиль' : <>Дальше<ArrowRight className="h-4 w-4" /></>}</button></div>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-center text-sm text-red-700">{error}</p>}
     </div>
   </div>;
