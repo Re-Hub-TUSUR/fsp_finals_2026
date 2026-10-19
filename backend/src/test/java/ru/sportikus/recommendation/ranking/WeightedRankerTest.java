@@ -45,7 +45,7 @@ class WeightedRankerTest {
         Event e = Event.builder().id(id).title("Событие " + id).sport(sport).organizerUser(organizer)
                 .startTime(start).endTime(start.plus(2, ChronoUnit.HOURS)).timeZone(zone)
                 .capacity(10).joinMode(JoinMode.OPEN).skillLevel(SkillLevel.AMATEUR).build();
-        EventResponse r = new EventResponse(id, e.getTitle(), null, null, null, "Организатор", null, false, null,
+        EventResponse r = new EventResponse(id, e.getTitle(), null, null, null, "Организатор", null, false, null, 100L,
                 start, e.getEndTime(), 56.0, 92.9, "адрес", "Красноярск", zone, 10, 1, JoinMode.OPEN, SkillLevel.AMATEUR,
                 null, null, null, null, null, null, null, null, null, null, null, null, null, null, null);
         return new CandidateView(e, r, distanceKm, 0, Set.of("INTEREST"));

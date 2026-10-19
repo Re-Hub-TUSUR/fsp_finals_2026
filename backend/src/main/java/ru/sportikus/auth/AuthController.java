@@ -25,6 +25,18 @@ public class AuthController {
         return authService.login(request);
     }
 
+    @PostMapping("/register/user")
+    @Operation(summary = "Регистрация обычного пользователя")
+    public AuthResponse registerUser(@Valid @RequestBody UserRegistrationRequest request) {
+        return authService.registerUser(request);
+    }
+
+    @PostMapping("/register/organization")
+    @Operation(summary = "Регистрация организации с заявкой на модерацию")
+    public AuthResponse registerOrganization(@Valid @RequestBody OrganizationRegistrationRequest request) {
+        return authService.registerOrganization(request);
+    }
+
     @GetMapping("/me")
     @Operation(summary = "Профиль текущего пользователя")
     public UserDto me() {

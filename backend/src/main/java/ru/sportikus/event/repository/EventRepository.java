@@ -50,4 +50,10 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template", "city"})
     List<Event> findAllByOrderByStartTimeDesc();
+
+    @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
+    List<Event> findByOrganizerUserIdAndStatusOrderByStartTimeAsc(Long userId, ru.sportikus.event.model.EventStatus status);
+
+    @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
+    List<Event> findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(Long organizationId, ru.sportikus.event.model.EventStatus status);
 }

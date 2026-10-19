@@ -26,6 +26,9 @@ interface AuthContextType {
   ready: boolean;
   authError: string | null;
   switchRole: (roleKey: DemoRoleKey) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
+  acceptAuth: (token: string, user: User) => void;
+  logout: () => void;
   /** Перечитать профиль (например, после одобрения организации администратором). */
   refreshUser: () => Promise<void>;
   /** Интересы и домашний город — для рекомендаций, центра карты и подписи города. */
@@ -92,7 +95,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             setToken(null);
           }
         }
-        await loginAs(storedRole());
       } catch {
         if (!cancelled) setAuthError('Не удалось подключиться к серверу');
       } finally {
@@ -103,6 +105,22 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       cancelled = true;
     };
   }, [loginAs]);
+
+  const acceptAuth = useCallback((token: string, user: User) => {
+    setToken(token);
+    setCurrentUser(user);
+    setAuthError(null);
+  }, []);
+
+  const login = useCallback(async (email: string, password: string) => {
+    const result = await authApi.login(email, password);
+    acceptAuth(result.token, result.user);
+  }, [acceptAuth]);
+
+  const logout = useCallback(() => {
+    setToken(null);
+    setCurrentUser(null);
+  }, []);
 
   const switchRole = useCallback(
     async (roleKey: DemoRoleKey) => {
@@ -124,7 +142,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   return (
-    <AuthContext.Provider value={{ currentUser, activeRoleKey, ready, authError, switchRole, refreshUser, preferences, refreshPreferences }}>
+    <AuthContext.Provider value={{ currentUser, activeRoleKey, ready, authError, switchRole, login, acceptAuth, logout, refreshUser, preferences, refreshPreferences }}>
       {children}
     </AuthContext.Provider>
   );

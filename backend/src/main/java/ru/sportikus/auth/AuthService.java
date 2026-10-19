@@ -28,6 +28,53 @@ public class AuthService {
         return new AuthResponse(jwtService.generate(user), toDto(user));
     }
 
+    @Transactional
+    public AuthResponse registerUser(UserRegistrationRequest request) {
+        String email = normalizeEmail(request.email());
+        ensureEmailAvailable(email);
+        User user = userRepository.save(User.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .fullName(request.firstName().trim() + " " + request.lastName().trim())
+                .role("ROLE_USER")
+                .build());
+        return new AuthResponse(jwtService.generate(user), toDto(user));
+    }
+
+    @Transactional
+    public AuthResponse registerOrganization(OrganizationRegistrationRequest request) {
+        String email = normalizeEmail(request.email());
+        ensureEmailAvailable(email);
+        if (organizationRepository.existsByInn(request.inn()) || organizationRepository.existsByOgrn(request.ogrn())) {
+            throw ApiException.conflict("Организация с таким ИНН или ОГРН уже зарегистрирована");
+        }
+        User owner = userRepository.save(User.builder()
+                .email(email)
+                .passwordHash(passwordEncoder.encode(request.password()))
+                .fullName(request.name().trim())
+                .role("ROLE_ORGANIZER")
+                .build());
+        organizationRepository.save(Organization.builder()
+                .name(request.name().trim())
+                .inn(request.inn())
+                .ogrn(request.ogrn())
+                .kpp(request.kpp())
+                .owner(owner)
+                .status("PENDING")
+                .build());
+        return new AuthResponse(jwtService.generate(owner), toDto(owner));
+    }
+
+    private String normalizeEmail(String email) {
+        return email.trim().toLowerCase();
+    }
+
+    private void ensureEmailAvailable(String email) {
+        if (userRepository.existsByEmailIgnoreCase(email)) {
+            throw ApiException.conflict("Аккаунт с таким e-mail уже существует");
+        }
+    }
+
     @Transactional(readOnly = true)
     public UserDto me(Long userId) {
         User user = userRepository.findById(userId)

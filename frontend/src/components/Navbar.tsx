@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowUpRight, ChevronDown, MapPin, Moon, Plus, Sun, UserRound } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, LogIn, LogOut, MapPin, Moon, Plus, Sun, UserRound } from 'lucide-react';
 
 const Logo: React.FC = () => (
   <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — на главную">
@@ -14,7 +14,7 @@ const Logo: React.FC = () => (
 );
 
 export const Navbar: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, logout } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
@@ -85,6 +85,7 @@ export const Navbar: React.FC = () => {
 
           {currentUser && (
             <div className="flex items-center gap-2.5" title={currentUser.organizationName ?? currentUser.fullName}>
+              <Link to="/profile" className="flex items-center gap-2.5" aria-label="Открыть профиль">
               <span className="w-11 h-11 rounded-full bg-surface text-ink flex items-center justify-center overflow-hidden shrink-0">
                 {currentUser.avatarUrl ? (
                   <img src={currentUser.avatarUrl} alt="" className="w-full h-full object-cover" />
@@ -98,7 +99,17 @@ export const Navbar: React.FC = () => {
                 </span>
                 {orgStatus && <span className={`text-[11px] font-medium ${orgStatus.cls}`}>{orgStatus.text}</span>}
               </span>
+              </Link>
+              <button type="button" onClick={logout} aria-label="Выйти" className="w-10 h-10 rounded-full flex items-center justify-center text-muted hover:bg-surface hover:text-ink">
+                <LogOut className="w-5 h-5" />
+              </button>
             </div>
+          )}
+          {!currentUser && (
+            <Link to="/auth" className="flex items-center gap-2 h-11 px-4 rounded-xl bg-brand text-on-brand font-medium">
+              <LogIn className="w-5 h-5" />
+              <span className="hidden sm:inline">Войти</span>
+            </Link>
           )}
         </div>
       </div>

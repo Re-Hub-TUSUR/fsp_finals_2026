@@ -79,13 +79,13 @@ export const AdminPage: React.FC = () => {
   const pending = orgs.filter((o) => o.status === 'PENDING').length;
   const tabClass = (active: boolean) =>
     `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
-      active ? 'border-purple-600 text-purple-600' : 'border-transparent text-slate-500 hover:text-slate-800'
+      active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
     }`;
 
   return (
     <div className="max-w-5xl mx-auto px-4 py-8">
       <div className="flex items-center gap-3 mb-6">
-        <div className="w-10 h-10 rounded-xl bg-purple-600 text-snow flex items-center justify-center shadow-md">
+        <div className="w-10 h-10 rounded-xl bg-brand text-on-brand flex items-center justify-center shadow-md">
           <ShieldAlert className="w-6 h-6" />
         </div>
         <div>

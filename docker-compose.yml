@@ -33,6 +33,9 @@ services:
       SPRING_DATASOURCE_USERNAME: sportikus_user
       SPRING_DATASOURCE_PASSWORD: sportikus_password
       JWT_SECRET: 404E635266556A586E3272357538782F413F4428472B4B6250645367566B5970
+      UPLOAD_DIR: /app/uploads
+    volumes:
+      - profile_uploads:/app/uploads
     ports:
       - "8080:8080"
 
@@ -53,3 +56,4 @@ services:
 
 volumes:
   postgres_data:
+  profile_uploads:

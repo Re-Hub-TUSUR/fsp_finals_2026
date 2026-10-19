@@ -11,6 +11,8 @@ import { ManageEventPage } from './pages/ManageEventPage';
 import { MyEventsPage } from './pages/MyEventsPage';
 import { AdminPage } from './pages/AdminPage';
 import { RecommendedPage } from './pages/RecommendedPage';
+import { AuthPage } from './pages/AuthPage';
+import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 
 function App() {
   return (
@@ -33,8 +35,11 @@ function App() {
                 <Route path="/events/:id/manage" element={<ManageEventPage />} />
                 <Route path="/my" element={<MyEventsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
-                <Route path="*" element={<Navigate to="/" replace />} />
                 <Route path="/recommended" element={<RecommendedPage />} />
+                <Route path="/auth" element={<AuthPage />} />
+                <Route path="/profile" element={<OwnProfilePage />} />
+                <Route path="/profiles/:type/:id" element={<ProfilePage />} />
+                <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
             </main>
 

@@ -55,7 +55,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
       <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2 min-w-0">
           <img src={event.organizerAvatar} alt="" className="w-7 h-7 rounded-full object-cover bg-slate-200 shrink-0" />
-          <span className="text-sm font-medium text-slate-700 truncate">{event.organizerName}</span>
+          <Link to={event.byOrganization ? `/profiles/organizations/${event.organizationId}` : `/profiles/users/${event.organizerUserId}`} className="text-sm font-medium text-slate-700 truncate hover:text-emerald-700">{event.organizerName}</Link>
           {event.byOrganization && <Building2 className="w-4 h-4 text-slate-400 shrink-0" aria-label="Организация" />}
         </div>
 

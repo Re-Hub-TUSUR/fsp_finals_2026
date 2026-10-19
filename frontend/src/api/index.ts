@@ -14,6 +14,7 @@ import type {
   Sport,
   SportEvent,
   User,
+  Profile,
 } from '../types';
 
 export interface EventQuery {
@@ -31,6 +32,27 @@ export const authApi = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: User }>('/auth/login', { email, password }).then((r) => r.data),
   me: () => api.get<User>('/auth/me').then((r) => r.data),
+  registerUser: (payload: { email: string; firstName: string; lastName: string; password: string }) =>
+    api.post<{ token: string; user: User }>('/auth/register/user', payload).then((r) => r.data),
+  registerOrganization: (payload: { name: string; inn: string; ogrn: string; kpp: string; email: string; password: string }) =>
+    api.post<{ token: string; user: User }>('/auth/register/organization', payload).then((r) => r.data),
+};
+
+export const profilesApi = {
+  user: (id: number | string) => api.get<Profile>(`/profiles/users/${id}`).then((r) => r.data),
+  organization: (id: number | string) => api.get<Profile>(`/profiles/organizations/${id}`).then((r) => r.data),
+  updateUser: (id: number, payload: { name: string; description?: string; imageUrl?: string }) =>
+    api.patch<Profile>(`/profiles/users/${id}`, payload).then((r) => r.data),
+  updateOrganization: (id: number, payload: { name: string; description?: string; imageUrl?: string }) =>
+    api.patch<Profile>(`/profiles/organizations/${id}`, payload).then((r) => r.data),
+  uploadUserImage: (id: number, file: File) => {
+    const body = new FormData(); body.append('file', file);
+    return api.post<Profile>(`/profiles/users/${id}/image`, body).then((r) => r.data);
+  },
+  uploadOrganizationImage: (id: number, file: File) => {
+    const body = new FormData(); body.append('file', file);
+    return api.post<Profile>(`/profiles/organizations/${id}/image`, body).then((r) => r.data);
+  },
 };
 
 export const catalogApi = {

@@ -25,6 +25,15 @@ public class Organization {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(length = 12)
+    private String inn;
+
+    @Column(length = 15)
+    private String ogrn;
+
+    @Column(length = 9)
+    private String kpp;
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "owner_user_id", nullable = false)
     private User owner;

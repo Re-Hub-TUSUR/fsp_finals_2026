@@ -77,6 +77,7 @@ public class EventMapper {
         return new EventResponse(
                 e.getId(), e.getTitle(), e.getDescription(), SportDto.from(e.getSport()), template,
                 organizerName, organizerAvatar, byOrg, byOrg ? e.getOrganizerOrg().getId() : null,
+                byOrg ? null : e.getOrganizerUser().getId(),
                 e.getStartTime(), e.getEndTime(), e.getLat(), e.getLng(), e.getAddress(),
                 e.getCity() == null ? null : e.getCity().getName(), e.getTimeZone(),
                 e.getCapacity(), counts.confirmed(), e.getJoinMode(), e.getSkillLevel(), e.getPrice(),

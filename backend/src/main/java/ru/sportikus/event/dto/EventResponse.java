@@ -31,6 +31,7 @@ public record EventResponse(
         String organizerAvatar,
         boolean byOrganization,
         Long organizationId,
+        Long organizerUserId,
 
         Instant startTime,
         Instant endTime,

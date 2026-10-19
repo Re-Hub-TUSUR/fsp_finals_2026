@@ -11,6 +11,10 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
 
     Optional<Organization> findFirstByOwnerIdOrderByIdAsc(Long ownerId);
 
+    boolean existsByInn(String inn);
+
+    boolean existsByOgrn(String ogrn);
+
     @EntityGraph(attributePaths = "owner")
     List<Organization> findByStatusOrderByCreatedAtDesc(String status);
 

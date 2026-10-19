@@ -13,6 +13,21 @@ export interface User {
   orgRejectReason?: string;
 }
 
+export interface Profile {
+  id: number;
+  type: 'USER' | 'ORGANIZATION';
+  name: string;
+  email: string;
+  description?: string;
+  imageUrl?: string;
+  inn?: string;
+  ogrn?: string;
+  kpp?: string;
+  status?: OrgStatus;
+  canEdit: boolean;
+  events: SportEvent[];
+}
+
 export interface Sport {
   id: number;
   name: string;
@@ -103,6 +118,7 @@ export interface SportEvent {
   organizerAvatar?: string;
   byOrganization: boolean;
   organizationId?: number;
+  organizerUserId?: number;
   startTime: string;
   endTime: string;
   lat: number;
