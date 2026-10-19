@@ -5,6 +5,7 @@ import { useTheme } from '../context/ThemeContext';
 import { citiesApi } from '../api';
 import type { City } from '../types';
 import { ArrowUpRight, ChevronDown, List, LogIn, LogOut, Map as MapIcon, MapPin, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-react';
+import { NotificationBell } from './NotificationBell';
 
 const Logo: React.FC = () => (
   <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — на главную">
@@ -158,6 +159,8 @@ export const Navbar: React.FC = () => {
           >
             {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
+
+          <NotificationBell />
 
           {!isAdmin && (
             <Link

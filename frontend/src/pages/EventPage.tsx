@@ -15,9 +15,11 @@ import {
   MapPin,
   Phone,
   QrCode,
+  Share2,
   ShieldAlert,
   Trophy,
   User as UserIcon,
+  UserPlus,
   Users,
 } from 'lucide-react';
 import { eventsApi, participationApi } from '../api';
@@ -28,6 +30,8 @@ import { JoinDialog } from '../components/JoinDialog';
 import { EventDiscussion } from '../components/EventDiscussion';
 import { TicketModal } from '../components/TicketModal';
 import { CheckInScannerModal } from '../components/CheckInScannerModal';
+import { InviteFriendsModal } from '../components/InviteFriendsModal';
+import { ShareEventModal } from '../components/ShareEventModal';
 import { MiniMap } from '../components/MiniMap';
 import { RouteButton } from '../components/RouteButton';
 import { useEventWeather } from '../components/EventWeather';
@@ -80,6 +84,8 @@ export const EventPage: React.FC = () => {
   const [completeOpen, setCompleteOpen] = useState(false);
   const [ticketOpen, setTicketOpen] = useState(false);
   const [scannerOpen, setScannerOpen] = useState(false);
+  const [inviteOpen, setInviteOpen] = useState(false);
+  const [shareOpen, setShareOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -400,6 +406,49 @@ export const EventPage: React.FC = () => {
             {event.description && (
               <p className="text-base text-slate-700 mt-5 whitespace-pre-line leading-relaxed">{event.description}</p>
             )}
+
+            {event.friendsAttending && event.friendsAttending.length > 0 && (
+              <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex -space-x-2.5 overflow-hidden" aria-hidden="true">
+                    {event.friendsAttending.map((friend) => (
+                      <Link
+                        key={friend.id}
+                        to={`/profiles/users/${friend.id}`}
+                        title={friend.fullName}
+                        className="relative inline-block w-9 h-9 rounded-full ring-2 ring-white overflow-hidden bg-slate-200 text-slate-800 hover:scale-105 transition-transform"
+                      >
+                        {friend.avatarUrl ? (
+                          <img src={friend.avatarUrl} alt="" className="w-full h-full object-cover" />
+                        ) : (
+                          <span className="w-full h-full flex items-center justify-center font-bold text-xs">
+                            {friend.fullName.slice(0, 1)}
+                          </span>
+                        )}
+                      </Link>
+                    ))}
+                  </div>
+                  <div>
+                    <p className="text-sm font-bold text-slate-900">
+                      {event.friendsAttending.length === 1
+                        ? `Ваш друг ${event.friendsAttending[0].fullName} участвует`
+                        : `Ваши друзья (${event.friendsAttending.length}) участвуют: ${event.friendsAttending.map((f) => f.fullName).join(', ')}`}
+                    </p>
+                    <p className="text-xs text-slate-500">Вы можете пойти вместе!</p>
+                  </div>
+                </div>
+                {currentUser && currentUser.role !== 'ROLE_ADMIN' && (
+                  <button
+                    type="button"
+                    onClick={() => setInviteOpen(true)}
+                    className="shrink-0 px-3 py-1.5 rounded-lg bg-white border border-slate-200 text-xs font-bold text-slate-700 hover:bg-slate-100 flex items-center gap-1.5 transition-colors"
+                  >
+                    <UserPlus className="w-3.5 h-3.5 text-brand" />
+                    <span>Позвать ещё</span>
+                  </button>
+                )}
+              </div>
+            )}
           </div>
 
           <div className="order-3 lg:order-none space-y-5 min-w-0">
@@ -601,6 +650,30 @@ export const EventPage: React.FC = () => {
 
             {panel}
             {actionError && <p className="text-sm text-red-700">{actionError}</p>}
+
+            {/* Социальные действия: Позвать друзей и Поделиться */}
+            <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
+              {currentUser && currentUser.role !== 'ROLE_ADMIN' && (
+                <button
+                  type="button"
+                  onClick={() => setInviteOpen(true)}
+                  className="w-full py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors shadow-2xs"
+                >
+                  <UserPlus className="w-4 h-4 text-brand" />
+                  <span>Позвать друзей</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setShareOpen(true)}
+                className={`w-full py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors shadow-2xs ${
+                  !currentUser || currentUser.role === 'ROLE_ADMIN' ? 'col-span-2' : ''
+                }`}
+              >
+                <Share2 className="w-4 h-4 text-slate-600" />
+                <span>Поделиться</span>
+              </button>
+            </div>
           </div>
 
           <a
@@ -674,6 +747,23 @@ export const EventPage: React.FC = () => {
           confirmedParticipants={[]}
           onCheckInSuccess={() => void load()}
           onClose={() => setScannerOpen(false)}
+        />
+      )}
+
+      {inviteOpen && (
+        <InviteFriendsModal
+          event={event}
+          open={inviteOpen}
+          onClose={() => setInviteOpen(false)}
+          onInvited={() => void load()}
+        />
+      )}
+
+      {shareOpen && (
+        <ShareEventModal
+          event={event}
+          open={shareOpen}
+          onClose={() => setShareOpen(false)}
         />
       )}
     </div>

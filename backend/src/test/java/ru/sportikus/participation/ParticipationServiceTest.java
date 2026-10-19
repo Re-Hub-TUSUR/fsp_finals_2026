@@ -53,6 +53,7 @@ class ParticipationServiceTest {
     @Mock UserRepository userRepository;
     @Mock EventMapper eventMapper;
     @Mock ApplicationEventPublisher events;
+    @Mock ru.sportikus.notification.service.NotificationService notificationService;
 
     ParticipationService service;
     Event event;
@@ -60,7 +61,7 @@ class ParticipationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ParticipationService(eventRepository, participationRepository, userRepository,
-                new FieldValidator(), eventMapper, events);
+                new FieldValidator(), eventMapper, events, notificationService);
 
         User author = User.builder().id(1L).fullName("Иван").role("ROLE_USER").build();
         event = Event.builder().id(EVENT_ID).title("Футбол").organizerUser(author)

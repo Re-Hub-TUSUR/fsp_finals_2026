@@ -68,6 +68,45 @@ export interface OrganizationSubscription {
   subscribedAt: string;
 }
 
+export type NotificationType =
+  | 'EVENT_INVITE'
+  | 'PARTICIPATION_CONFIRMED'
+  | 'PARTICIPATION_REJECTED'
+  | 'FRIEND_REQUEST'
+  | 'FRIEND_ACCEPTED'
+  | 'NEW_COMMENT'
+  | 'SYSTEM';
+
+export interface AppNotification {
+  id: number;
+  type: NotificationType;
+  title: string;
+  message: string;
+  linkUrl?: string;
+  senderUserId?: number;
+  senderName?: string;
+  senderAvatar?: string;
+  eventId?: number;
+  eventTitle?: string;
+  read: boolean;
+  createdAt: string;
+}
+
+export interface NotificationListResponse {
+  unreadCount: number;
+  items: AppNotification[];
+}
+
+export interface InviteFriendsPayload {
+  friendIds: number[];
+  message?: string;
+}
+
+export interface InviteFriendsResult {
+  invitedCount: number;
+  invitedUserIds: number[];
+}
+
 export interface Sport {
   id: number;
   name: string;
