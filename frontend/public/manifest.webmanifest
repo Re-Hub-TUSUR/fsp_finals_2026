@@ -1,0 +1,25 @@
+{
+  "id": "/",
+  "name": "Sportikus — спортивные активности рядом",
+  "short_name": "Sportikus",
+  "description": "Найдите спортивное мероприятие рядом и запишитесь в пару кликов. Электронные билеты работают и без сети.",
+  "lang": "ru",
+  "dir": "ltr",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f4f5f7",
+  "theme_color": "#f4f5f7",
+  "categories": ["sports", "lifestyle", "social"],
+  "icons": [
+    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/icons/icon-maskable-192.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/icons/icon-maskable-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ],
+  "shortcuts": [
+    { "name": "Мои события и билеты", "short_name": "Мои события", "url": "/my" },
+    { "name": "Рекомендации для вас", "short_name": "Для вас", "url": "/recommended" },
+    { "name": "Создать мероприятие", "short_name": "Создать", "url": "/events/new" }
+  ]
+}

@@ -32,6 +32,7 @@ nav = [
         { "Конструктор мероприятий" = "technical/constructor.md" },
         { "Рекомендательная система" = "technical/recommendations.md" },
         { "Автопроверка мероприятий" = "technical/moderation.md" },
+        { "PWA" = "technical/pwa.md" },
         { "Локальный запуск" = "technical/local-start.md" },
         { "Тестирование" = "technical/testing.md" },
         { "Ограничения и развитие" = "technical/limitations.md" },

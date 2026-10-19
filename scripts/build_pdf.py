@@ -66,6 +66,7 @@ CHAPTERS: list[tuple[str, str]] = [
     ("Инженерия", "technical/constructor.md"),
     ("Инженерия", "technical/recommendations.md"),
     ("Инженерия", "technical/moderation.md"),
+    ("Инженерия", "technical/pwa.md"),
     ("Инженерия", "technical/local-start.md"),
     ("Инженерия", "technical/testing.md"),
     ("Инженерия", "technical/limitations.md"),

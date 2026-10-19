@@ -1,7 +1,9 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import { AxiosError } from 'axios';
 import type { Preferences, User } from '../types';
 import { authApi, preferencesApi } from '../api';
 import { getToken, setToken } from '../api/client';
+import { clearPersonalOfflineData } from '../pwa';
 
 export const DEMO_PASSWORD = 'password123';
 
@@ -71,6 +73,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   const loginAs = useCallback(async (roleKey: DemoRoleKey) => {
     const { token, user } = await authApi.login(DEMO_ACCOUNTS[roleKey].email, DEMO_PASSWORD);
+    void clearPersonalOfflineData();
     setToken(token);
     setCurrentUser(user);
     setActiveRoleKey(roleKey);
@@ -91,8 +94,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             const user = await authApi.me();
             if (!cancelled) setCurrentUser(user);
             return;
-          } catch {
-            setToken(null);
+          } catch (error) {
+            // Выходим из аккаунта только если сервер отверг токен: без сети (офлайн-PWA) вход сохраняется
+            if (error instanceof AxiosError && error.response?.status === 401) setToken(null);
+            else if (!cancelled) setAuthError('Не удалось подключиться к серверу');
           }
         }
       } catch {
@@ -107,6 +112,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [loginAs]);
 
   const acceptAuth = useCallback((token: string, user: User) => {
+    void clearPersonalOfflineData();
     setToken(token);
     setCurrentUser(user);
     setAuthError(null);
@@ -118,6 +124,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, [acceptAuth]);
 
   const logout = useCallback(() => {
+    void clearPersonalOfflineData();
     setToken(null);
     setCurrentUser(null);
   }, []);

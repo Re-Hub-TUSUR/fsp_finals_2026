@@ -16,6 +16,7 @@ import { NotificationsPage } from './pages/NotificationsPage';
 import { AuthPage } from './pages/AuthPage';
 import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 import { AchievementToast } from './components/AchievementToast';
+import { InstallAppBanner, OfflineBanner } from './components/PwaBanners';
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
 function PageFade({ children }: { children: ReactNode }) {
@@ -35,6 +36,7 @@ function App() {
           {/* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */}
           <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
             <AchievementToast />
+            <OfflineBanner />
             {/* Демо-панель для жюри: вход под любым сидовым аккаунтом в 1 клик */}
             <DemoRoleBar />
 
@@ -60,6 +62,7 @@ function App() {
               </PageFade>
             </main>
 
+            <InstallAppBanner />
             <MobileTabBar />
           </div>
         </BrowserRouter>
