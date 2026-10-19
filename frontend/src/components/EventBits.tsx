@@ -2,7 +2,7 @@ import React from 'react';
 import type { SportEvent } from '../types';
 import { eventStatus, initials } from '../utils/eventView';
 
-/** Кружок организатора: фото или инициалы на нейтральном фоне; акцентный — для выбранного. */
+/** Кружок организатора: фото сохраняется и у выбранного события, иначе показываются инициалы. */
 export const OrgAvatar: React.FC<{ event: SportEvent; size?: number; active?: boolean }> = ({
   event,
   size = 48,
@@ -14,7 +14,7 @@ export const OrgAvatar: React.FC<{ event: SportEvent; size?: number; active?: bo
     }`}
     style={{ width: size, height: size, fontSize: Math.round(size * 0.31) }}
   >
-    {event.organizerAvatar && !active ? (
+    {event.organizerAvatar ? (
       <img src={event.organizerAvatar} alt="" className="w-full h-full object-cover" />
     ) : (
       initials(event.organizerName)
