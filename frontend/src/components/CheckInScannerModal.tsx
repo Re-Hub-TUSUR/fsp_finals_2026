@@ -5,6 +5,7 @@ import {
   Camera,
   CameraOff,
   CheckCircle2,
+  ImageUp,
   Loader2,
   QrCode,
   ShieldAlert,
@@ -14,6 +15,13 @@ import {
 import { participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { CheckInResult, Participation, SportEvent } from '../types';
+import {
+  CAMERA_PROBLEM_MESSAGES,
+  cameraSupport,
+  classifyCameraError,
+  extractTicketCode,
+  isRepeatScan,
+} from '../utils/camera';
 
 interface CheckInScannerModalProps {
   event: SportEvent;
@@ -32,22 +40,33 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
   const [cameraActive, setCameraActive] = useState(false);
+  const [cameraStarting, setCameraStarting] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
+  const [photoBusy, setPhotoBusy] = useState(false);
+  // Проверяем сразу при открытии: по http:// камеры нет, и организатор должен узнать это до клика
+  const [support] = useState(() => cameraSupport());
 
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const photoInputRef = useRef<HTMLInputElement>(null);
+  // Колбэк камеры живёт с момента запуска, поэтому «занято» и последний код храним в ref, а не в state
+  const busyRef = useRef(false);
+  const lastScanRef = useRef<{ code: string; at: number } | null>(null);
   const readerElementId = 'html5-qr-reader';
+  const photoElementId = 'html5-qr-photo';
 
-  // Обработка кода билета (из камеры или ввода)
+  // Обработка кода билета (из камеры, фото или ввода)
   const processTicketCode = async (rawCode: string) => {
-    const clean = rawCode.trim().toUpperCase();
-    if (!clean || busy) return;
+    const clean = extractTicketCode(rawCode);
+    if (!clean || busyRef.current) return;
 
+    busyRef.current = true;
     setBusy(true);
     setResult(null);
 
     try {
       const res = await participationApi.checkIn(event.id, clean);
       setResult(res);
+      navigator.vibrate?.(res.success ? 80 : [60, 40, 60]);
       if (res.success) {
         onCheckInSuccess?.(res);
       }
@@ -59,8 +78,17 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
         ticketCode: clean,
       });
     } finally {
+      busyRef.current = false;
       setBusy(false);
     }
+  };
+
+  const handleScan = (decodedText: string) => {
+    const scanned = extractTicketCode(decodedText);
+    const now = Date.now();
+    if (busyRef.current || isRepeatScan(lastScanRef.current, scanned, now)) return;
+    lastScanRef.current = { code: scanned, at: now };
+    void processTicketCode(scanned);
   };
 
   const handleManualSubmit = (e: React.FormEvent) => {
@@ -70,7 +98,13 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
 
   // Запуск камеры
   const startCamera = async () => {
+    if (cameraActive || cameraStarting) return;
     setCameraError(null);
+    if (support !== 'ok') {
+      setCameraError(CAMERA_PROBLEM_MESSAGES[support]);
+      return;
+    }
+    setCameraStarting(true);
     try {
       const html5QrCode = new Html5Qrcode(readerElementId);
       scannerRef.current = html5QrCode;
@@ -81,19 +115,41 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
           fps: 10,
           qrbox: { width: 250, height: 250 },
         },
-        (decodedText) => {
-          // Найден QR код!
-          void processTicketCode(decodedText);
-        },
+        handleScan,
         () => {
-          // Поиск кадра (игнорируем промежуточные кадры без QR)
+          // Кадр без QR — ждём следующий
         },
       );
       setCameraActive(true);
     } catch (err) {
       console.warn('Camera start error:', err);
-      setCameraError('Не удалось получить доступ к камере (проверьте разрешения или используйте ручной ввод)');
+      scannerRef.current = null;
+      setCameraError(CAMERA_PROBLEM_MESSAGES[classifyCameraError(err)]);
       setCameraActive(false);
+    } finally {
+      setCameraStarting(false);
+    }
+  };
+
+  // Запасной путь: системная камера телефона делает фото, QR распознаётся с картинки. Работает и без https
+  const scanPhoto = async (file: File) => {
+    setCameraError(null);
+    setPhotoBusy(true);
+    if (scannerRef.current?.isScanning) await stopCamera();
+    const reader = new Html5Qrcode(photoElementId);
+    try {
+      const text = await reader.scanFile(file, false);
+      await processTicketCode(text);
+    } catch {
+      setCameraError('На фото не найден QR-код. Сфотографируйте его крупнее, без бликов, или введите код вручную.');
+    } finally {
+      try {
+        reader.clear();
+      } catch {
+        // нечего очищать
+      }
+      setPhotoBusy(false);
+      if (photoInputRef.current) photoInputRef.current.value = '';
     }
   };
 
@@ -215,26 +271,35 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
               <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
                 Сканирование камерой
               </span>
-              <button
-                type="button"
-                onClick={cameraActive ? stopCamera : startCamera}
-                className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition ${
-                  cameraActive
-                    ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                    : 'bg-brand/10 text-brand hover:bg-brand/20'
-                }`}
-              >
-                {cameraActive ? (
-                  <>
-                    <CameraOff className="w-3.5 h-3.5" /> Выключить камеру
-                  </>
-                ) : (
-                  <>
-                    <Camera className="w-3.5 h-3.5" /> Включить камеру
-                  </>
-                )}
-              </button>
+              {support === 'ok' && (
+                <button
+                  type="button"
+                  onClick={cameraActive ? stopCamera : startCamera}
+                  disabled={cameraStarting}
+                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition disabled:opacity-60 ${
+                    cameraActive
+                      ? 'bg-red-50 text-red-700 hover:bg-red-100'
+                      : 'bg-brand/10 text-brand hover:bg-brand/20'
+                  }`}
+                >
+                  {cameraActive ? (
+                    <>
+                      <CameraOff className="w-3.5 h-3.5" /> Выключить камеру
+                    </>
+                  ) : (
+                    <>
+                      <Camera className="w-3.5 h-3.5" /> Включить камеру
+                    </>
+                  )}
+                </button>
+              )}
             </div>
+
+            {support !== 'ok' && (
+              <p role="status" className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+                {CAMERA_PROBLEM_MESSAGES[support]}
+              </p>
+            )}
 
             <div
               id={readerElementId}
@@ -243,21 +308,52 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
               }`}
             />
 
-            {!cameraActive && (
-              <div
+            {!cameraActive && support === 'ok' && (
+              <button
+                type="button"
                 onClick={startCamera}
-                className="cursor-pointer border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50 hover:bg-slate-100/70 rounded-2xl p-6 text-center transition"
+                disabled={cameraStarting}
+                className="w-full cursor-pointer border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50 hover:bg-slate-100/70 rounded-2xl p-6 text-center transition disabled:opacity-60"
               >
-                <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-700">Нажмите, чтобы включить камеру</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Наведите объектив на QR-код участника
+                {cameraStarting ? (
+                  <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
+                ) : (
+                  <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                )}
+                <p className="text-xs font-semibold text-slate-700">
+                  {cameraStarting ? 'Включаем камеру…' : 'Нажмите, чтобы включить камеру'}
                 </p>
-              </div>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Наведите объектив на QR-код участника. Браузер попросит разрешение на камеру
+                </p>
+              </button>
             )}
 
+            <div id={photoElementId} className="hidden" />
+            <input
+              ref={photoInputRef}
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="hidden"
+              aria-label="Фото QR-кода"
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) void scanPhoto(file);
+              }}
+            />
+            <button
+              type="button"
+              onClick={() => photoInputRef.current?.click()}
+              disabled={photoBusy || busy}
+              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 transition"
+            >
+              {photoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageUp className="w-4 h-4" />}
+              Сфотографировать QR
+            </button>
+
             {cameraError && (
-              <p className="text-xs text-amber-700 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
+              <p role="alert" className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
                 {cameraError}
               </p>
             )}
