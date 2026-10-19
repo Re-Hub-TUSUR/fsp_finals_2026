@@ -24,6 +24,7 @@ import java.util.List;
 public class FriendshipService {
     private final FriendshipRepository friendshipRepository;
     private final UserRepository userRepository;
+    private final ru.sportikus.notification.service.NotificationService notificationService;
 
     @Transactional
     public FriendshipResponse request(AuthUser auth, Long userId) {
@@ -37,8 +38,10 @@ public class FriendshipService {
             }
             throw ApiException.conflict("Заявка в друзья или дружба уже существует");
         }
-        User requester = userRepository.getReferenceById(auth.id());
+        User requester = userRepository.findById(auth.id())
+                .orElseThrow(() -> ApiException.unauthorized("Пользователь не найден"));
         friendshipRepository.save(Friendship.builder().requester(requester).recipient(target).build());
+        notificationService.notifyFriendRequest(requester, target);
         return new FriendshipResponse(userId, FriendshipState.OUTGOING_PENDING);
     }
 
@@ -48,6 +51,7 @@ public class FriendshipService {
         Friendship friendship = pendingIncoming(auth.id(), userId);
         friendship.setStatus(FriendshipStatus.ACCEPTED);
         friendship.setAcceptedAt(Instant.now());
+        notificationService.notifyFriendAccepted(friendship.getRecipient(), friendship.getRequester());
         return new FriendshipResponse(userId, FriendshipState.FRIENDS);
     }
 

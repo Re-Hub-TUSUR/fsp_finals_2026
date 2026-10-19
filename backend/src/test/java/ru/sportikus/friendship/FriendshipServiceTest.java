@@ -30,11 +30,13 @@ class FriendshipServiceTest {
     private static final AuthUser IVAN = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
     @Mock FriendshipRepository friendships;
     @Mock UserRepository users;
+    @Mock ru.sportikus.notification.service.NotificationService notifications;
     FriendshipService service;
 
     @BeforeEach
     void setUp() {
-        service = new FriendshipService(friendships, users);
+        service = new FriendshipService(friendships, users, notifications);
+        when(users.findById(1L)).thenReturn(Optional.of(User.builder().id(1L).fullName("Иван").role("ROLE_USER").build()));
         when(users.findById(2L)).thenReturn(Optional.of(User.builder().id(2L).fullName("Ольга").role("ROLE_USER").build()));
         when(users.getReferenceById(1L)).thenReturn(User.builder().id(1L).fullName("Иван").role("ROLE_USER").build());
         when(friendships.findBetween(1L, 2L)).thenReturn(Optional.empty());

@@ -23,6 +23,9 @@ import type {
   Achievement,
   OrganizationSubscription,
   CheckInResult,
+  NotificationListResponse,
+  InviteFriendsPayload,
+  InviteFriendsResult,
 } from '../types';
 
 export const achievementsApi = {
@@ -100,6 +103,8 @@ export const eventsApi = {
   create: (payload: CreateEventPayload) => api.post<SportEvent>('/events', payload).then((r) => r.data),
   complete: (id: number) => api.post<SportEvent>(`/events/${id}/complete`).then((r) => r.data),
   icsUrl: (id: number) => `${api.defaults.baseURL}/events/${id}/ics`,
+  inviteFriends: (id: number | string, payload: InviteFriendsPayload) =>
+    api.post<InviteFriendsResult>(`/events/${id}/invite`, payload).then((r) => r.data),
 };
 
 export const participationApi = {
@@ -164,3 +169,10 @@ export const commentsApi = {
   adminList: () =>
     api.get<EventComment[]>('/admin/comments').then((r) => r.data),
 };
+
+export const notificationsApi = {
+  list: () => api.get<NotificationListResponse>('/me/notifications').then((r) => r.data),
+  markRead: (id: number) => api.patch(`/me/notifications/${id}/read`),
+  markAllRead: () => api.post('/me/notifications/read-all'),
+};
+

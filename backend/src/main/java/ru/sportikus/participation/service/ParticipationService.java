@@ -52,6 +52,7 @@ public class ParticipationService {
     private final FieldValidator fieldValidator;
     private final EventMapper eventMapper;
     private final ApplicationEventPublisher events;
+    private final ru.sportikus.notification.service.NotificationService notificationService;
 
     @Transactional
     public ParticipationResponse join(AuthUser auth, Long eventId, JoinRequest req) {
@@ -195,6 +196,7 @@ public class ParticipationService {
         p.setDecidedBy(manager);
         Participation saved = participationRepository.save(p);
         events.publishEvent(new ParticipationChangedEvent(p.getUser().getId(), eventId, from, req.decision()));
+        notificationService.notifyParticipationDecision(p.getUser(), event, req.decision() == ParticipationStatus.CONFIRMED, req.comment());
         return ParticipationResponse.withUser(saved);
     }
 
