@@ -123,6 +123,8 @@ export const CreateEventPage: React.FC = () => {
     [templates, isOrg],
   );
 
+  const standardSports = useMemo(() => sports.filter((s) => !s.custom), [sports]);
+
   const applyTemplate = React.useCallback(
     (t: EventTemplate, allSports: Sport[]) => {
       setTemplate(t);
@@ -336,20 +338,15 @@ export const CreateEventPage: React.FC = () => {
                 </button>
               </div>
               {customSport ? (
-                <>
-                  <input
-                    id="ev-sport"
-                    type="text"
-                    maxLength={60}
-                    placeholder="Например: Петанк, Падел, Скандинавская ходьба"
-                    value={customSportName}
-                    onChange={(e) => setCustomSportName(e.target.value)}
-                    className={`${inputClass} border-emerald-400`}
-                  />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Новый вид сразу появится в общем списке и фильтрах для всех.
-                  </p>
-                </>
+                <input
+                  id="ev-sport"
+                  type="text"
+                  maxLength={60}
+                  placeholder="Например: Петанк, Падел, Скандинавская ходьба"
+                  value={customSportName}
+                  onChange={(e) => setCustomSportName(e.target.value)}
+                  className={`${inputClass} border-emerald-400`}
+                />
               ) : (
                 <select
                   id="ev-sport"
@@ -358,7 +355,7 @@ export const CreateEventPage: React.FC = () => {
                   className={inputClass}
                 >
                   <option value="">— выберите —</option>
-                  {sports.map((s) => (
+                  {standardSports.map((s) => (
                     <option key={s.id} value={s.id}>
                       {s.name}
                     </option>
