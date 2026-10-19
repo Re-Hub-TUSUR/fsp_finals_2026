@@ -1,4 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   AlertTriangle,
@@ -104,7 +105,9 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
       setCameraError(CAMERA_PROBLEM_MESSAGES[support]);
       return;
     }
-    setCameraStarting(true);
+    // html5-qrcode берёт ширину видео из ширины контейнера в момент запуска: скрытый контейнер
+    // даёт видео шириной 0 и чёрный экран. Поэтому сначала показываем контейнер, потом запускаем
+    flushSync(() => setCameraStarting(true));
     try {
       const html5QrCode = new Html5Qrcode(readerElementId);
       scannerRef.current = html5QrCode;
@@ -303,26 +306,26 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
 
             <div
               id={readerElementId}
-              className={`overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 min-h-[220px] flex items-center justify-center text-slate-400 text-xs ${
-                cameraActive ? 'block' : 'hidden'
+              className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 min-h-[220px] text-slate-400 text-xs ${
+                cameraActive || cameraStarting ? 'block' : 'hidden'
               }`}
             />
 
-            {!cameraActive && support === 'ok' && (
+            {cameraStarting && (
+              <p role="status" className="flex items-center gap-2 text-xs text-slate-600">
+                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
+                Включаем камеру… Если браузер спросит, разрешите доступ.
+              </p>
+            )}
+
+            {!cameraActive && !cameraStarting && support === 'ok' && (
               <button
                 type="button"
                 onClick={startCamera}
-                disabled={cameraStarting}
-                className="w-full cursor-pointer border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50 hover:bg-slate-100/70 rounded-2xl p-6 text-center transition disabled:opacity-60"
+                className="w-full cursor-pointer border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50 hover:bg-slate-100/70 rounded-2xl p-6 text-center transition"
               >
-                {cameraStarting ? (
-                  <Loader2 className="w-8 h-8 text-slate-400 mx-auto mb-2 animate-spin" />
-                ) : (
-                  <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                )}
-                <p className="text-xs font-semibold text-slate-700">
-                  {cameraStarting ? 'Включаем камеру…' : 'Нажмите, чтобы включить камеру'}
-                </p>
+                <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-xs font-semibold text-slate-700">Нажмите, чтобы включить камеру</p>
                 <p className="text-[11px] text-slate-400 mt-0.5">
                   Наведите объектив на QR-код участника. Браузер попросит разрешение на камеру
                 </p>

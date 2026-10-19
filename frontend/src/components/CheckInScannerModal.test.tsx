@@ -94,6 +94,35 @@ describe('CheckInScannerModal', () => {
     expect(screen.getByRole('status')).toHaveTextContent('не даёт доступ к камере');
   });
 
+  it('видоискатель видим уже в момент запуска камеры — иначе видео получает ширину 0 и экран чёрный', async () => {
+    const user = userEvent.setup();
+    let readerClassAtStart = '';
+    scanner.start.mockImplementation(async (_camera, _config, onScan: (text: string) => void) => {
+      readerClassAtStart = document.getElementById('html5-qr-reader')?.className ?? '';
+      scanner.isScanning = true;
+      scanner.onScan = onScan;
+    });
+    renderModal();
+
+    expect(document.getElementById('html5-qr-reader')).toHaveClass('hidden');
+    await user.click(screen.getByRole('button', { name: /Нажмите, чтобы включить камеру/ }));
+
+    expect(scanner.start).toHaveBeenCalledTimes(1);
+    expect(readerClassAtStart.split(/\s+/)).not.toContain('hidden');
+    expect(document.getElementById('html5-qr-reader')).not.toHaveClass('hidden');
+  });
+
+  it('после выключения камеры видоискатель снова скрыт', async () => {
+    const user = userEvent.setup();
+    renderModal();
+    await user.click(screen.getByRole('button', { name: /Нажмите, чтобы включить камеру/ }));
+    await user.click(screen.getByRole('button', { name: /Выключить камеру/ }));
+
+    expect(scanner.stop).toHaveBeenCalled();
+    expect(document.getElementById('html5-qr-reader')).toHaveClass('hidden');
+    expect(screen.getByRole('button', { name: /Нажмите, чтобы включить камеру/ })).toBeInTheDocument();
+  });
+
   it('один QR в кадре отмечает вход ровно один раз и не перекрывает успех «уже использован»', async () => {
     const user = userEvent.setup();
     renderModal();
