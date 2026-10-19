@@ -13,7 +13,7 @@ import {
   splitAddress,
   type LatLng,
 } from '../utils/eventView';
-import { CoverBadge, EventCover, FriendsAttending, SeatLine, SportIcon } from './EventBits';
+import { CoverBadge, EventCover, FriendsAttending, SeatLine } from './EventBits';
 
 const sportKm = (event: SportEvent, me: LatLng | null) =>
   me ? `${event.sport.name} · ${formatDistance(distanceKm(me, event))}` : event.sport.name;
@@ -48,11 +48,7 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
         <div className="absolute right-4 bottom-4"><FriendsAttending event={event} dark /></div>
       </EventCover>
       <div className="w-full p-4 lg:p-[18px] flex flex-col gap-2">
-        <div className="flex items-center gap-2 text-muted">
-          <SportIcon name={event.sport.name} size={20} />
-          <span className="flex-1 min-w-0 truncate text-sm font-semibold">{sportKm(event, me)}</span>
-          <span className="text-[15px] font-bold text-ink whitespace-nowrap">{priceLabel(event)}</span>
-        </div>
+        {me && <span className="text-sm font-semibold text-muted">{formatDistance(distanceKm(me, event))} от вас</span>}
         <span className="text-[19px] lg:text-xl leading-tight font-bold text-ink">{event.title}</span>
         <span className="text-[15px] lg:text-base font-semibold text-ink">{dateFull(event)}</span>
         <span className="text-sm font-medium text-muted">

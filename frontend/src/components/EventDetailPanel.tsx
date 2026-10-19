@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ChevronRight, Clock, Loader2, MapPin, Wallet, X } from 'lucide-react';
+import { ChevronRight, Clock, Loader2, MapPin, X } from 'lucide-react';
 import type { SportEvent } from '../types';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
-import { SKILL_LABELS, formatPrice, registrationClosesAt } from '../utils/format';
+import { SKILL_LABELS, registrationClosesAt } from '../utils/format';
 import {
   accessLabel,
   dateFull,
@@ -163,8 +163,7 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
                 <SportIcon name={event.sport.name} size={22} />
               </span>
               <div className="flex-1 min-w-0">
-                <div className="text-base font-semibold text-ink">{event.sport.name}</div>
-                <div className={`text-[13px] font-medium ${sameLevel ? 'text-brand-ink' : 'text-muted'}`}>{levelLine}</div>
+                <div className={`text-base font-semibold ${sameLevel ? 'text-brand-ink' : 'text-ink'}`}>{levelLine}</div>
               </div>
               <button
                 type="button"
@@ -206,7 +205,6 @@ export const EventDetailPanel: React.FC<EventDetailPanelProps> = ({ event, me, o
                   sub={`Погода в это время · ${weather.details}`}
                 />
               )}
-              <Row icon={<Wallet className="w-5 h-5" />} title={formatPrice(event.price)} sub="Стоимость участия" />
             </div>
 
             <div className="p-4 rounded-[18px] border border-line">
