@@ -57,7 +57,7 @@ const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.Rea
   <div className="flex items-start gap-3">
     <span className="mt-0.5 text-slate-400 shrink-0">{icon}</span>
     <div>
-      <div className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{label}</div>
+      <div className="text-sm text-slate-500 font-semibold">{label}</div>
       <div className="text-base text-slate-900">{children}</div>
     </div>
   </div>
@@ -268,11 +268,11 @@ export const EventPage: React.FC = () => {
         <div className="space-y-3">
           <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
             <div className="flex items-center gap-2 font-bold">
-              <CheckCircle2 className="w-5 h-5 text-brand-ink" /> Вы участвуете!
+              <CheckCircle2 className="w-5 h-5 text-brand" /> Вы участвуете!
             </div>
             {my.checkedIn ? (
               <div className="mt-2 text-xs font-semibold text-ink bg-brand-tint-2 rounded-lg p-2.5 flex items-center gap-1.5">
-                <CheckCircle2 className="w-4 h-4 text-brand-ink shrink-0" />
+                <CheckCircle2 className="w-4 h-4 text-brand shrink-0" />
                 Вход на мероприятие подтверждён организатором
               </div>
             ) : (
@@ -339,7 +339,7 @@ export const EventPage: React.FC = () => {
           ) : (
             <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
               <div className="flex items-center gap-2 font-bold">
-                <CheckCircle2 className="w-5 h-5 text-brand-ink" /> Освободилось место!
+                <CheckCircle2 className="w-5 h-5 text-brand" /> Освободилось место!
               </div>
               <p className="text-sm mt-1">Займите его, пока не опередили.</p>
               <button
@@ -577,13 +577,13 @@ export const EventPage: React.FC = () => {
               <dl className="grid sm:grid-cols-2 gap-x-6 gap-y-3">
                 {templateFacts.map(({ field, text }) => (
                   <div key={field.key} className={field.type === 'TEXTAREA' ? 'sm:col-span-2' : ''}>
-                    <dt className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{field.label}</dt>
+                    <dt className="text-sm text-slate-500 font-semibold">{field.label}</dt>
                     <dd className="text-base text-slate-900 whitespace-pre-line">{text}</dd>
                   </div>
                 ))}
                 {event.customFields?.map((f, i) => (
                   <div key={`c${i}`}>
-                    <dt className="text-xs uppercase tracking-wide text-slate-400 font-semibold">{f.label}</dt>
+                    <dt className="text-sm text-slate-500 font-semibold">{f.label}</dt>
                     <dd className="text-base text-slate-900">{f.value}</dd>
                   </div>
                 ))}
@@ -703,7 +703,7 @@ export const EventPage: React.FC = () => {
           </div>
         </div>
 
-        <aside className="order-2 lg:order-none lg:sticky lg:top-20 space-y-4">
+        <aside className="order-2 self-start lg:order-none space-y-4">
           <div className="bg-card rounded-2xl border border-slate-200 p-5 shadow-sm space-y-4">
             <div>
               <div className="flex items-end justify-between mb-1.5">

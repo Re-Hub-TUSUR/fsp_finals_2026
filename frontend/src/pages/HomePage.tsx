@@ -434,7 +434,7 @@ export const HomePage: React.FC = () => {
 
   /* ---------- Секции Ленты ---------- */
   const sectionHead = (title: string, n: number, live = false, sub?: string) => (
-    <div className="flex items-baseline gap-2.5 pb-1.5 lg:pb-2 border-b-2 border-ink">
+    <div className="flex items-baseline gap-2.5 pb-1.5 lg:pb-2">
       {live && <span className="self-center w-2.5 h-2.5 rounded-full bg-brand" />}
       <span className="text-xl lg:text-[22px] font-bold text-ink">{title}</span>
       <span className="text-[15px] lg:text-base font-semibold text-muted">{n}</span>
