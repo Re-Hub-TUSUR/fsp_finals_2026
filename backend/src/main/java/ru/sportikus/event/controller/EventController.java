@@ -9,7 +9,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Instant;
-import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -19,6 +19,33 @@ import java.util.Map;
 @Tag(name = "Events", description = "Управление спортивными мероприятиями и каталог")
 public class EventController {
 
+    private Map<String, Object> createEventMap(
+            long id, String title, String description,
+            long sportId, String sportName, String sportSlug,
+            String organizerName, Instant startTime, Instant endTime,
+            double lat, double lng, String address,
+            int capacity, int confirmedCount,
+            String joinMode, String skillLevel, String status
+    ) {
+        Map<String, Object> map = new LinkedHashMap<>();
+        map.put("id", id);
+        map.put("title", title);
+        map.put("description", description);
+        map.put("sport", Map.of("id", sportId, "name", sportName, "slug", sportSlug));
+        map.put("organizerName", organizerName);
+        map.put("startTime", startTime.toString());
+        map.put("endTime", endTime.toString());
+        map.put("lat", lat);
+        map.put("lng", lng);
+        map.put("address", address);
+        map.put("capacity", capacity);
+        map.put("confirmedCount", confirmedCount);
+        map.put("joinMode", joinMode);
+        map.put("skillLevel", skillLevel);
+        map.put("status", status);
+        return map;
+    }
+
     @GetMapping
     @Operation(summary = "Получить список мероприятий с фильтрами по спорту и локации")
     public ResponseEntity<List<Map<String, Object>>> getEvents(
@@ -27,39 +54,28 @@ public class EventController {
             @RequestParam(required = false) Double lng,
             @RequestParam(required = false, defaultValue = "10") Double radiusKm
     ) {
-        // Return demo data if DB is warming up
         return ResponseEntity.ok(List.of(
-            Map.of(
-                "id", 1,
-                "title", "Утренний забег на о. Татышев",
-                "sport", Map.of("id", 3, "name", "Бег", "slug", "beg"),
-                "organizerName", "СК «Енисей»",
-                "startTime", Instant.now().plusSeconds(7200).toString(),
-                "endTime", Instant.now().plusSeconds(12600).toString(),
-                "lat", 56.0235,
-                "lng", 92.9351,
-                "address", "Красноярск, остров Татышев",
-                "capacity", 20,
-                "confirmedCount", 1,
-                "joinMode", "OPEN",
-                "skillLevel", "ANY",
-                "status", "PUBLISHED"
+            createEventMap(
+                1L, "Утренний забег на о. Татышев",
+                "Легкий темповый бег 5 км по живописным дорожкам острова.",
+                3L, "Бег", "beg",
+                "СК «Енисей»",
+                Instant.now().plusSeconds(7200),
+                Instant.now().plusSeconds(12600),
+                56.0235, 92.9351, "Красноярск, остров Татышев",
+                20, 1,
+                "OPEN", "ANY", "PUBLISHED"
             ),
-            Map.of(
-                "id", 2,
-                "title", "Дворовый футбол 5x5",
-                "sport", Map.of("id", 1, "name", "Футбол", "slug", "futbol"),
-                "organizerName", "Иван Иванов",
-                "startTime", Instant.now().plusSeconds(14400).toString(),
-                "endTime", Instant.now().plusSeconds(21600).toString(),
-                "lat", 56.0125,
-                "lng", 92.8680,
-                "address", "Красноярск, ул. Ленина, д. 118",
-                "capacity", 10,
-                "confirmedCount", 1,
-                "joinMode", "OPEN",
-                "skillLevel", "AMATEUR",
-                "status", "PUBLISHED"
+            createEventMap(
+                2L, "Дворовый футбол 5x5",
+                "Собираем 2 команды для дружеского матча. Нужен вратарь.",
+                1L, "Футбол", "futbol",
+                "Иван Иванов",
+                Instant.now().plusSeconds(14400),
+                Instant.now().plusSeconds(21600),
+                56.0125, 92.8680, "Красноярск, ул. Ленина, д. 118",
+                10, 1,
+                "OPEN", "AMATEUR", "PUBLISHED"
             )
         ));
     }
@@ -67,20 +83,16 @@ public class EventController {
     @GetMapping("/{id}")
     @Operation(summary = "Получить детальную информацию о мероприятии")
     public ResponseEntity<Map<String, Object>> getEventById(@PathVariable Long id) {
-        return ResponseEntity.ok(Map.of(
-            "id", id,
-            "title", "Утренний забег на о. Татышев",
-            "description", "Легкий темповый бег 5 км по живописным дорожкам острова.",
-            "sport", Map.of("id", 3, "name", "Бег", "slug", "beg"),
-            "organizerName", "СК «Енисей»",
-            "lat", 56.0235,
-            "lng", 92.9351,
-            "address", "Красноярск, остров Татышев",
-            "capacity", 20,
-            "confirmedCount", 1,
-            "joinMode", "OPEN",
-            "skillLevel", "ANY",
-            "status", "PUBLISHED"
+        return ResponseEntity.ok(createEventMap(
+            id, "Утренний забег на о. Татышев",
+            "Легкий темповый бег 5 км по живописным дорожкам острова.",
+            3L, "Бег", "beg",
+            "СК «Енисей»",
+            Instant.now().plusSeconds(7200),
+            Instant.now().plusSeconds(12600),
+            56.0235, 92.9351, "Красноярск, остров Татышев",
+            20, 1,
+            "OPEN", "ANY", "PUBLISHED"
         ));
     }
 
