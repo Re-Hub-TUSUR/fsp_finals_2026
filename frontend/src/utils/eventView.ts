@@ -201,6 +201,38 @@ export function dateFull(event: Pick<SportEvent, 'startTime' | 'endTime'>): stri
   return `${day}, ${wd} · ${time(d)}`;
 }
 
+/** Формат даты для карточек мероприятий из макета: «20 октября, вт 07:30». */
+export function formatCardDate(startTime: string | Date): string {
+  const d = typeof startTime === 'string' ? new Date(startTime) : startTime;
+  if (isNaN(d.getTime())) return '';
+  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
+  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', '');
+  const timeStr = time(d);
+  return `${day}, ${wd} ${timeStr}`;
+}
+
+/** «13 свободных мест» / «2 свободных места» / «1 свободное место» / «Мест нет». */
+export function freeSpotsText(count: number): string {
+  if (count <= 0) return 'Мест нет';
+  const mod10 = count % 10;
+  const mod100 = count % 100;
+  if (mod100 >= 11 && mod100 <= 19) return `${count} свободных мест`;
+  if (mod10 === 1) return `${count} свободное место`;
+  if (mod10 >= 2 && mod10 <= 4) return `${count} свободных места`;
+  return `${count} свободных мест`;
+}
+
+/** «17 мест» / «10 мест» / «5 мест» / «1 место». */
+export function capacityText(capacity: number): string {
+  if (capacity <= 0) return '0 мест';
+  const mod10 = capacity % 10;
+  const mod100 = capacity % 100;
+  if (mod100 >= 11 && mod100 <= 19) return `${capacity} мест`;
+  if (mod10 === 1) return `${capacity} место`;
+  if (mod10 >= 2 && mod10 <= 4) return `${capacity} места`;
+  return `${capacity} мест`;
+}
+
 /** «19:00–20:30». */
 export const timeRange = (event: Pick<SportEvent, 'startTime' | 'endTime'>) =>
   `${time(new Date(event.startTime))}–${time(new Date(event.endTime))}`;

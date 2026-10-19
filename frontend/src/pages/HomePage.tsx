@@ -290,10 +290,6 @@ export const HomePage: React.FC = () => {
     return out;
   }, [visible, origin]);
 
-  const recItems = useMemo(
-    () => (q.trim() ? [] : recs.filter((r) => spotsLeft(r.event) > 0).slice(0, 4)),
-    [recs, q],
-  );
 
   // Синхронизация выбора: прокручиваем список у карты (десктоп) и в шторке (мобильный) к выбранному ряду
   useEffect(() => {
@@ -469,16 +465,6 @@ export const HomePage: React.FC = () => {
       </div>
       {errorBox}
 
-      {recItems.length > 0 && (
-        <div className="flex flex-col gap-2.5 lg:gap-3">
-          {sectionHead('Рекомендации для вас', recItems.length)}
-          <div className={grid}>
-            {recItems.map((r) => (
-              <CoverCard key={r.event.id} event={r.event} me={origin} active={r.event.id === detailId} onOpen={() => openDetail(r.event)} />
-            ))}
-          </div>
-        </div>
-      )}
 
       {empty}
 

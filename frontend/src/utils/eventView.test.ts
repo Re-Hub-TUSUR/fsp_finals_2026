@@ -1,11 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import type { SportEvent } from '../types';
 import {
+  capacityText,
   dayKey,
   distanceKm,
   eventAction,
   eventStatus,
+  formatCardDate,
   formatDistance,
+  freeSpotsText,
   initials,
   isFull,
   isHot,
@@ -288,5 +291,38 @@ describe('routeLinks', () => {
     expect(byId['2gis']).toBe('https://2gis.ru/directions/points/%7C92.85,56.01');
     expect(byId.yandex).toBe('https://yandex.ru/maps/?rtext=~56.01,92.85&rtt=auto');
     expect(byId.google).toBe('https://www.google.com/maps/dir/?api=1&destination=56.01,92.85');
+  });
+});
+
+describe('formatCardDate', () => {
+  it('formats dates matching the mockup style', () => {
+    const d = new Date(2026, 9, 20, 7, 30); // 20 октября 2026, 07:30
+    const str = formatCardDate(d);
+    expect(str).toContain('20 октября');
+    expect(str).toContain('07:30');
+  });
+});
+
+describe('freeSpotsText', () => {
+  it('formats Russian plurals for free spots correctly', () => {
+    expect(freeSpotsText(0)).toBe('Мест нет');
+    expect(freeSpotsText(1)).toBe('1 свободное место');
+    expect(freeSpotsText(2)).toBe('2 свободных места');
+    expect(freeSpotsText(4)).toBe('4 свободных места');
+    expect(freeSpotsText(5)).toBe('5 свободных мест');
+    expect(freeSpotsText(13)).toBe('13 свободных мест');
+    expect(freeSpotsText(21)).toBe('21 свободное место');
+    expect(freeSpotsText(22)).toBe('22 свободных места');
+  });
+});
+
+describe('capacityText', () => {
+  it('formats capacity text with proper plural forms', () => {
+    expect(capacityText(0)).toBe('0 мест');
+    expect(capacityText(1)).toBe('1 место');
+    expect(capacityText(2)).toBe('2 места');
+    expect(capacityText(5)).toBe('5 мест');
+    expect(capacityText(10)).toBe('10 мест');
+    expect(capacityText(17)).toBe('17 мест');
   });
 });

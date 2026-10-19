@@ -189,7 +189,10 @@ export const Navbar: React.FC = () => {
             </div>
           )}
           {!currentUser && (
-            <Link to="/auth" className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-[42px] px-3 sm:px-4 rounded-[10px] bg-brand text-on-brand font-semibold text-sm sm:text-base shrink-0">
+            <Link
+              to="/auth"
+              className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-[42px] px-3 sm:px-4 rounded-[10px] border border-line-2 bg-card text-ink hover:bg-surface transition-colors font-semibold text-sm sm:text-base shrink-0"
+            >
               <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Войти</span>
             </Link>
