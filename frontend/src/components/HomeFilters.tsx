@@ -43,7 +43,7 @@ export const extraFilterCount = (f: HomeFilterState) =>
   (f.skill ? 1 : 0) + (f.joinMode ? 1 : 0) + (f.freeOnly ? 1 : 0) + (f.freeCost ? 1 : 0);
 
 export const allFilterCount = (f: HomeFilterState) =>
-  extraFilterCount(f) + f.sports.length + (f.when.kind !== 'all' ? 1 : 0);
+  extraFilterCount(f) + (f.when.kind !== 'all' ? 1 : 0);
 
 /* ---------- Поповер ---------- */
 
@@ -116,6 +116,55 @@ export const RadiusList: React.FC<{
     })}
   </div>
 );
+
+/* ---------- Вид спорта: один компактный фильтр вместо ряда чипов ---------- */
+
+export const sportsLabel = (selected: string[], sports: Sport[]) => {
+  if (selected.length === 0) return 'Все виды';
+  if (selected.length === 1) return sports.find((s) => s.slug === selected[0])?.name ?? '1 вид';
+  return `${selected.length} вида`;
+};
+
+export const SportList: React.FC<{
+  selected: string[];
+  sports: Sport[];
+  onChange: (slugs: string[]) => void;
+}> = ({ selected, sports, onChange }) => {
+  const toggle = (slug: string) =>
+    onChange(selected.includes(slug) ? selected.filter((s) => s !== slug) : [...selected, slug]);
+  return (
+    <div className="flex flex-col gap-2 p-1.5">
+      <div className="grid grid-cols-2 gap-1 max-h-[320px] overflow-y-auto" role="group" aria-label="Вид спорта">
+        {sports.map((s) => {
+          const on = selected.includes(s.slug);
+          return (
+            <button
+              key={s.slug}
+              type="button"
+              aria-pressed={on}
+              onClick={() => toggle(s.slug)}
+              className={`h-10 px-3 flex items-center gap-2 rounded-xl text-sm font-semibold text-left transition-colors ${
+                on ? 'bg-ink text-white' : 'text-ink hover:bg-surface'
+              }`}
+            >
+              <span className="flex-1 truncate">{s.name}</span>
+              {on && <Check className="w-4 h-4 shrink-0" />}
+            </button>
+          );
+        })}
+      </div>
+      {selected.length > 0 && (
+        <button
+          type="button"
+          onClick={() => onChange([])}
+          className="h-9 rounded-xl text-sm font-semibold text-brand-ink hover:bg-surface transition-colors"
+        >
+          Сбросить выбор
+        </button>
+      )}
+    </div>
+  );
+};
 
 /* ---------- Когда: пресеты + календарь-интервал ---------- */
 
@@ -265,12 +314,8 @@ export const FilterBar: React.FC<{
   onOpenFilters: () => void;
   canUseRadius: boolean;
 }> = ({ filters, onChange, sports, radiusCounts, eventDays, resultCount, onOpenFilters, canUseRadius }) => {
-  const [pop, setPop] = useState<'radius' | 'when' | null>(null);
+  const [pop, setPop] = useState<'radius' | 'when' | 'sport' | null>(null);
   const close = () => setPop(null);
-  const toggleSport = (slug: string) =>
-    onChange({
-      sports: filters.sports.includes(slug) ? filters.sports.filter((s) => s !== slug) : [...filters.sports, slug],
-    });
 
   return (
     <div className="relative z-30 shrink-0 h-16 px-6 flex items-center gap-2.5 bg-white border-b border-line">
@@ -329,16 +374,22 @@ export const FilterBar: React.FC<{
 
       <span className="shrink-0 w-px h-6 bg-line mx-1" />
 
-      <div className="flex-1 min-w-0 flex gap-1.5 overflow-x-auto no-scrollbar [mask-image:linear-gradient(90deg,#000_92%,transparent)]">
-        <Chip active={filters.sports.length === 0} onClick={() => onChange({ sports: [] })}>
-          Все виды
-        </Chip>
-        {sports.map((s) => (
-          <Chip key={s.slug} active={filters.sports.includes(s.slug)} onClick={() => toggleSport(s.slug)}>
-            {s.name}
-          </Chip>
-        ))}
-      </div>
+      <Popover
+        open={pop === 'sport'}
+        onClose={close}
+        width={320}
+        trigger={
+          <button type="button" onClick={() => setPop(pop === 'sport' ? null : 'sport')} className={barButton(pop === 'sport')}>
+            <span className="text-muted">Спорт</span>
+            <span className="font-bold max-w-[140px] truncate">{sportsLabel(filters.sports, sports)}</span>
+            <ChevronDown className={`w-4 h-4 text-muted transition-transform ${pop === 'sport' ? 'rotate-180' : ''}`} />
+          </button>
+        }
+      >
+        <SportList selected={filters.sports} sports={sports} onChange={(s) => onChange({ sports: s })} />
+      </Popover>
+
+      <div className="flex-1" />
 
       <button type="button" onClick={onOpenFilters} className={`${barButton(false)} font-semibold`}>
         <FilterIcon size={18} />
@@ -361,11 +412,7 @@ export const FiltersSheet: React.FC<{
   resultCount: number;
   /** На десктопе «Когда» и «Радиус» живут в баре — в шите их не дублируем */
   compact: boolean;
-}> = ({ filters, onChange, onReset, onClose, sports, eventDays, resultCount, compact }) => {
-  const toggleSport = (slug: string) =>
-    onChange({
-      sports: filters.sports.includes(slug) ? filters.sports.filter((s) => s !== slug) : [...filters.sports, slug],
-    });
+}> = ({ filters, onChange, onReset, onClose, eventDays, resultCount, compact }) => {
   return (
     <Modal
       title="Фильтры"
@@ -394,16 +441,6 @@ export const FiltersSheet: React.FC<{
             />
           </div>
         )}
-        <div className="flex flex-col gap-2.5">
-          <SectionLabel>Вид спорта</SectionLabel>
-          <div className="flex flex-wrap gap-2">
-            {sports.map((s) => (
-              <Chip key={s.slug} active={filters.sports.includes(s.slug)} onClick={() => toggleSport(s.slug)}>
-                {s.name}
-              </Chip>
-            ))}
-          </div>
-        </div>
         <div className="flex flex-col gap-2.5">
           <SectionLabel>Уровень</SectionLabel>
           <Segmented

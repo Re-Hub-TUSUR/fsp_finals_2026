@@ -13,8 +13,10 @@ import {
   FiltersSheet,
   RADIUS_OPTIONS,
   RadiusList,
+  SportList,
   allFilterCount,
   radiusValue,
+  sportsLabel,
   type HomeFilterState,
   type Radius,
 } from '../components/HomeFilters';
@@ -58,6 +60,7 @@ export const HomePage: React.FC = () => {
   const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [radiusSheetOpen, setRadiusSheetOpen] = useState(false);
+  const [sportSheetOpen, setSportSheetOpen] = useState(false);
 
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
@@ -371,25 +374,9 @@ export const HomePage: React.FC = () => {
           {radiusValue(filters.radius)}
           <ChevronDown className="w-4 h-4 text-muted" />
         </button>
-        <Chip floating={floating} active={filters.sports.length === 0} onClick={() => changeFilters({ sports: [] })}>
-          Все виды
+        <Chip floating={floating} active={filters.sports.length > 0} onClick={() => setSportSheetOpen(true)}>
+          {sportsLabel(filters.sports, sports)}
         </Chip>
-        {sports.map((s) => (
-          <Chip
-            key={s.slug}
-            floating={floating}
-            active={filters.sports.includes(s.slug)}
-            onClick={() =>
-              changeFilters({
-                sports: filters.sports.includes(s.slug)
-                  ? filters.sports.filter((x) => x !== s.slug)
-                  : [...filters.sports, s.slug],
-              })
-            }
-          >
-            {s.name}
-          </Chip>
-        ))}
       </div>
     </div>
   );
@@ -551,6 +538,12 @@ export const HomePage: React.FC = () => {
           resultCount={visible.length}
           compact={isDesktop()}
         />
+      )}
+
+      {sportSheetOpen && (
+        <Modal title="Вид спорта" onClose={() => setSportSheetOpen(false)}>
+          <SportList selected={filters.sports} sports={sports} onChange={(s) => changeFilters({ sports: s })} />
+        </Modal>
       )}
 
       {radiusSheetOpen && (

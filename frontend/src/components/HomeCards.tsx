@@ -34,7 +34,7 @@ export const CoverCard: React.FC<{ event: SportEvent; me: LatLng | null; active?
     <button
       type="button"
       onClick={onOpen}
-      className={`w-full flex flex-col text-left rounded-[20px] bg-card overflow-hidden transition-shadow hover:shadow-card ring-2 ${
+      className={`anim-rise w-full flex flex-col text-left rounded-[20px] bg-card overflow-hidden transition-[box-shadow,transform] hover:shadow-card hover:-translate-y-0.5 ring-2 ${
         active ? 'ring-brand' : 'ring-transparent'
       }`}
     >
@@ -87,7 +87,7 @@ export const CompactCard: React.FC<{ event: SportEvent; me: LatLng | null; activ
     data-eid={event.id}
     onClick={onPick}
     aria-pressed={active}
-    className={`w-full text-left flex gap-3 p-3.5 rounded-[18px] border-[1.5px] transition-colors ${
+    className={`anim-rise w-full text-left flex gap-3 p-3.5 rounded-[18px] border-[1.5px] transition-colors ${
       active ? 'bg-brand-tint border-brand' : 'bg-card border-line hover:border-surface-2'
     }`}
   >
@@ -119,7 +119,7 @@ export const CarouselCard: React.FC<{
   <div
     data-eid={event.id}
     onClick={onPick}
-    className={`shrink-0 w-[290px] snap-start flex items-center gap-3 p-3 rounded-[20px] bg-white border-2 shadow-card cursor-pointer transition-colors ${
+    className={`anim-rise shrink-0 w-[290px] snap-start flex items-center gap-3 p-3 rounded-[20px] bg-white border-2 shadow-card cursor-pointer transition-colors ${
       active ? 'border-brand' : 'border-white'
     }`}
   >

@@ -1,4 +1,5 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import type { ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { DemoRoleBar } from './components/DemoRoleBar';
@@ -14,6 +15,16 @@ import { RecommendedPage } from './pages/RecommendedPage';
 import { AuthPage } from './pages/AuthPage';
 import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 
+/** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
+function PageFade({ children }: { children: ReactNode }) {
+  const { pathname } = useLocation();
+  return (
+    <div key={pathname === '/' ? '/events' : pathname} className="anim-fade h-full">
+      {children}
+    </div>
+  );
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -27,6 +38,7 @@ function App() {
             <Navbar />
 
             <main className="flex-1 min-h-0 overflow-y-auto">
+              <PageFade>
               <Routes>
                 <Route path="/" element={<HomePage />} />
                 <Route path="/events" element={<HomePage />} />
@@ -41,6 +53,7 @@ function App() {
                 <Route path="/profiles/:type/:id" element={<ProfilePage />} />
                 <Route path="*" element={<Navigate to="/" replace />} />
               </Routes>
+              </PageFade>
             </main>
 
             <MobileTabBar />
