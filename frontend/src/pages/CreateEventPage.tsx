@@ -276,11 +276,11 @@ export const CreateEventPage: React.FC = () => {
   if (!ready) return null;
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-slate-900 mb-1">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full min-w-0 overflow-x-hidden">
+      <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-1">
         {isOrg ? 'Мероприятие от организации' : 'Создать мероприятие'}
       </h1>
-      <p className="text-base text-slate-500 mb-6">
+      <p className="text-sm sm:text-base text-slate-500 mb-6">
         Выберите готовый формат и заполните только нужное — сборка мероприятия займёт пару минут.
       </p>
 
@@ -387,9 +387,6 @@ export const CreateEventPage: React.FC = () => {
                     onChange={(e) => setCustomSportName(e.target.value)}
                     className={`${inputClass} border-brand-line`}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
-                    Новый вид сразу появится в общем списке и фильтрах для всех.
-                  </p>
                 </>
               ) : (
                 <select

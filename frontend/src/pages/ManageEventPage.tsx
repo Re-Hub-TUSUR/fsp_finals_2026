@@ -203,22 +203,22 @@ export const ManageEventPage: React.FC = () => {
   );
 
   return (
-    <div className="max-w-3xl mx-auto px-4 py-6">
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 py-6 w-full min-w-0 overflow-x-hidden">
       <Link to={`/events/${event.id}`} className="inline-flex items-center gap-1.5 text-sm text-slate-500 hover:text-slate-800 mb-4">
         <ArrowLeft className="w-4 h-4" /> К мероприятию
       </Link>
-      <h1 className="text-2xl font-bold text-slate-900">{event.title}</h1>
-      <p className="text-slate-500 mb-5">
+      <h1 className="text-2xl font-bold text-slate-900 break-words">{event.title}</h1>
+      <p className="text-slate-500 mb-5 break-words">
         {formatShortDateTime(event.startTime, event.timeZone)} · {event.address}
       </p>
 
-      <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-snow rounded-2xl p-4 sm:p-5 mb-6 shadow-md border border-slate-700">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-snow rounded-2xl p-4 sm:p-5 mb-6 shadow-md border border-slate-700">
         <div className="flex items-center gap-3">
-          <div className="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold">
+          <div className="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold shrink-0">
             <QrCode className="w-5 h-5" />
           </div>
-          <div>
-            <div className="font-bold text-base">Контроль входа и проверка QR-билетов</div>
+          <div className="min-w-0">
+            <div className="font-bold text-base leading-snug">Контроль входа и проверка QR-билетов</div>
             <p className="text-xs text-slate-300 mt-0.5">
               Отмечено на площадке:{' '}
               <b className="text-emerald-400">
@@ -230,7 +230,7 @@ export const ManageEventPage: React.FC = () => {
         </div>
         <button
           onClick={() => setScannerOpen(true)}
-          className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
+          className="w-full sm:w-auto justify-center flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98 shrink-0"
         >
           <Camera className="w-4 h-4" />
           Сканировать QR / Ввести код
