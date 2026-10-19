@@ -7,6 +7,7 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
 import org.mockito.quality.Strictness;
+import org.springframework.context.ApplicationEventPublisher;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.event.model.Event;
 import ru.sportikus.event.model.EventStatus;
@@ -51,6 +52,7 @@ class ParticipationServiceTest {
     @Mock ParticipationRepository participationRepository;
     @Mock UserRepository userRepository;
     @Mock EventMapper eventMapper;
+    @Mock ApplicationEventPublisher events;
 
     ParticipationService service;
     Event event;
@@ -58,7 +60,7 @@ class ParticipationServiceTest {
     @BeforeEach
     void setUp() {
         service = new ParticipationService(eventRepository, participationRepository, userRepository,
-                new FieldValidator(), eventMapper);
+                new FieldValidator(), eventMapper, events);
 
         User author = User.builder().id(1L).fullName("Иван").role("ROLE_USER").build();
         event = Event.builder().id(EVENT_ID).title("Футбол").organizerUser(author)

@@ -1,7 +1,11 @@
 package ru.sportikus.event.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
+import org.springframework.data.jpa.domain.Specification;
+import ru.sportikus.city.repository.CityRepository;
+import ru.sportikus.event.repository.EventGeoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
@@ -52,17 +56,28 @@ public class EventService {
     private final SportService sportService;
     private final FieldValidator fieldValidator;
     private final EventMapper mapper;
+    private final EventGeoRepository geoRepository;
+    private final CityRepository cityRepository;
 
     // ------------------------------------------------------------------ чтение
 
+    /** Максимум событий в одном ответе каталога: при масштабе страны каталог всегда ограничен. */
+    private static final int CATALOG_LIMIT = 500;
+    private static final double MAX_RADIUS_KM = 300;
+
     @Transactional(readOnly = true)
     public List<EventResponse> catalog(EventFilter filter, Optional<AuthUser> viewer) {
-        List<Event> events = eventRepository.findAll(EventSpecs.catalog(filter, Instant.now()), Sort.by("startTime"));
-        if (filter.lat() != null && filter.lng() != null && filter.radiusKm() != null) {
-            events = events.stream()
-                    .filter(e -> distanceKm(filter.lat(), filter.lng(), e.getLat(), e.getLng()) <= filter.radiusKm())
-                    .toList();
+        Specification<Event> spec = EventSpecs.catalog(filter, Instant.now());
+        if (filter.lat() != null && filter.lng() != null) {
+            double radius = Math.min(filter.radiusKm() == null ? 50 : filter.radiusKm(), MAX_RADIUS_KM);
+            List<Long> nearby = geoRepository.publishedWithin(filter.lat(), filter.lng(), radius, CATALOG_LIMIT * 2);
+            if (nearby.isEmpty()) {
+                return List.of();
+            }
+            spec = spec.and((root, query, cb) -> root.get("id").in(nearby));
         }
+        List<Event> events = eventRepository.findAll(spec, PageRequest.of(0, CATALOG_LIMIT, Sort.by("startTime")))
+                .getContent();
         return mapper.toList(events, viewer.map(AuthUser::id).orElse(null), false);
     }
 
@@ -141,6 +156,11 @@ public class EventService {
                 .registrationFields(new ArrayList<>(registrationFields))
                 .orgDetails(orgDetails)
                 .build();
+        // Местный часовой пояс и город — по ближайшему городу из справочника
+        cityRepository.findNearest(req.lat(), req.lng()).ifPresent(city -> {
+            event.setCity(city);
+            event.setTimeZone(city.getTimeZone());
+        });
 
         return mapper.toDetails(eventRepository.save(event), auth.id());
     }
@@ -282,17 +302,5 @@ public class EventService {
             rest = rest.substring(limit);
         }
         sb.append(rest).append("\r\n");
-    }
-
-    // --------------------------------------------------------------- геометрия
-
-    static double distanceKm(double lat1, double lng1, double lat2, double lng2) {
-        double r = 6371.0;
-        double dLat = Math.toRadians(lat2 - lat1);
-        double dLng = Math.toRadians(lng2 - lng1);
-        double a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
-                + Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2))
-                * Math.sin(dLng / 2) * Math.sin(dLng / 2);
-        return r * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     }
 }

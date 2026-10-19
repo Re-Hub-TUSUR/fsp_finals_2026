@@ -1,10 +1,10 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { MapPin, PlusCircle, ShieldAlert, Ticket } from 'lucide-react';
+import { MapPin, PlusCircle, ShieldAlert, Sparkles, Ticket } from 'lucide-react';
 
 export const Navbar: React.FC = () => {
-  const { currentUser } = useAuth();
+  const { currentUser, preferences } = useAuth();
   const location = useLocation();
 
   const isActive = (path: string) => location.pathname === path;
@@ -26,7 +26,9 @@ export const Navbar: React.FC = () => {
               </div>
               <div className="flex flex-col">
                 <span className="text-xl font-bold tracking-tight text-slate-900 leading-tight">Sportikus</span>
-                <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">Красноярск</span>
+                <span className="text-[10px] uppercase font-bold text-emerald-600 tracking-wider">
+                  {preferences?.homeCity?.name ?? 'Россия'}
+                </span>
               </div>
             </Link>
 
@@ -35,6 +37,12 @@ export const Navbar: React.FC = () => {
                 <span className="hidden sm:inline">Карта и события</span>
                 <MapPin className="w-5 h-5 sm:hidden" aria-label="Карта и события" />
               </Link>
+              {currentUser && !isAdmin && (
+                <Link to="/recommended" className={`${linkClass(isActive('/recommended'))} flex items-center gap-1.5`}>
+                  <Sparkles className="w-5 h-5 sm:w-4 sm:h-4 text-emerald-600" />
+                  <span className="hidden sm:inline">Для вас</span>
+                </Link>
+              )}
               {currentUser && !isAdmin && (
                 <Link to="/my" className={`${linkClass(isActive('/my'))} flex items-center gap-1.5`}>
                   <Ticket className="w-5 h-5 sm:w-4 sm:h-4" />

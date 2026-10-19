@@ -1,6 +1,7 @@
 package ru.sportikus.participation.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
@@ -12,6 +13,7 @@ import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventAccess;
 import ru.sportikus.event.service.EventMapper;
 import ru.sportikus.form.FieldValidator;
+import ru.sportikus.participation.ParticipationChangedEvent;
 import ru.sportikus.participation.dto.DecisionRequest;
 import ru.sportikus.participation.dto.JoinRequest;
 import ru.sportikus.participation.dto.ParticipationResponse;
@@ -48,6 +50,7 @@ public class ParticipationService {
     private final UserRepository userRepository;
     private final FieldValidator fieldValidator;
     private final EventMapper eventMapper;
+    private final ApplicationEventPublisher events;
 
     @Transactional
     public ParticipationResponse join(AuthUser auth, Long eventId, JoinRequest req) {
@@ -94,6 +97,7 @@ public class ParticipationService {
         }
 
         boolean instant = event.getJoinMode() == JoinMode.OPEN;
+        ParticipationStatus previous = existing == null ? null : existing.getStatus();
         Participation p = existing != null ? existing : Participation.builder().event(event).user(user).build();
         p.setStatus(instant ? ParticipationStatus.CONFIRMED : ParticipationStatus.PENDING);
         p.setMessage(blankToNull(req.message()));
@@ -101,7 +105,9 @@ public class ParticipationService {
         p.setDecisionComment(null);
         p.setDecidedBy(null);
         p.setDecidedAt(instant ? now : null);
-        return ParticipationResponse.withUser(participationRepository.save(p));
+        Participation saved = participationRepository.save(p);
+        events.publishEvent(new ParticipationChangedEvent(user.getId(), eventId, previous, saved.getStatus()));
+        return ParticipationResponse.withUser(saved);
     }
 
     @Transactional
@@ -115,10 +121,13 @@ public class ParticipationService {
         if (!Instant.now().isBefore(event.getEndTime())) {
             throw ApiException.conflict("Мероприятие уже завершилось");
         }
+        ParticipationStatus previous = p.getStatus();
         p.setStatus(ParticipationStatus.CANCELLED);
         p.setDecidedAt(null);
         p.setDecidedBy(null);
-        return ParticipationResponse.withUser(participationRepository.save(p));
+        Participation saved = participationRepository.save(p);
+        events.publishEvent(new ParticipationChangedEvent(auth.id(), eventId, previous, ParticipationStatus.CANCELLED));
+        return ParticipationResponse.withUser(saved);
     }
 
     /** Все заявки и участники мероприятия — только для организатора. */
@@ -177,7 +186,9 @@ public class ParticipationService {
         p.setDecisionComment(blankToNull(req.comment()));
         p.setDecidedAt(Instant.now());
         p.setDecidedBy(manager);
-        return ParticipationResponse.withUser(participationRepository.save(p));
+        Participation saved = participationRepository.save(p);
+        events.publishEvent(new ParticipationChangedEvent(p.getUser().getId(), eventId, from, req.decision()));
+        return ParticipationResponse.withUser(saved);
     }
 
     /** Заявки и участия текущего пользователя вместе с мероприятиями. */

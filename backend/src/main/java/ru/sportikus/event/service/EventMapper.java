@@ -78,6 +78,7 @@ public class EventMapper {
                 e.getId(), e.getTitle(), e.getDescription(), SportDto.from(e.getSport()), template,
                 organizerName, organizerAvatar, byOrg, byOrg ? e.getOrganizerOrg().getId() : null,
                 e.getStartTime(), e.getEndTime(), e.getLat(), e.getLng(), e.getAddress(),
+                e.getCity() == null ? null : e.getCity().getName(), e.getTimeZone(),
                 e.getCapacity(), counts.confirmed(), e.getJoinMode(), e.getSkillLevel(), e.getPrice(),
                 e.getRegistrationDeadline(), e.getMinAge(), e.getMaxAge(), e.getRequiredEquipment(),
                 e.getStatus(), e.getUnpublishReason(),

@@ -8,6 +8,7 @@ import { EventPage } from './pages/EventPage';
 import { ManageEventPage } from './pages/ManageEventPage';
 import { MyEventsPage } from './pages/MyEventsPage';
 import { AdminPage } from './pages/AdminPage';
+import { RecommendedPage } from './pages/RecommendedPage';
 
 function App() {
   return (
@@ -27,6 +28,7 @@ function App() {
               <Route path="/events/:id" element={<EventPage />} />
               <Route path="/events/:id/manage" element={<ManageEventPage />} />
               <Route path="/my" element={<MyEventsPage />} />
+              <Route path="/recommended" element={<RecommendedPage />} />
               <Route path="/admin" element={<AdminPage />} />
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>

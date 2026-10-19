@@ -3,7 +3,7 @@ import type { SportEvent } from '../types';
 import { Link } from 'react-router-dom';
 import { Building2, Calendar, MapPin, Users } from 'lucide-react';
 import { ParticipationBadge } from './ParticipationBadge';
-import { JOIN_MODE_LABELS, SKILL_LABELS, formatPrice, formatShortDateTime } from '../utils/format';
+import { JOIN_MODE_LABELS, SKILL_LABELS, formatPrice, formatShortDateTime, isForeignZone } from '../utils/format';
 
 interface EventCardProps {
   event: SportEvent;
@@ -33,7 +33,10 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
         <div className="mt-4 space-y-1.5 text-sm text-slate-600">
           <div className="flex items-center gap-2">
             <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
-            <span>{formatShortDateTime(event.startTime)}</span>
+            <span>
+              {formatShortDateTime(event.startTime, event.timeZone)}
+              {isForeignZone(event.timeZone) && <span className="text-slate-400"> (местное{event.cityName ? `, ${event.cityName}` : ''})</span>}
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <MapPin className="w-4 h-4 text-slate-400 shrink-0" />

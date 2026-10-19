@@ -1,5 +1,5 @@
-import React from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import React, { useEffect, useRef } from 'react';
+import { MapContainer, TileLayer, Marker, useMap, useMapEvents } from 'react-leaflet';
 import L from 'leaflet';
 import type { SportEvent } from '../types';
 import { Clock, Users, MapPin, X, ArrowRight } from 'lucide-react';
@@ -7,14 +7,48 @@ import { Link } from 'react-router-dom';
 import { ParticipationBadge } from './ParticipationBadge';
 import { JOIN_MODE_LABELS, formatPrice, formatTimeBadge, spotsLeft } from '../utils/format';
 
+export interface MapViewport {
+  lat: number;
+  lng: number;
+  radiusKm: number;
+}
+
 interface BlinkMapProps {
   events: SportEvent[];
   selectedEvent: SportEvent | null;
   onSelectEvent: (event: SportEvent | null) => void;
+  /** Куда центрировать карту (домашний город или геолокация). Смена значения перемещает карту. */
+  center: [number, number];
+  /** Видимая область изменилась — каталог подгружает события только для неё. */
+  onViewportChange?: (viewport: MapViewport) => void;
 }
 
-// Center of Krasnoyarsk
-const KRASNOYARSK_COORDS: [number, number] = [56.0153, 92.8932];
+const MAX_VIEWPORT_RADIUS_KM = 300;
+
+/** Перемещает карту к новому центру и сообщает видимую область (центр + радиус до угла). */
+const MapController: React.FC<{ center: [number, number]; onViewportChange?: (v: MapViewport) => void }> = ({
+  center,
+  onViewportChange,
+}) => {
+  const map = useMap();
+  const callback = useRef(onViewportChange);
+  callback.current = onViewportChange;
+
+  const report = () => {
+    const c = map.getCenter();
+    const radiusKm = Math.min(MAX_VIEWPORT_RADIUS_KM, map.distance(c, map.getBounds().getNorthEast()) / 1000);
+    callback.current?.({ lat: c.lat, lng: c.lng, radiusKm: Math.max(1, Math.round(radiusKm)) });
+  };
+
+  useMapEvents({ moveend: report });
+
+  useEffect(() => {
+    map.setView(center, map.getZoom());
+    report();
+  }, [center[0], center[1]]);
+
+  return null;
+};
 const FALLBACK_AVATAR = 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=120';
 
 const escapeAttr = (value: string) =>
@@ -22,7 +56,7 @@ const escapeAttr = (value: string) =>
 
 // Helper to create Blink-style DivIcon
 function createBlinkIcon(event: SportEvent, isSelected: boolean) {
-  const timeBadge = formatTimeBadge(event.startTime, event.endTime);
+  const timeBadge = formatTimeBadge(event.startTime, event.endTime, event.timeZone);
   const left = spotsLeft(event);
   const isHot = left <= 3 && left > 0;
 
@@ -56,10 +90,11 @@ function createBlinkIcon(event: SportEvent, isSelected: boolean) {
   });
 }
 
-export const BlinkMap: React.FC<BlinkMapProps> = ({ events, selectedEvent, onSelectEvent }) => {
+export const BlinkMap: React.FC<BlinkMapProps> = ({ events, selectedEvent, onSelectEvent, center, onViewportChange }) => {
   return (
     <div className="relative w-full h-full min-h-[480px] rounded-2xl overflow-hidden border border-slate-200 shadow-inner">
-      <MapContainer center={KRASNOYARSK_COORDS} zoom={13} scrollWheelZoom={true} className="w-full h-full">
+      <MapContainer center={center} zoom={12} scrollWheelZoom={true} className="w-full h-full">
+        <MapController center={center} onViewportChange={onViewportChange} />
         <TileLayer
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
@@ -107,7 +142,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({ events, selectedEvent, onSel
             </div>
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-slate-400 shrink-0" />
-              <span>{formatTimeBadge(selectedEvent.startTime, selectedEvent.endTime)}</span>
+              <span>{formatTimeBadge(selectedEvent.startTime, selectedEvent.endTime, selectedEvent.timeZone)}</span>
               <span className="text-slate-300">·</span>
               <span>{formatPrice(selectedEvent.price)}</span>
             </div>

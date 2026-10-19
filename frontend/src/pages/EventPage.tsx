@@ -34,7 +34,10 @@ import {
   formatDateTime,
   formatPrice,
   formatShortDateTime,
+  formatTime,
+  isForeignZone,
   registrationClosesAt,
+  utcLabel,
   spotsLeft,
 } from '../utils/format';
 
@@ -285,7 +288,12 @@ export const EventPage: React.FC = () => {
             <h2 className="text-lg font-bold text-slate-900 mb-4">Основное</h2>
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
               <Fact icon={<Clock className="w-5 h-5" />} label="Когда">
-                {formatDateTime(event.startTime)} – {new Date(event.endTime).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}
+                {formatDateTime(event.startTime, event.timeZone)} – {formatTime(event.endTime, event.timeZone)}
+                {event.timeZone && isForeignZone(event.timeZone) && (
+                  <span className="block text-xs text-slate-500">
+                    Местное время{event.cityName ? `: ${event.cityName}` : ''} ({utcLabel(event.timeZone)})
+                  </span>
+                )}
               </Fact>
               <Fact icon={<MapPin className="w-5 h-5" />} label="Где">
                 {event.address}
@@ -303,7 +311,7 @@ export const EventPage: React.FC = () => {
               )}
               {event.registrationDeadline && (
                 <Fact icon={<CalendarPlus className="w-5 h-5" />} label="Приём заявок до">
-                  {formatShortDateTime(event.registrationDeadline)}
+                  {formatShortDateTime(event.registrationDeadline, event.timeZone)}
                 </Fact>
               )}
               {event.requiredEquipment && (
