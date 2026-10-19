@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Building2, Edit3, Mail, Save, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Building2, Edit3, Mail, Save, Search, ShieldCheck, UserRound, X } from 'lucide-react';
 import { achievementsApi, friendsApi, profilesApi } from '../api';
 import { errorMessage } from '../api/client';
 import { EventCard } from '../components/EventCard';
 import { InterestsPanel } from '../components/InterestsPanel';
 import { useAuth } from '../context/AuthContext';
-import type { Achievement, Friend, FriendRequest, FriendshipState, Profile } from '../types';
+import type { Achievement, Friend, FriendRequest, FriendSearchResult, FriendshipState, Profile } from '../types';
 
 export function OwnProfilePage() {
   const { currentUser, ready } = useAuth();
@@ -34,6 +34,10 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
   const [friends, setFriends] = useState<Friend[]>([]);
   const [friendsLoading, setFriendsLoading] = useState(false);
   const [friendsLoaded, setFriendsLoaded] = useState(false);
+  const [friendEmail, setFriendEmail] = useState('');
+  const [friendSearch, setFriendSearch] = useState<FriendSearchResult>();
+  const [friendSearchMessage, setFriendSearchMessage] = useState('');
+  const [friendSearching, setFriendSearching] = useState(false);
   const ownUserProfile = type === 'users' && currentUser?.id === id;
 
   useEffect(() => {
@@ -78,8 +82,22 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
       setFriendRequests((items) => items.filter((request) => request.userId !== userId));
       if (action === 'remove') setFriends((items) => items.filter((friend) => friend.userId !== userId));
       if (action === 'accept') setFriendsLoaded(false);
+      if (friendSearch?.userId === userId) {
+        const state: FriendshipState = action === 'request' ? 'OUTGOING_PENDING' : action === 'accept' ? 'FRIENDS' : 'NONE';
+        setFriendSearch({ ...friendSearch, state });
+      }
     } catch (err) { setError(errorMessage(err)); }
     finally { setFriendBusy(false); }
+  };
+
+  const searchFriend = async (e: FormEvent) => {
+    e.preventDefault();
+    const email = friendEmail.trim();
+    if (!email) return;
+    setFriendSearching(true); setFriendSearch(undefined); setFriendSearchMessage('');
+    try { setFriendSearch(await friendsApi.search(email)); }
+    catch (err) { setFriendSearchMessage(errorMessage(err)); }
+    finally { setFriendSearching(false); }
   };
 
   const save = async (e: FormEvent) => {
@@ -135,6 +153,23 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
     </>}
     {ownUserProfile && activeTab === 'friends' && <section className="pt-8">
       <div className="flex flex-wrap items-baseline justify-between gap-2"><h2 className="text-2xl font-bold">Друзья</h2>{friendsLoaded && <span className="text-sm text-slate-500">{friends.length}</span>}</div>
+      <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5">
+        <h3 className="text-lg font-bold">Найти друга</h3>
+        <form onSubmit={searchFriend} className="mt-3 flex flex-col gap-2 sm:flex-row">
+          <label htmlFor="friend-email" className="sr-only">Электронная почта пользователя</label>
+          <input id="friend-email" type="email" required value={friendEmail} onChange={(e) => setFriendEmail(e.target.value)} placeholder="Введите почту пользователя" className="min-w-0 flex-1 rounded-xl border border-slate-300 px-4 py-2.5 outline-none focus:border-brand" />
+          <button disabled={friendSearching} className="flex items-center justify-center gap-2 rounded-xl bg-brand px-5 py-2.5 font-semibold text-on-brand disabled:opacity-50"><Search className="h-4 w-4" />{friendSearching ? 'Ищем…' : 'Найти'}</button>
+        </form>
+        {friendSearchMessage && <p className="mt-3 text-sm text-red-700">{friendSearchMessage}</p>}
+        {friendSearch && <article className="mt-4 flex flex-wrap items-center gap-3 rounded-xl bg-slate-50 p-4">
+          <div className="flex h-12 w-12 shrink-0 items-center justify-center overflow-hidden rounded-full bg-slate-200">{friendSearch.avatarUrl ? <img src={friendSearch.avatarUrl} alt="" className="h-full w-full object-cover" /> : <UserRound className="h-6 w-6 text-slate-500" />}</div>
+          <div className="min-w-0 flex-1"><Link to={`/profiles/users/${friendSearch.userId}`} className="font-semibold text-slate-900 hover:text-brand">{friendSearch.fullName}</Link><p className="truncate text-sm text-slate-500">{friendSearch.email}</p></div>
+          {friendSearch.state === 'NONE' && <button disabled={friendBusy} onClick={() => setFriendship('request', friendSearch.userId)} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Добавить в друзья</button>}
+          {friendSearch.state === 'OUTGOING_PENDING' && <button disabled={friendBusy} onClick={() => setFriendship('remove', friendSearch.userId)} className="rounded-xl border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50">Заявка отправлена · Отменить</button>}
+          {friendSearch.state === 'INCOMING_PENDING' && <div className="flex gap-2"><button disabled={friendBusy} onClick={() => setFriendship('accept', friendSearch.userId)} className="rounded-xl bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Принять</button><button disabled={friendBusy} onClick={() => setFriendship('reject', friendSearch.userId)} className="rounded-xl border px-4 py-2 text-sm font-semibold disabled:opacity-50">Отклонить</button></div>}
+          {friendSearch.state === 'FRIENDS' && <span className="rounded-full bg-brand-tint px-3 py-1.5 text-sm font-semibold text-brand-ink">Уже в друзьях</span>}
+        </article>}
+      </div>
       {friendRequests.length > 0 && <div className="mt-5 rounded-2xl border border-slate-200 bg-white p-5"><h3 className="text-lg font-bold">Входящие заявки</h3><div className="mt-4 space-y-3">{friendRequests.map((request) => <div key={request.userId} className="flex flex-wrap items-center gap-3"><div className="h-10 w-10 overflow-hidden rounded-full bg-slate-200">{request.avatarUrl && <img src={request.avatarUrl} alt="" className="h-full w-full object-cover" />}</div><span className="mr-auto font-medium">{request.fullName}</span><button disabled={friendBusy} onClick={() => setFriendship('accept', request.userId)} className="rounded-md bg-brand px-3 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Принять</button><button disabled={friendBusy} onClick={() => setFriendship('reject', request.userId)} className="rounded-md border px-3 py-2 text-sm font-semibold disabled:opacity-50">Отклонить</button></div>)}</div></div>}
       {friendsLoading && <p className="mt-5 text-slate-500">Загружаем друзей...</p>}
       {!friendsLoading && friendsLoaded && (friends.length ? <div className="mt-5 grid gap-3 sm:grid-cols-2">{friends.map((friend) => <article key={friend.userId} className="flex items-center gap-3 rounded-2xl border border-slate-200 bg-white p-4"><div className="h-12 w-12 shrink-0 overflow-hidden rounded-full bg-slate-200">{friend.avatarUrl && <img src={friend.avatarUrl} alt="" className="h-full w-full object-cover" />}</div><Link to={`/profiles/users/${friend.userId}`} className="min-w-0 flex-1 truncate font-semibold text-slate-900 hover:text-brand">{friend.fullName}</Link><button disabled={friendBusy} onClick={() => setFriendship('remove', friend.userId)} className="rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold disabled:opacity-50">Удалить</button></article>)}</div> : <p className="mt-5 text-slate-500">Пока нет подтверждённых друзей. Откройте профиль спортсмена, чтобы отправить заявку.</p>)}

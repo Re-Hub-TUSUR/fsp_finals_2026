@@ -50,6 +50,14 @@ export interface Friend {
   friendsSince?: string;
 }
 
+export interface FriendSearchResult {
+  userId: number;
+  fullName: string;
+  email: string;
+  avatarUrl?: string;
+  state: FriendshipState;
+}
+
 export interface Sport {
   id: number;
   name: string;

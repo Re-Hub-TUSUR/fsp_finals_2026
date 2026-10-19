@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.sportikus.friendship.dto.FriendRequestResponse;
 import ru.sportikus.friendship.dto.FriendResponse;
+import ru.sportikus.friendship.dto.FriendSearchResponse;
 import ru.sportikus.friendship.dto.FriendshipResponse;
 import ru.sportikus.friendship.service.FriendshipService;
 import ru.sportikus.security.CurrentUser;
@@ -40,4 +41,10 @@ public class FriendshipController {
     @GetMapping("/me/friends")
     @Operation(summary = "Подтверждённые друзья текущего пользователя")
     public List<FriendResponse> friends() { return friendshipService.friends(CurrentUser.require()); }
+
+    @GetMapping("/me/friend-search")
+    @Operation(summary = "Найти пользователя по электронной почте")
+    public FriendSearchResponse search(@RequestParam String email) {
+        return friendshipService.search(CurrentUser.require(), email);
+    }
 }

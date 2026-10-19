@@ -18,6 +18,7 @@ import type {
   EventComment,
   FriendRequest,
   Friend,
+  FriendSearchResult,
   FriendshipState,
   Achievement,
 } from '../types';
@@ -72,6 +73,7 @@ export const friendsApi = {
   reject: (userId: number) => api.post(`/friends/${userId}/reject`),
   incoming: () => api.get<FriendRequest[]>('/me/friend-requests').then((r) => r.data),
   list: () => api.get<Friend[]>('/me/friends').then((r) => r.data),
+  search: (email: string) => api.get<FriendSearchResult>('/me/friend-search', { params: { email } }).then((r) => r.data),
 };
 
 export const catalogApi = {

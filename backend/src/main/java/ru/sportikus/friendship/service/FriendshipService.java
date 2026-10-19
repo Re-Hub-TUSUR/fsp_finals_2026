@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.friendship.dto.FriendRequestResponse;
 import ru.sportikus.friendship.dto.FriendResponse;
+import ru.sportikus.friendship.dto.FriendSearchResponse;
 import ru.sportikus.friendship.dto.FriendshipResponse;
 import ru.sportikus.friendship.dto.FriendshipState;
 import ru.sportikus.friendship.model.Friendship;
@@ -87,6 +88,19 @@ public class FriendshipService {
                     return new FriendResponse(friend.getId(), friend.getFullName(), friend.getAvatarUrl(), friendship.getAcceptedAt());
                 })
                 .toList();
+    }
+
+    @Transactional(readOnly = true)
+    public FriendSearchResponse search(AuthUser auth, String email) {
+        rejectAdmin(auth);
+        String normalized = email == null ? "" : email.trim();
+        if (normalized.isBlank()) throw ApiException.badRequest("Введите электронную почту");
+        User user = userRepository.findByEmailIgnoreCase(normalized)
+                .filter(candidate -> !candidate.getId().equals(auth.id()))
+                .filter(candidate -> !"ROLE_ADMIN".equals(candidate.getRole()))
+                .orElseThrow(() -> ApiException.notFound("Пользователь с такой почтой не найден"));
+        return new FriendSearchResponse(user.getId(), user.getFullName(), user.getEmail(), user.getAvatarUrl(),
+                state(auth.id(), user.getId()));
     }
 
     @Transactional(readOnly = true)
