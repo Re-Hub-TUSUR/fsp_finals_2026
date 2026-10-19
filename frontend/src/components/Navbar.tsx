@@ -9,7 +9,6 @@ import {
   ChevronDown,
   List,
   LogIn,
-  LogOut,
   Map as MapIcon,
   MapPin,
   Moon,
@@ -57,7 +56,7 @@ const AccountAvatar: React.FC<{ userId: number; src?: string }> = ({ userId, src
 };
 
 export const Navbar: React.FC = () => {
-  const { currentUser, logout, preferences } = useAuth();
+  const { currentUser, preferences } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
   const [params, setParams] = useSearchParams();
@@ -216,9 +215,6 @@ export const Navbar: React.FC = () => {
                 {orgStatus && <span className={`text-[11px] font-medium ${orgStatus.cls}`}>{orgStatus.text}</span>}
               </span>
               </Link>
-              <button type="button" onClick={logout} aria-label="Выйти" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-muted hover:bg-surface hover:text-ink shrink-0">
-                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
-              </button>
             </div>
           )}
           {!currentUser && (

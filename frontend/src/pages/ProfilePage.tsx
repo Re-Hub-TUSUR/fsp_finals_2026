@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import type { FormEvent } from 'react';
 import { Link, Navigate, useParams } from 'react-router-dom';
-import { Building2, Edit3, Mail, Save, Search, ShieldCheck, UserRound, X } from 'lucide-react';
+import { Building2, Edit3, LogOut, Mail, Save, Search, ShieldCheck, UserRound, X } from 'lucide-react';
 import { achievementsApi, friendsApi, profilesApi, subscriptionsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { EventCard } from '../components/EventCard';
@@ -20,7 +20,7 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
   const params = useParams();
   const type = forcedType ?? (params.type as 'users' | 'organizations');
   const id = forcedId ?? Number(params.id);
-  const { currentUser, refreshUser } = useAuth();
+  const { currentUser, refreshUser, logout } = useAuth();
   const [profile, setProfile] = useState<Profile>();
   const [editing, setEditing] = useState(false);
   const [form, setForm] = useState({ name: '', description: '', imageUrl: '' });
@@ -166,6 +166,7 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
         <div className="flex flex-wrap items-start justify-between gap-3">
           <div><p className="text-sm font-semibold text-emerald-700">{isOrg ? 'Организация' : 'Пользователь'}</p><h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">{profile.name}</h1></div>
           {profile.canEdit && <button onClick={() => setEditing(true)} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold w-full sm:w-auto"><Edit3 className="h-4 w-4" />Редактировать профиль</button>}
+          {forcedId != null && <button onClick={logout} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-red-700 w-full sm:w-auto"><LogOut className="h-4 w-4" />Выйти из аккаунта</button>}
           {isOrg && currentUser?.role === 'ROLE_USER' && !profile.canEdit && <button disabled={subscriptionBusy} onClick={toggleSubscription} className={`rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50 w-full sm:w-auto ${profile.subscribed ? 'border border-slate-300' : 'bg-brand text-on-brand'}`}>{profile.subscribed ? 'Отписаться' : 'Подписаться'}</button>}
           {friendshipAction === 'NONE' && <button disabled={friendBusy} onClick={() => setFriendship('request', profile.id)} className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50 w-full sm:w-auto">Добавить в друзья</button>}
           {friendshipAction === 'OUTGOING_PENDING' && <button disabled={friendBusy} onClick={() => setFriendship('remove', profile.id)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 w-full sm:w-auto">Заявка отправлена · Отменить</button>}

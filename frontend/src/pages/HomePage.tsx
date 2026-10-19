@@ -505,15 +505,18 @@ export const HomePage: React.FC = () => {
             controlsClassName="top-[128px] right-3 lg:top-4 lg:right-4"
             cardClassName={`bottom-4 ${desktopMode === 'list' ? 'lg:left-[456px]' : ''}`}
           />
+          {/* Правый нижний угол; на мобильном — над свёрнутой шторкой, в раскрытой не нужен */}
           {view === 'map' && (
-            <label className="absolute top-[128px] left-3 lg:top-4 lg:left-1/2 lg:-translate-x-1/2 z-20 flex items-center gap-2 h-10 px-3 rounded-[10px] border border-line-2 bg-card text-ink text-sm font-semibold shadow-[0_4px_16px_rgba(20,30,45,0.14)] cursor-pointer select-none">
+            <label
+              className={`absolute right-3 ${selectedEvent ? 'bottom-[218px]' : 'bottom-[120px]'} lg:right-4 lg:bottom-4 z-20 ${sheet === 'half' ? 'hidden lg:flex' : 'flex'} items-center gap-1.5 h-8 px-2.5 rounded-lg border border-line-2 bg-card text-ink text-xs font-semibold shadow-[0_2px_8px_rgba(20,30,45,0.12)] cursor-pointer select-none`}
+            >
               <input
                 type="checkbox"
                 checked={moveSearch}
                 onChange={(e) => setMoveSearch(e.target.checked)}
-                className="w-4 h-4 accent-brand"
+                className="w-3.5 h-3.5 accent-brand"
               />
-              Искать при перемещении карты
+              Искать при перемещении
             </label>
           )}
           {loading && view === 'map' && (
