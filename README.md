@@ -9,6 +9,8 @@ Sportikus помогает найти и организовать спортив
 
 📐 Подробнее об устройстве системы — в [`docs/architecture.md`](docs/architecture.md) (компоненты, ER-диаграмма, потоки, рекомендательная система, принятые решения).
 
+📚 Полная документация (продукт, сценарии, покрытие ТЗ, инженерия) собрана на [Zensical](https://zensical.org) в [`docs-zensical/`](docs-zensical/README.md); готовый PDF — [`sportikus-docs.pdf`](sportikus-docs.pdf). Пересобрать PDF: `python scripts/build_pdf.py`.
+
 ---
 
 ## ✨ Возможности
