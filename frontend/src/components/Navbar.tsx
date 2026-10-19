@@ -4,13 +4,13 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
 import { citiesApi } from '../api';
 import type { City } from '../types';
-import { ArrowUpRight, ChevronDown, List, LogIn, LogOut, Map as MapIcon, MapPin, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-react';
+import { ChevronDown, List, LogIn, LogOut, Map as MapIcon, MapPin, Moon, Plus, Search, Sun, UserRound, X } from 'lucide-react';
 import { NotificationBell } from './NotificationBell';
 
 const Logo: React.FC = () => (
   <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — на главную">
     <span className="w-[38px] h-[38px] rounded-[10px] bg-brand text-on-brand flex items-center justify-center">
-      <ArrowUpRight className="w-6 h-6" strokeWidth={2.2} />
+      <img src="/logo-s.png" alt="" className="h-[22px] w-auto" />
     </span>
     <span className="text-[22px] sm:text-2xl font-extrabold tracking-[-0.03em] text-ink">Sportikus</span>
   </Link>
