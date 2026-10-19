@@ -14,6 +14,7 @@ import ru.sportikus.event.service.EventAccess;
 import ru.sportikus.event.service.EventMapper;
 import ru.sportikus.form.FieldValidator;
 import ru.sportikus.participation.ParticipationChangedEvent;
+import ru.sportikus.participation.dto.CheckInResponse;
 import ru.sportikus.participation.dto.DecisionRequest;
 import ru.sportikus.participation.dto.JoinRequest;
 import ru.sportikus.participation.dto.ParticipationResponse;
@@ -100,6 +101,9 @@ public class ParticipationService {
         ParticipationStatus previous = existing == null ? null : existing.getStatus();
         Participation p = existing != null ? existing : Participation.builder().event(event).user(user).build();
         p.setStatus(instant ? ParticipationStatus.CONFIRMED : ParticipationStatus.PENDING);
+        if (instant && p.getTicketCode() == null) {
+            p.setTicketCode(generateTicketCode());
+        }
         p.setMessage(blankToNull(req.message()));
         p.setAnswers(new LinkedHashMap<>(answers));
         p.setDecisionComment(null);
@@ -183,12 +187,71 @@ public class ParticipationService {
 
         User manager = userRepository.getReferenceById(auth.id());
         p.setStatus(req.decision());
+        if (req.decision() == ParticipationStatus.CONFIRMED && p.getTicketCode() == null) {
+            p.setTicketCode(generateTicketCode());
+        }
         p.setDecisionComment(blankToNull(req.comment()));
         p.setDecidedAt(Instant.now());
         p.setDecidedBy(manager);
         Participation saved = participationRepository.save(p);
         events.publishEvent(new ParticipationChangedEvent(p.getUser().getId(), eventId, from, req.decision()));
         return ParticipationResponse.withUser(saved);
+    }
+
+    /** Контроль входа на мероприятие организатором по коду билета (из QR-кода). */
+    @Transactional
+    public CheckInResponse checkIn(AuthUser auth, Long eventId, String rawTicketCode) {
+        Event event = eventRepository.findDetailedById(eventId)
+                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        if (!EventAccess.isManager(event, auth.id()) && !auth.isAdmin()) {
+            throw ApiException.forbidden("Отмечать билеты может только организатор мероприятия");
+        }
+
+        boolean isPaid = event.getPrice() != null && event.getPrice().compareTo(java.math.BigDecimal.ZERO) > 0;
+
+        if (rawTicketCode == null || rawTicketCode.isBlank()) {
+            return new CheckInResponse(false, "NOT_FOUND", "Код билета не указан",
+                    null, null, null, event.getTitle(), isPaid, event.getPrice());
+        }
+        String code = rawTicketCode.trim().toUpperCase();
+
+        Participation p = participationRepository.findByTicketCode(code).orElse(null);
+        if (p == null) {
+            return new CheckInResponse(false, "NOT_FOUND",
+                    "Билет с кодом «" + code + "» не найден в системе",
+                    code, null, null, event.getTitle(), isPaid, event.getPrice());
+        }
+
+        ParticipationResponse.Participant participant = new ParticipationResponse.Participant(
+                p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl());
+
+        if (!p.getEvent().getId().equals(eventId)) {
+            return new CheckInResponse(false, "WRONG_EVENT",
+                    "Билет от другого события: «" + p.getEvent().getTitle() + "»!",
+                    code, null, participant, event.getTitle(), isPaid, event.getPrice());
+        }
+
+        if (p.getStatus() != ParticipationStatus.CONFIRMED) {
+            return new CheckInResponse(false, "NOT_CONFIRMED",
+                    "Заявка участника не подтверждена (статус: " + p.getStatus() + ")",
+                    code, null, participant, event.getTitle(), isPaid, event.getPrice());
+        }
+
+        if (p.isCheckedIn()) {
+            return new CheckInResponse(false, "ALREADY_CHECKED_IN",
+                    "Внимание! Билет уже был использован ранее (" + p.getCheckedInAt() + ")!",
+                    code, p.getCheckedInAt(), participant, event.getTitle(), isPaid, event.getPrice());
+        }
+
+        User manager = userRepository.getReferenceById(auth.id());
+        p.setCheckedIn(true);
+        p.setCheckedInAt(Instant.now());
+        p.setCheckedInBy(manager);
+        Participation saved = participationRepository.save(p);
+
+        return new CheckInResponse(true, "SUCCESS",
+                "Участник подтверждён и допущен на мероприятие!",
+                code, saved.getCheckedInAt(), participant, event.getTitle(), isPaid, event.getPrice());
     }
 
     /** Заявки и участия текущего пользователя вместе с мероприятиями. */
@@ -205,6 +268,10 @@ public class ParticipationService {
     private Event lockEvent(Long eventId) {
         return eventRepository.findForUpdate(eventId)
                 .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+    }
+
+    private static String generateTicketCode() {
+        return "SPT-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
     }
 
     private static String blankToNull(String s) {

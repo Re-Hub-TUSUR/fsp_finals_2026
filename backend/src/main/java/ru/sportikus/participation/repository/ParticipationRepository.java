@@ -66,4 +66,7 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
 
     @EntityGraph(attributePaths = {"user", "event"})
     Optional<Participation> findWithUserById(Long id);
+
+    @EntityGraph(attributePaths = {"user", "event"})
+    Optional<Participation> findByTicketCode(String ticketCode);
 }

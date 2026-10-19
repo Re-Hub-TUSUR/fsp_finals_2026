@@ -22,6 +22,7 @@ import type {
   FriendshipState,
   Achievement,
   OrganizationSubscription,
+  CheckInResult,
 } from '../types';
 
 export const achievementsApi = {
@@ -111,6 +112,8 @@ export const participationApi = {
     api
       .patch<Participation>(`/events/${eventId}/participations/${participationId}`, { decision, comment })
       .then((r) => r.data),
+  checkIn: (eventId: number | string, ticketCode: string) =>
+    api.post<CheckInResult>(`/events/${eventId}/checkin`, { ticketCode }).then((r) => r.data),
 };
 
 export const meApi = {

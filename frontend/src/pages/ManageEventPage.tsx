@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { ArrowLeft, Check, Loader2, MessageSquare, ShieldAlert, X } from 'lucide-react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
+import { ArrowLeft, Camera, Check, CheckCircle2, Loader2, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { FieldDef, FieldValue, Participation, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
+import { CheckInScannerModal } from '../components/CheckInScannerModal';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { displayValue, inputClass, labelClass } from '../components/FieldInput';
 import { formatShortDateTime } from '../utils/format';
@@ -29,6 +30,7 @@ const Answers: React.FC<{ fields: FieldDef[]; answers?: Record<string, FieldValu
 
 export const ManageEventPage: React.FC = () => {
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
   const { currentUser, ready } = useAuth();
   const [event, setEvent] = useState<SportEvent | null>(null);
   const [items, setItems] = useState<Participation[]>([]);
@@ -38,6 +40,7 @@ export const ManageEventPage: React.FC = () => {
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<Participation | null>(null);
   const [reason, setReason] = useState('');
+  const [scannerOpen, setScannerOpen] = useState(searchParams.get('scanner') === '1');
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -52,6 +55,17 @@ export const ManageEventPage: React.FC = () => {
       setLoading(false);
     }
   }, [id]);
+
+  const checkInDirect = async (ticketCode: string) => {
+    if (!event) return;
+    setActionError(null);
+    try {
+      await participationApi.checkIn(event.id, ticketCode);
+      await load();
+    } catch (e) {
+      setActionError(errorMessage(e));
+    }
+  };
 
   useEffect(() => {
     if (!ready) return;
@@ -124,6 +138,26 @@ export const ManageEventPage: React.FC = () => {
           )}
           <Answers fields={questions} answers={p.answers} />
           {p.decisionComment && <p className="mt-2 text-sm text-slate-500">Ваш комментарий: «{p.decisionComment}»</p>}
+          {p.status === 'CONFIRMED' && p.ticketCode && (
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
+              <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200">
+                Билет: {p.ticketCode}
+              </span>
+              {p.checkedIn ? (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-100 px-2.5 py-0.5 rounded-full">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён {p.checkedInAt ? `(${p.checkedInAt.slice(11, 16)})` : ''}
+                </span>
+              ) : (
+                <button
+                  onClick={() => checkInDirect(p.ticketCode!)}
+                  disabled={busyId === p.id}
+                  className="inline-flex items-center gap-1 text-xs font-semibold bg-emerald-600 hover:bg-emerald-700 text-snow px-3 py-1 rounded-lg transition shadow-sm"
+                >
+                  <UserCheck className="w-3.5 h-3.5" /> Отметить вход
+                </button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -176,6 +210,31 @@ export const ManageEventPage: React.FC = () => {
       <p className="text-slate-500 mb-5">
         {formatShortDateTime(event.startTime, event.timeZone)} · {event.address}
       </p>
+
+      <div className="flex flex-wrap items-center justify-between gap-3 bg-gradient-to-r from-slate-900 to-slate-800 text-snow rounded-2xl p-4 sm:p-5 mb-6 shadow-md border border-slate-700">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold">
+            <QrCode className="w-5 h-5" />
+          </div>
+          <div>
+            <div className="font-bold text-base">Контроль входа и проверка QR-билетов</div>
+            <p className="text-xs text-slate-300 mt-0.5">
+              Отмечено на площадке:{' '}
+              <b className="text-emerald-400">
+                {groups.confirmed.filter((p) => p.checkedIn).length}
+              </b>{' '}
+              из {groups.confirmed.length} участников
+            </p>
+          </div>
+        </div>
+        <button
+          onClick={() => setScannerOpen(true)}
+          className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
+        >
+          <Camera className="w-4 h-4" />
+          Сканировать QR / Ввести код
+        </button>
+      </div>
 
       <div className="bg-white rounded-2xl border border-slate-200 p-4 mb-6 flex items-center justify-between shadow-sm">
         <div>
@@ -236,6 +295,15 @@ export const ManageEventPage: React.FC = () => {
             </button>
           </div>
         </Modal>
+      )}
+
+      {scannerOpen && (
+        <CheckInScannerModal
+          event={event}
+          confirmedParticipants={groups.confirmed}
+          onCheckInSuccess={() => void load()}
+          onClose={() => setScannerOpen(false)}
+        />
       )}
     </div>
   );

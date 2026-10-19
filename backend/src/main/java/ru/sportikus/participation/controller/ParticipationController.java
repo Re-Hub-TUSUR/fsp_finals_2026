@@ -58,4 +58,11 @@ public class ParticipationController {
                                         @Valid @RequestBody DecisionRequest request) {
         return participationService.decide(CurrentUser.require(), eventId, participationId, request);
     }
+
+    @PostMapping("/checkin")
+    @Operation(summary = "Отметить участника на входе по QR-коду / коду билета (только организатор)")
+    public ru.sportikus.participation.dto.CheckInResponse checkIn(@PathVariable Long eventId,
+                                                                   @Valid @RequestBody ru.sportikus.participation.dto.CheckInRequest request) {
+        return participationService.checkIn(CurrentUser.require(), eventId, request.ticketCode());
+    }
 }

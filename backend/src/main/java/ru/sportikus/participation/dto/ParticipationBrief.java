@@ -11,10 +11,16 @@ public record ParticipationBrief(
         ParticipationStatus status,
         String message,
         String decisionComment,
-        Instant createdAt
+        Instant createdAt,
+        String ticketCode,
+        Boolean checkedIn,
+        Instant checkedInAt
 ) {
 
     public static ParticipationBrief from(Participation p) {
-        return new ParticipationBrief(p.getId(), p.getStatus(), p.getMessage(), p.getDecisionComment(), p.getCreatedAt());
+        return new ParticipationBrief(
+                p.getId(), p.getStatus(), p.getMessage(), p.getDecisionComment(), p.getCreatedAt(),
+                p.getTicketCode(), p.isCheckedIn(), p.getCheckedInAt()
+        );
     }
 }

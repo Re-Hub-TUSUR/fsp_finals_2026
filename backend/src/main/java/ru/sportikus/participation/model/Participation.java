@@ -58,6 +58,22 @@ public class Participation {
     @JoinColumn(name = "decided_by")
     private User decidedBy;
 
+    /** Уникальный код электронного билета (закодирован в QR-коде участника). */
+    @Column(name = "ticket_code", length = 64, unique = true)
+    private String ticketCode;
+
+    /** Отметка о фактическом проходе / допуске на мероприятие. */
+    @Column(name = "checked_in", nullable = false)
+    @Builder.Default
+    private boolean checkedIn = false;
+
+    @Column(name = "checked_in_at")
+    private Instant checkedInAt;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "checked_in_by")
+    private User checkedInBy;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default
     private Instant createdAt = Instant.now();

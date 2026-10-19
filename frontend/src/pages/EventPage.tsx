@@ -14,6 +14,7 @@ import {
   Mail,
   MapPin,
   Phone,
+  QrCode,
   ShieldAlert,
   Trophy,
   User as UserIcon,
@@ -25,6 +26,8 @@ import { useAuth } from '../context/AuthContext';
 import type { SportEvent } from '../types';
 import { JoinDialog } from '../components/JoinDialog';
 import { EventDiscussion } from '../components/EventDiscussion';
+import { TicketModal } from '../components/TicketModal';
+import { CheckInScannerModal } from '../components/CheckInScannerModal';
 import { MiniMap } from '../components/MiniMap';
 import { Modal } from '../components/Modal';
 import { displayValue } from '../components/FieldInput';
@@ -62,6 +65,8 @@ export const EventPage: React.FC = () => {
   const [joinOpen, setJoinOpen] = useState(false);
   const [cancelOpen, setCancelOpen] = useState(false);
   const [completeOpen, setCompleteOpen] = useState(false);
+  const [ticketOpen, setTicketOpen] = useState(false);
+  const [scannerOpen, setScannerOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
 
@@ -182,7 +187,7 @@ export const EventPage: React.FC = () => {
           </div>
           <Link
             to={`/events/${event.id}/manage`}
-            className="block text-center bg-brand hover:bg-brand-hover text-on-brand font-semibold py-3 rounded-xl"
+            className="block text-center bg-brand hover:bg-brand-hover text-on-brand font-semibold py-3 rounded-xl shadow-sm"
           >
             Заявки и участники
             {!!event.pendingCount && (
@@ -191,10 +196,17 @@ export const EventPage: React.FC = () => {
               </span>
             )}
           </Link>
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="w-full flex items-center justify-center gap-2 text-center bg-slate-900 hover:bg-slate-800 text-snow font-semibold py-3 rounded-xl shadow-sm transition active:scale-98"
+          >
+            <QrCode className="w-4 h-4 text-brand" />
+            Контроль входа (Сканер QR)
+          </button>
           {ended && (
             <button
               onClick={() => setCompleteOpen(true)}
-              className="w-full rounded-xl bg-slate-900 px-4 py-3 font-semibold text-white hover:bg-slate-800"
+              className="w-full rounded-xl bg-slate-800 px-4 py-3 font-semibold text-white hover:bg-slate-700"
             >
               Завершить событие
             </button>
@@ -214,10 +226,29 @@ export const EventPage: React.FC = () => {
         <div className="space-y-3">
           <div className="rounded-xl bg-brand-tint border border-brand-line p-4 text-brand-ink">
             <div className="flex items-center gap-2 font-bold">
-              <CheckCircle2 className="w-5 h-5" /> Вы участвуете!
+              <CheckCircle2 className="w-5 h-5 text-emerald-600" /> Вы участвуете!
             </div>
+            {my.checkedIn ? (
+              <div className="mt-2 text-xs font-semibold text-emerald-800 bg-emerald-100/80 rounded-lg p-2.5 flex items-center gap-1.5">
+                <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                Вход на мероприятие подтверждён организатором
+              </div>
+            ) : (
+              <p className="text-xs text-brand-ink/80 mt-1">Место забронировано. Покажите QR-код организатору на входе.</p>
+            )}
             {my.decisionComment && <p className="text-sm mt-1">Организатор: «{my.decisionComment}»</p>}
           </div>
+
+          {my.ticketCode && (
+            <button
+              onClick={() => setTicketOpen(true)}
+              className="w-full flex items-center justify-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-bold py-3.5 rounded-xl shadow-md transition active:scale-98"
+            >
+              <QrCode className="w-5 h-5" />
+              Показать QR-билет
+            </button>
+          )}
+
           {!ended && (
             <button onClick={() => setCancelOpen(true)} className="w-full text-sm font-semibold text-red-700 hover:bg-red-50 py-2.5 rounded-xl">
               Отменить участие
@@ -608,6 +639,27 @@ export const EventPage: React.FC = () => {
             <button type="button" disabled={busy} onClick={completeEvent} className="rounded-xl bg-slate-900 px-4 py-2.5 font-semibold text-white disabled:opacity-50">{busy ? 'Завершение...' : 'Завершить'}</button>
           </div>
         </Modal>
+      )}
+
+      {ticketOpen && my?.ticketCode && (
+        <TicketModal
+          event={event}
+          ticketCode={my.ticketCode}
+          participantName={currentUser?.fullName ?? 'Участник'}
+          participantAvatar={currentUser?.avatarUrl}
+          checkedIn={my.checkedIn}
+          checkedInAt={my.checkedInAt}
+          onClose={() => setTicketOpen(false)}
+        />
+      )}
+
+      {scannerOpen && (
+        <CheckInScannerModal
+          event={event}
+          confirmedParticipants={[]}
+          onCheckInSuccess={() => void load()}
+          onClose={() => setScannerOpen(false)}
+        />
       )}
     </div>
   );

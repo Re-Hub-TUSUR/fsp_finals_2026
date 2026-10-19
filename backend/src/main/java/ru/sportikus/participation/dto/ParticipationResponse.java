@@ -19,7 +19,10 @@ public record ParticipationResponse(
         Instant createdAt,
         Instant decidedAt,
         Participant user,
-        EventResponse event
+        EventResponse event,
+        String ticketCode,
+        Boolean checkedIn,
+        Instant checkedInAt
 ) {
 
     public record Participant(Long id, String fullName, String avatarUrl) {
@@ -28,11 +31,13 @@ public record ParticipationResponse(
     public static ParticipationResponse withUser(Participation p) {
         return new ParticipationResponse(p.getId(), p.getStatus(), p.getMessage(), p.getAnswers(),
                 p.getDecisionComment(), p.getCreatedAt(), p.getDecidedAt(),
-                new Participant(p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl()), null);
+                new Participant(p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl()), null,
+                p.getTicketCode(), p.isCheckedIn(), p.getCheckedInAt());
     }
 
     public static ParticipationResponse withEvent(Participation p, EventResponse event) {
         return new ParticipationResponse(p.getId(), p.getStatus(), p.getMessage(), p.getAnswers(),
-                p.getDecisionComment(), p.getCreatedAt(), p.getDecidedAt(), null, event);
+                p.getDecisionComment(), p.getCreatedAt(), p.getDecidedAt(), null, event,
+                p.getTicketCode(), p.isCheckedIn(), p.getCheckedInAt());
     }
 }

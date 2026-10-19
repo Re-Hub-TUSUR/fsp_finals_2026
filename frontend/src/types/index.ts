@@ -169,6 +169,9 @@ export interface ParticipationBrief {
   message?: string;
   decisionComment?: string;
   createdAt: string;
+  ticketCode?: string;
+  checkedIn?: boolean;
+  checkedInAt?: string;
 }
 
 export interface SportEvent {
@@ -235,6 +238,21 @@ export interface Participation {
   decidedAt?: string;
   user?: { id: number; fullName: string; avatarUrl?: string };
   event?: SportEvent;
+  ticketCode?: string;
+  checkedIn?: boolean;
+  checkedInAt?: string;
+}
+
+export interface CheckInResult {
+  success: boolean;
+  status: 'SUCCESS' | 'ALREADY_CHECKED_IN' | 'NOT_FOUND' | 'WRONG_EVENT' | 'NOT_CONFIRMED';
+  message: string;
+  ticketCode?: string;
+  checkedInAt?: string;
+  participant?: { id: number; fullName: string; avatarUrl?: string };
+  eventTitle?: string;
+  isPaid?: boolean;
+  price?: number;
 }
 
 export interface AdminOrganization {

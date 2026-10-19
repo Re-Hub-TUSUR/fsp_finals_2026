@@ -1,11 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, Calendar, Loader2, MapPin, PlusCircle } from 'lucide-react';
+import { Archive, Calendar, CheckCircle2, Loader2, MapPin, PlusCircle, QrCode } from 'lucide-react';
 import { meApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
+import { TicketModal } from '../components/TicketModal';
 import { formatShortDateTime } from '../utils/format';
 import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
@@ -18,6 +19,7 @@ export const MyEventsPage: React.FC = () => {
   const [managed, setManaged] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedTicket, setSelectedTicket] = useState<{ event: SportEvent; participation: Participation } | null>(null);
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
@@ -135,6 +137,25 @@ export const MyEventsPage: React.FC = () => {
                   {p.event.status !== 'PUBLISHED' && (
                     <p className="mt-2 text-sm text-red-700">Мероприятие снято с публикации: {p.event.unpublishReason}</p>
                   )}
+                  {p.status === 'CONFIRMED' && p.ticketCode && (
+                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                      {p.checkedIn ? (
+                        <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
+                          <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён {p.checkedInAt ? `(${p.checkedInAt.slice(11, 16)})` : ''}
+                        </span>
+                      ) : (
+                        <span className="text-xs text-slate-500">
+                          Билет: <code className="font-mono font-bold text-slate-800">{p.ticketCode}</code>
+                        </span>
+                      )}
+                      <button
+                        onClick={() => setSelectedTicket({ event: p.event!, participation: p })}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand text-on-brand hover:bg-brand-hover px-3 py-1.5 rounded-xl transition shadow-sm"
+                      >
+                        <QrCode className="w-3.5 h-3.5" /> Показать билет
+                      </button>
+                    </div>
+                  )}
                   {(p.status === 'PENDING' || p.status === 'CONFIRMED') && new Date(p.event.endTime) > new Date() && (
                     <div className="mt-3 text-right">
                       <button onClick={() => cancel(p)} className="text-sm font-semibold text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg">
@@ -201,6 +222,18 @@ export const MyEventsPage: React.FC = () => {
             </section>
           )}
         </div>
+      )}
+
+      {selectedTicket && (
+        <TicketModal
+          event={selectedTicket.event}
+          ticketCode={selectedTicket.participation.ticketCode!}
+          participantName={currentUser.fullName}
+          participantAvatar={currentUser.avatarUrl}
+          checkedIn={selectedTicket.participation.checkedIn}
+          checkedInAt={selectedTicket.participation.checkedInAt}
+          onClose={() => setSelectedTicket(null)}
+        />
       )}
     </div>
   );
