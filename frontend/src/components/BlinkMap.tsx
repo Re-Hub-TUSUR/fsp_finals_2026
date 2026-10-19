@@ -38,8 +38,8 @@ interface BlinkMapProps {
 
 /** Круг радиуса в цвет акцента темы (MapGL принимает только hex) */
 const RADIUS_COLORS = {
-  light: { fill: '#0BD68A1A', stroke: '#0BD68A' },
-  dark: { fill: '#DDF55E1A', stroke: '#DDF55E' },
+  light: { fill: '#04D7931A', stroke: '#04D793' },
+  dark: { fill: '#D5F45B1A', stroke: '#D5F45B' },
 };
 
 // Center of Krasnoyarsk ([lng, lat] для 2GIS)

@@ -46,16 +46,16 @@ body,
   /* Рамки контролов (фильтры, поиск, кнопки) — по макету «Карта и Лента» */
   --color-line-2: #a9b1ba;
 
-  --color-brand: #0bd68a;
-  --color-brand-hover: #07b875;
+  --color-brand: #04d793;
+  --color-brand-hover: #03c485;
   --color-on-brand: #ffffff;
   --color-brand-tint: #e8fcf4;
   --color-brand-tint-2: #d2f7e8;
-  --color-brand-ink: #057a50;
+  --color-brand-ink: #04d793;
   --color-brand-line: #9debcb;
 
-  --color-hot: #0bd68a;
-  --color-hot-tint: #0bd68a;
+  --color-hot: #04d793;
+  --color-hot-tint: #04d793;
   --color-hot-ink: #ffffff;
   --color-flame: #ff7a45;
   --color-warn-tint: #fff0e8;
@@ -93,12 +93,12 @@ body,
   --color-line: #373c41;
   --color-line-2: #6b727a;
 
-  --color-brand: #ddf55e;
-  --color-brand-hover: #cbe645;
+  --color-brand: #d5f45b;
+  --color-brand-hover: #c4e447;
   --color-on-brand: #111315;
   --color-brand-tint: #2a3220;
   --color-brand-tint-2: #344026;
-  --color-brand-ink: #ddf55e;
+  --color-brand-ink: #d5f45b;
   --color-brand-line: #56622c;
 
   --color-hot: #f4a383;
