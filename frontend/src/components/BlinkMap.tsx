@@ -10,11 +10,15 @@ import {
   meElement,
   pinElement,
 } from '../lib/mapPins';
-import type { LatLng } from '../utils/eventView';
+import { distanceKm, type LatLng } from '../utils/eventView';
 import { useTheme } from '../context/ThemeContext';
 import { MapFallback } from './MapFallback';
 import { MapEventCard } from './MapEventCard';
 import { Loader2, Minus, Moon, Plus, Sun } from 'lucide-react';
+
+export interface MapViewport extends LatLng {
+  radiusKm: number;
+}
 
 interface BlinkMapProps {
   events: SportEvent[];
@@ -23,6 +27,7 @@ interface BlinkMapProps {
   /** Где пользователь (для «я здесь» и расстояний) */
   me: LatLng | null;
   onLocate: (me: LatLng) => void;
+  onViewportChange: (viewport: MapViewport) => void;
   /** Позиция колонки кнопок управления (на мобильном — под поиском и чипами) */
   controlsClassName?: string;
   /** Отступ карточки выбранного события снизу (на мобильном — над нижней навигацией) */
@@ -64,12 +69,15 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   onSelectEvent,
   me,
   onLocate,
+  onViewportChange,
   controlsClassName = 'top-4 right-4',
   cardClassName = 'bottom-4',
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectEvent);
   onSelectRef.current = onSelectEvent;
+  const onViewportRef = useRef(onViewportChange);
+  onViewportRef.current = onViewportChange;
   const lastPinClick = useRef(0);
   const fitted = useRef(false);
   const { theme, toggleTheme } = useTheme();
@@ -93,12 +101,26 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   useEffect(() => {
     if (!instance) return;
     const { map } = instance;
-    const onMoveEnd = () => setViewTick((t) => t + 1);
+    const onMoveEnd = () => {
+      setViewTick((t) => t + 1);
+      const [lng, lat] = map.getCenter();
+      const { southWest, northEast } = map.getBounds();
+      const center = { lat, lng };
+      const corners = [
+        { lat: southWest[1], lng: southWest[0] },
+        { lat: southWest[1], lng: northEast[0] },
+        { lat: northEast[1], lng: southWest[0] },
+        { lat: northEast[1], lng: northEast[0] },
+      ];
+      const radiusKm = Math.max(1, Math.min(300, Math.ceil(Math.max(...corners.map((corner) => distanceKm(center, corner))))));
+      onViewportRef.current({ ...center, radiusKm });
+    };
     const onClick = () => {
       if (Date.now() - lastPinClick.current > 300) onSelectRef.current(null);
     };
     map.on('moveend', onMoveEnd);
     map.on('click', onClick);
+    onMoveEnd();
     return () => {
       map.off('moveend', onMoveEnd);
       map.off('click', onClick);

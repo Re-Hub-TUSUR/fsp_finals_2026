@@ -2,6 +2,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import type { JoinMode, SkillLevel, Sport, SportEvent } from '../types';
 import { BlinkMap } from '../components/BlinkMap';
+import type { MapViewport } from '../components/BlinkMap';
 import { EventMeter, OrgAvatar } from '../components/EventBits';
 import { Modal } from '../components/Modal';
 import { Chip, SectionLabel, Segmented, Toggle } from '../components/ui';
@@ -59,6 +60,8 @@ export const HomePage: React.FC = () => {
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [selectedId, setSelectedId] = useState<number | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
+  // Каталог доступен и без ключа карты; после инициализации 2ГИС уточнит область.
+  const [viewport, setViewport] = useState<MapViewport>({ lat: 56.0153, lng: 92.8932, radiusKm: 50 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -87,7 +90,7 @@ export const HomePage: React.FC = () => {
   }, [searchQuery]);
 
   useEffect(() => {
-    if (!ready || !viewport) return;
+    if (!ready) return;
     let cancelled = false;
     setLoading(true);
     eventsApi
@@ -112,7 +115,7 @@ export const HomePage: React.FC = () => {
       cancelled = true;
     };
     // currentUser?.id — чтобы после смены роли обновились статусы «Вы участвуете»
-  }, [ready, currentUser?.id, selectedSports, debouncedQuery, skill, joinMode]);
+  }, [ready, viewport, currentUser?.id, selectedSports, debouncedQuery, skill, joinMode]);
 
   // Фильтры «когда», «расстояние», «свободные места» и сортировка — на клиенте
   const visible = useMemo(() => {
@@ -300,6 +303,7 @@ export const HomePage: React.FC = () => {
           onSelectEvent={(e) => setSelectedId(e?.id ?? null)}
           me={me}
           onLocate={setMe}
+          onViewportChange={setViewport}
           controlsClassName="top-[118px] right-3 lg:top-4 lg:right-4"
           cardClassName="bottom-3 lg:bottom-4"
         />
