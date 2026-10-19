@@ -21,6 +21,9 @@ spring:
   flyway:
     enabled: true
     baseline-on-migrate: true
+    # Нужен для уже созданных демо-БД: V5 moderation пришла из merge после V6 friendships.
+    # На чистой БД миграции всё равно выполняются в обычном порядке V5 → V6.
+    out-of-order: true
     locations: classpath:db/migration
   servlet:
     multipart:
