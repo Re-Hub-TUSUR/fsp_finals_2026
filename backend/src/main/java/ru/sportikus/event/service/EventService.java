@@ -22,6 +22,7 @@ import ru.sportikus.event.repository.EventSpecs;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
 import ru.sportikus.form.FieldValidator;
+import ru.sportikus.moderation.EventModerationService;
 import ru.sportikus.organization.model.Organization;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
@@ -58,6 +59,7 @@ public class EventService {
     private final EventMapper mapper;
     private final EventGeoRepository geoRepository;
     private final CityRepository cityRepository;
+    private final EventModerationService moderationService;
 
     // ------------------------------------------------------------------ чтение
 
@@ -86,7 +88,8 @@ public class EventService {
     public EventResponse details(Long id, Optional<AuthUser> viewer) {
         Event event = eventRepository.findDetailedById(id)
                 .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
-        return mapper.toDetails(event, viewer.map(AuthUser::id).orElse(null));
+        return mapper.toDetails(event, viewer.map(AuthUser::id).orElse(null),
+                viewer.map(AuthUser::isAdmin).orElse(false));
     }
 
     /** Мероприятия, которыми управляет пользователь (свои и своей организации), с числом заявок в ожидании. */
@@ -161,6 +164,9 @@ public class EventService {
             event.setCity(city);
             event.setTimeZone(city.getTimeZone());
         });
+        // Автопроверка, этап 1: фильтр слов. Сомнительное мероприятие сохраняется скрытым (MODERATION)
+        // и после коммита уходит на проверку ИИ — см. EventController#create
+        moderationService.screen(event);
 
         return mapper.toDetails(eventRepository.save(event), auth.id());
     }

@@ -82,3 +82,20 @@ recommendations:
     enabled: true
     popularity-refresh: PT5M
     nightly-cron: "0 30 3 * * *"
+
+# Автопроверка новых мероприятий: фильтр запрещённых тем → при сомнении проверка ИИ (см. ModerationProperties)
+moderation:
+  enabled: ${MODERATION_ENABLED:true}
+  # Свой вид спорта и категорию «Другое» словарь оценить не может — их тематику проверяет ИИ
+  review-custom-sports: true
+  review-sport-slugs: [drugoe]
+  stuck-after: PT1M
+  llm:
+    enabled: true
+    base-url: ${ROUTERAI_BASE_URL:https://routerai.ru/api/v1}
+    # Без ключа второй этап пропускается: сомнительные мероприятия публикуются с пометкой для администратора
+    api-key: ${ROUTERAI_API_KEY:}
+    model: ${MODERATION_LLM_MODEL:google/gemini-2.5-flash-lite}
+    timeout: PT8S
+    max-tokens: 200
+    max-input-chars: 4000

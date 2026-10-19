@@ -8,6 +8,7 @@ import type { AdminOrganization, EventComment, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
 import { inputClass, labelClass } from '../components/FieldInput';
 import { formatShortDateTime } from '../utils/format';
+import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, needsAdminAttention } from '../utils/moderation';
 
 type Target = { kind: 'org'; item: AdminOrganization } | { kind: 'event'; item: SportEvent };
 
@@ -28,6 +29,7 @@ export const AdminPage: React.FC = () => {
   const [target, setTarget] = useState<Target | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [eventFilter, setEventFilter] = useState<'all' | 'attention' | 'rejected'>('all');
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
@@ -83,6 +85,23 @@ export const AdminPage: React.FC = () => {
   }
 
   const pending = orgs.filter((o) => o.status === 'PENDING').length;
+  const attention = events.filter(needsAdminAttention).length;
+  const autoRejected = events.filter((e) => e.moderation?.status === 'REJECTED').length;
+  const shownEvents = events.filter((e) =>
+    eventFilter === 'attention' ? needsAdminAttention(e) : eventFilter === 'rejected' ? e.moderation?.status === 'REJECTED' : true,
+  );
+  const filterChip = (key: typeof eventFilter, label: string) => (
+    <button
+      key={key}
+      onClick={() => setEventFilter(key)}
+      aria-pressed={eventFilter === key}
+      className={`px-3 py-1.5 rounded-full text-sm font-semibold border ${
+        eventFilter === key ? 'bg-brand border-brand text-on-brand' : 'bg-white border-slate-200 text-slate-700 hover:bg-slate-50'
+      }`}
+    >
+      {label}
+    </button>
+  );
   const tabClass = (active: boolean) =>
     `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
       active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -108,6 +127,11 @@ export const AdminPage: React.FC = () => {
         <button onClick={() => setTab('events')} className={tabClass(tab === 'events')}>
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
+          {attention > 0 && (
+            <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full" title="Требуют внимания после автопроверки">
+              {ATTENTION_SYMBOL} {attention}
+            </span>
+          )}
         </button>
         <button onClick={() => setTab('comments')} className={tabClass(tab === 'comments')}>
           <MessageSquare className="w-4 h-4" />
@@ -177,12 +201,26 @@ export const AdminPage: React.FC = () => {
         <div className="space-y-3">
           <p className="text-sm text-slate-500">
             Снятое с публикации мероприятие исчезает с карты и из поиска; по прямой ссылке видна причина, запись закрыта.
+            Знаком {ATTENTION_SYMBOL} отмечены сомнительные мероприятия, которые пропустила автопроверка: посмотрите их
+            внимательнее и нажмите «Проверено» или снимите с публикации.
           </p>
-          {events.map((ev) => (
+          <div className="flex flex-wrap gap-2">
+            {filterChip('all', `Все (${events.length})`)}
+            {filterChip('attention', `${ATTENTION_SYMBOL} Требуют внимания (${attention})`)}
+            {filterChip('rejected', `Отклонены автопроверкой (${autoRejected})`)}
+          </div>
+          {shownEvents.length === 0 && (
+            <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">Здесь пусто</div>
+          )}
+          {shownEvents.map((ev) => (
             <div
               key={ev.id}
               className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
-                ev.status === 'PUBLISHED' ? 'border-slate-200' : 'border-red-200 bg-red-50/40'
+                needsAdminAttention(ev)
+                  ? 'border-amber-300 bg-amber-50/40'
+                  : ev.status === 'PUBLISHED'
+                    ? 'border-slate-200'
+                    : 'border-red-200 bg-red-50/40'
               }`}
             >
               <div className="min-w-0">
@@ -193,19 +231,53 @@ export const AdminPage: React.FC = () => {
                 <p className="text-sm text-slate-500">
                   {ev.organizerName} · {formatShortDateTime(ev.startTime, ev.timeZone)}
                 </p>
-                {ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1">Снято: {ev.unpublishReason}</p>}
+                {ev.status === 'MODERATION' ? (
+                  <p className="text-sm text-amber-800 mt-1">⏳ Идёт проверка ИИ</p>
+                ) : (
+                  ev.status !== 'PUBLISHED' && <p className="text-sm text-red-700 mt-1">Снято: {ev.unpublishReason}</p>
+                )}
+                {needsAdminAttention(ev) && ev.moderation && (
+                  <div className="mt-2 text-sm text-amber-900">
+                    <span className="inline-flex items-center gap-1 font-semibold bg-amber-100 border border-amber-300 px-2 py-0.5 rounded-lg">
+                      {ATTENTION_SYMBOL} Прошло проверку ИИ — будьте внимательны
+                    </span>
+                    {ev.moderation.reason && <p className="mt-1">{ev.moderation.reason}</p>}
+                  </div>
+                )}
+                {ev.moderation?.status === 'REJECTED' && (
+                  <span className="inline-block mt-2 text-xs font-semibold bg-red-100 text-red-800 px-2 py-0.5 rounded-lg">
+                    Отклонено автопроверкой{ev.moderation.model ? ` · ${ev.moderation.model}` : ''}
+                  </span>
+                )}
+                {ev.moderation && ev.moderation.hits.length > 0 && ev.moderation.status !== 'CLEAN' && (
+                  <p className="mt-1 text-xs text-slate-500">
+                    Фильтр нашёл:{' '}
+                    {ev.moderation.hits.map((h) => `«${h.term}» (${MODERATION_CATEGORY_LABELS[h.category]})`).join(', ')}
+                  </p>
+                )}
               </div>
               {ev.status === 'PUBLISHED' ? (
-                <button
-                  onClick={() => {
-                    setReason('');
-                    setTarget({ kind: 'event', item: ev });
-                  }}
-                  className="text-sm bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-4 py-2.5 rounded-xl shrink-0"
-                >
-                  Снять с публикации
-                </button>
-              ) : (
+                <div className="flex flex-wrap gap-2 shrink-0">
+                  {needsAdminAttention(ev) && (
+                    <button
+                      onClick={() => run(() => adminApi.moderationReviewed(ev.id))}
+                      disabled={busy}
+                      className="flex items-center gap-1.5 text-sm bg-brand hover:bg-brand-hover text-on-brand font-semibold px-4 py-2.5 rounded-xl"
+                    >
+                      <CheckCircle className="w-4 h-4" /> Проверено
+                    </button>
+                  )}
+                  <button
+                    onClick={() => {
+                      setReason('');
+                      setTarget({ kind: 'event', item: ev });
+                    }}
+                    className="text-sm bg-red-50 text-red-700 hover:bg-red-100 font-semibold px-4 py-2.5 rounded-xl"
+                  >
+                    Снять с публикации
+                  </button>
+                </div>
+              ) : ev.status === 'MODERATION' ? null : (
                 <button
                   onClick={() => run(() => adminApi.publish(ev.id))}
                   disabled={busy}

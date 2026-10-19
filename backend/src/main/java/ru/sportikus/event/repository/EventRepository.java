@@ -12,7 +12,9 @@ import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.sportikus.event.model.Event;
+import ru.sportikus.moderation.ModerationStatus;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
@@ -50,6 +52,9 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template", "city"})
     List<Event> findAllByOrderByStartTimeDesc();
+
+    /** Проверки ИИ, которые не завершились (например, после перезапуска). */
+    List<Event> findTop20ByModerationStatusAndCreatedAtBeforeOrderByCreatedAtAsc(ModerationStatus status, Instant before);
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
     List<Event> findByOrganizerUserIdAndStatusOrderByStartTimeAsc(Long userId, ru.sportikus.event.model.EventStatus status);

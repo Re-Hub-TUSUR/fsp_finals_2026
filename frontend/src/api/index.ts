@@ -99,6 +99,9 @@ export const adminApi = {
   unpublish: (id: number, reason: string) =>
     api.post<SportEvent>(`/admin/events/${id}/unpublish`, { reason }).then((r) => r.data),
   publish: (id: number) => api.post<SportEvent>(`/admin/events/${id}/publish`).then((r) => r.data),
+  /** Снять пометку автопроверки ⚠ — администратор посмотрел и оставляет мероприятие. */
+  moderationReviewed: (id: number) =>
+    api.post<SportEvent>(`/admin/events/${id}/moderation/reviewed`).then((r) => r.data),
 };
 
 export const citiesApi = {

@@ -7,6 +7,8 @@ import org.hibernate.type.SqlTypes;
 import ru.sportikus.city.model.City;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
+import ru.sportikus.moderation.ModerationHit;
+import ru.sportikus.moderation.ModerationStatus;
 import ru.sportikus.organization.model.Organization;
 import ru.sportikus.sport.model.Sport;
 import ru.sportikus.template.model.EventTemplate;
@@ -144,6 +146,28 @@ public class Event {
 
     @Column(name = "unpublish_reason", columnDefinition = "TEXT")
     private String unpublishReason;
+
+    /** Результат автопроверки (фильтр слов → ИИ); FLAGGED — повод администратору присмотреться. */
+    @Enumerated(EnumType.STRING)
+    @Column(name = "moderation_status", nullable = false)
+    @Builder.Default
+    private ModerationStatus moderationStatus = ModerationStatus.CLEAN;
+
+    @Column(name = "moderation_reason", columnDefinition = "TEXT")
+    private String moderationReason;
+
+    /** Что нашёл фильтр запрещённых слов. */
+    @JdbcTypeCode(SqlTypes.JSON)
+    @Column(name = "moderation_hits", nullable = false, columnDefinition = "jsonb")
+    @Builder.Default
+    private List<ModerationHit> moderationHits = new ArrayList<>();
+
+    /** Модель ИИ, принявшая решение (null — до ИИ дело не дошло). */
+    @Column(name = "moderation_model")
+    private String moderationModel;
+
+    @Column(name = "moderated_at")
+    private Instant moderatedAt;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     @Builder.Default

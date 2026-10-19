@@ -7,6 +7,8 @@ import ru.sportikus.event.model.OrgDetails;
 import ru.sportikus.event.model.SkillLevel;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
+import ru.sportikus.moderation.ModerationHit;
+import ru.sportikus.moderation.ModerationStatus;
 import ru.sportikus.participation.dto.ParticipationBrief;
 import ru.sportikus.sport.dto.SportDto;
 
@@ -64,9 +66,17 @@ public record EventResponse(
         // --- контекст текущего пользователя ---
         ParticipationBrief myParticipation,
         Boolean canManage,
-        Integer pendingCount
+        Integer pendingCount,
+
+        // --- только для администратора ---
+        ModerationInfo moderation
 ) {
 
     public record TemplateRef(Long id, String code, String name, String icon) {
+    }
+
+    /** Результат автопроверки: статус, решение ИИ и находки фильтра. */
+    public record ModerationInfo(ModerationStatus status, String reason, List<ModerationHit> hits,
+                                 String model, Instant checkedAt) {
     }
 }

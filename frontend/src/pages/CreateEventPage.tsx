@@ -22,6 +22,7 @@ import { QuestionsEditor } from '../components/constructor/QuestionsEditor';
 import { CustomFieldsEditor } from '../components/constructor/CustomFieldsEditor';
 import { OrgDetailsForm } from '../components/constructor/OrgDetailsForm';
 import { JOIN_MODE_LABELS, SKILL_LABELS, toLocalInput, utcLabel, zonedLocalToIso } from '../utils/format';
+import { autoRejectReason } from '../utils/moderation';
 
 const KRASNOYARSK: [number, number] = [56.0153, 92.8932];
 
@@ -89,6 +90,8 @@ export const CreateEventPage: React.FC = () => {
   const [orgDetails, setOrgDetails] = useState<OrgDetails>({});
 
   const [submitting, setSubmitting] = useState(false);
+  /** Мероприятие сохранено, но автопроверка его не пропустила. */
+  const [rejected, setRejected] = useState<{ id: number; reason?: string } | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const isOrg = currentUser?.role === 'ROLE_ORGANIZER';
@@ -225,8 +228,15 @@ export const CreateEventPage: React.FC = () => {
     };
 
     setSubmitting(true);
+    setRejected(null);
     try {
+      // В ответе уже итог автопроверки: сомнительное мероприятие ИИ проверяет за несколько секунд
       const created = await eventsApi.create(payload);
+      if (created.status === 'UNPUBLISHED') {
+        setRejected({ id: created.id, reason: autoRejectReason(created.unpublishReason) });
+        setSubmitting(false);
+        return;
+      }
       navigate(`/events/${created.id}`);
     } catch (err) {
       setError(errorMessage(err));
@@ -634,6 +644,23 @@ export const CreateEventPage: React.FC = () => {
           </div>
         )}
 
+        {rejected && (
+          <div role="alert" className="p-4 bg-red-50 border border-red-200 rounded-xl text-red-900 flex gap-3">
+            <ShieldAlert className="w-5 h-5 shrink-0 mt-0.5" />
+            <div className="text-base">
+              <b>Мероприятие не прошло автоматическую проверку и не опубликовано</b>
+              {rejected.reason && <p className="text-sm mt-1">Причина: {rejected.reason}</p>}
+              <p className="text-sm mt-2 opacity-90">
+                На Sportikus публикуются мероприятия о спорте, активном отдыхе и здоровом образе жизни. Исправьте описание и
+                отправьте снова. Если считаете, что это ошибка, — администратор увидит мероприятие и может вернуть его.
+              </p>
+              <Link to="/my" className="inline-block mt-2 text-sm font-semibold underline">
+                Мои события
+              </Link>
+            </div>
+          </div>
+        )}
+
         <div className="flex flex-col-reverse sm:flex-row gap-3 sm:justify-end">
           <Link
             to="/"
@@ -651,9 +678,14 @@ export const CreateEventPage: React.FC = () => {
             }`}
           >
             {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
-            Опубликовать мероприятие
+            {submitting ? 'Публикуем и проверяем…' : 'Опубликовать мероприятие'}
           </button>
         </div>
+        {submitting && (
+          <p className="text-sm text-slate-500 text-right" aria-live="polite">
+            Мероприятие проходит автоматическую проверку — обычно это несколько секунд.
+          </p>
+        )}
       </form>
     </div>
   );

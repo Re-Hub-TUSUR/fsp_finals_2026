@@ -45,9 +45,19 @@ public class AdminController {
     }
 
     @GetMapping("/events")
-    @Operation(summary = "Все мероприятия, включая снятые с публикации")
+    @Operation(summary = "Все мероприятия, включая снятые с публикации",
+            description = "С результатом автопроверки (`moderation`). Первыми идут требующие внимания: "
+                    + "`FLAGGED` (⚠ сомнительное, ИИ пропустил или был недоступен), затем `REJECTED` (отклонено ИИ) и `PENDING`.")
     public List<EventResponse> events() {
         return adminService.events();
+    }
+
+    @PostMapping("/events/{id}/moderation/reviewed")
+    @Operation(summary = "Снять пометку автопроверки ⚠",
+            description = "Администратор посмотрел мероприятие с `moderation.status = FLAGGED` и оставляет его в публикации. "
+                    + "Чтобы убрать мероприятие, используйте снятие с публикации.")
+    public EventResponse reviewed(@PathVariable Long id) {
+        return adminService.reviewed(id);
     }
 
     @PostMapping("/events/{id}/unpublish")
@@ -57,7 +67,8 @@ public class AdminController {
     }
 
     @PostMapping("/events/{id}/publish")
-    @Operation(summary = "Вернуть мероприятие в публикацию")
+    @Operation(summary = "Вернуть мероприятие в публикацию",
+            description = "В том числе отклонённое автопроверкой: ручное решение администратора снимает результат проверки (REVIEWED).")
     public EventResponse publish(@PathVariable Long id) {
         return adminService.publish(id);
     }

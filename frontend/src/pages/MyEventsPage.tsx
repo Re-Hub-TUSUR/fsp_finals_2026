@@ -7,6 +7,7 @@ import { useAuth } from '../context/AuthContext';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { formatShortDateTime } from '../utils/format';
+import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
 type Tab = 'participating' | 'organizing';
 
@@ -152,8 +153,14 @@ export const MyEventsPage: React.FC = () => {
                   <div className="text-sm text-slate-600 mt-1">
                     {formatShortDateTime(e.startTime, e.timeZone)} · {e.sport.name} · {e.confirmedCount}/{e.capacity} мест
                   </div>
-                  {e.status !== 'PUBLISHED' && (
-                    <div className="text-sm text-red-700 mt-1">Снято с публикации: {e.unpublishReason}</div>
+                  {e.status === 'MODERATION' ? (
+                    <div className="text-sm text-amber-800 mt-1">Идёт автоматическая проверка…</div>
+                  ) : (
+                    e.status !== 'PUBLISHED' && (
+                      <div className="text-sm text-red-700 mt-1">
+                        {isAutoRejected(e) ? 'Не прошло автопроверку' : 'Снято с публикации'}: {autoRejectReason(e.unpublishReason)}
+                      </div>
+                    )
                   )}
                 </div>
                 <Link

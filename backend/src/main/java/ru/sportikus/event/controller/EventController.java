@@ -19,13 +19,17 @@ import org.springframework.web.bind.annotation.RestController;
 import ru.sportikus.event.dto.CreateEventRequest;
 import ru.sportikus.event.dto.EventFilter;
 import ru.sportikus.event.dto.EventResponse;
+import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.model.SkillLevel;
 import ru.sportikus.event.service.EventService;
+import ru.sportikus.moderation.EventModerationService;
+import ru.sportikus.security.AuthUser;
 import ru.sportikus.security.CurrentUser;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 @RestController
 @RequestMapping("/api/v1/events")
@@ -34,6 +38,7 @@ import java.util.List;
 public class EventController {
 
     private final EventService eventService;
+    private final EventModerationService moderationService;
 
     @GetMapping
     @Operation(summary = "Каталог опубликованных мероприятий с фильтрами",
@@ -62,11 +67,23 @@ public class EventController {
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
-    @Operation(summary = "Создать мероприятие",
+    @Operation(summary = "Создать мероприятие (с автопроверкой)",
             description = "Пользователь публикует от своего имени. Организатор — от имени организации, только если она одобрена; "
-                    + "для организации обязательны контакты (orgDetails).")
+                    + "для организации обязательны контакты (orgDetails).\n\n"
+                    + "**Автопроверка.** Текст проходит фильтр запрещённых тем (политика, алкоголь, табак, наркотики, ставки, "
+                    + "дискриминация, насилие, 18+, финансовые схемы, мат). Если фильтр насторожился — а также для своего вида "
+                    + "спорта или категории «Другое» — мероприятие проверяет ИИ (обычно 1–3 секунды, ответ приходит в этом же запросе):\n"
+                    + "* `status = PUBLISHED` — опубликовано (сомнительное, но одобренное ИИ помечается для администратора);\n"
+                    + "* `status = UNPUBLISHED` — отклонено, причина в `unpublishReason` (видна автору).")
     public EventResponse create(@Valid @RequestBody CreateEventRequest request) {
-        return eventService.create(CurrentUser.require(), request);
+        AuthUser author = CurrentUser.require();
+        EventResponse created = eventService.create(author, request);
+        if (created.status() == EventStatus.MODERATION) {
+            // Этап 2 — вне транзакции создания: пока ждём ИИ, БД не заблокирована
+            moderationService.review(created.id());
+            created = eventService.details(created.id(), Optional.of(author));
+        }
+        return created;
     }
 
     @GetMapping("/{id}/ics")

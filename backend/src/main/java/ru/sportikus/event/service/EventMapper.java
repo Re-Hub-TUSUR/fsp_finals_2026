@@ -27,6 +27,11 @@ public class EventMapper {
 
     /** Лёгкое представление для списков и карты. Вызывать внутри транзакции. */
     public List<EventResponse> toList(List<Event> events, Long viewerId, boolean includePending) {
+        return toList(events, viewerId, includePending, false);
+    }
+
+    /** То же, с результатом автопроверки — для администратора. */
+    public List<EventResponse> toList(List<Event> events, Long viewerId, boolean includePending, boolean includeModeration) {
         if (events.isEmpty()) {
             return List.of();
         }
@@ -37,16 +42,21 @@ public class EventMapper {
                         .collect(Collectors.toMap(p -> p.getEvent().getId(), p -> p));
         return events.stream()
                 .map(e -> build(e, counts.getOrDefault(e.getId(), new Counts(0, 0)), mine.get(e.getId()),
-                        false, viewerId, includePending))
+                        false, viewerId, includePending, includeModeration))
                 .toList();
     }
 
     /** Полная карточка мероприятия. Вызывать внутри транзакции. */
     public EventResponse toDetails(Event event, Long viewerId) {
+        return toDetails(event, viewerId, false);
+    }
+
+    /** Полная карточка; с результатом автопроверки — для администратора. */
+    public EventResponse toDetails(Event event, Long viewerId, boolean includeModeration) {
         Counts counts = loadCounts(List.of(event.getId())).getOrDefault(event.getId(), new Counts(0, 0));
         Participation mine = viewerId == null ? null
                 : participationRepository.findByEventIdAndUserId(event.getId(), viewerId).orElse(null);
-        return build(event, counts, mine, true, viewerId, false);
+        return build(event, counts, mine, true, viewerId, false, includeModeration);
     }
 
     private Map<Long, Counts> loadCounts(List<Long> ids) {
@@ -65,7 +75,7 @@ public class EventMapper {
     }
 
     private EventResponse build(Event e, Counts counts, Participation mine, boolean detailed,
-                                Long viewerId, boolean includePending) {
+                                Long viewerId, boolean includePending, boolean includeModeration) {
         boolean byOrg = e.isByOrganization();
         String organizerName = byOrg ? e.getOrganizerOrg().getName() : e.getOrganizerUser().getFullName();
         String organizerAvatar = byOrg ? e.getOrganizerOrg().getLogoUrl() : e.getOrganizerUser().getAvatarUrl();
@@ -73,6 +83,10 @@ public class EventMapper {
         EventResponse.TemplateRef template = e.getTemplate() == null ? null
                 : new EventResponse.TemplateRef(e.getTemplate().getId(), e.getTemplate().getCode(),
                         e.getTemplate().getName(), e.getTemplate().getIcon());
+        EventResponse.ModerationInfo moderation = includeModeration
+                ? new EventResponse.ModerationInfo(e.getModerationStatus(), e.getModerationReason(),
+                        e.getModerationHits(), e.getModerationModel(), e.getModeratedAt())
+                : null;
 
         return new EventResponse(
                 e.getId(), e.getTitle(), e.getDescription(), SportDto.from(e.getSport()), template,
@@ -90,6 +104,7 @@ public class EventMapper {
                 detailed ? e.getOrgDetails() : null,
                 mine == null ? null : ParticipationBrief.from(mine),
                 viewerId == null ? null : manager,
-                manager && (detailed || includePending) ? counts.pending() : null);
+                manager && (detailed || includePending) ? counts.pending() : null,
+                moderation);
     }
 }
