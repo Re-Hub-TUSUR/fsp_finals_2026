@@ -4,6 +4,8 @@ export type Theme = 'light' | 'dark';
 
 const STORAGE_KEY = 'sportikus-theme';
 
+const THEME_COLORS: Record<Theme, string> = { light: '#f4f5f7', dark: '#15171a' };
+
 interface ThemeContextValue {
   theme: Theme;
   toggleTheme: () => void;
@@ -30,6 +32,8 @@ export const ThemeProvider: React.FC<{ children: React.ReactNode }> = ({ childre
 
   useEffect(() => {
     document.documentElement.dataset.theme = theme;
+    // Цвет строки состояния в установленном приложении — под фон страницы (--color-page)
+    document.querySelector('meta[name="theme-color"]')?.setAttribute('content', THEME_COLORS[theme]);
   }, [theme]);
 
   useEffect(() => {
