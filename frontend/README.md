@@ -1,32 +1,108 @@
-# React + TypeScript + Vite
+# Sportikus — веб-клиент
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+Одностраничное приложение платформы Sportikus: карта и каталог мероприятий, конструктор, запись с подтверждением, рекомендации, профили, модерация. Общее описание проекта и запуск всей системы — в [корневом README](../README.md); устройство бэкенда — в [`docs/architecture.md`](../docs/architecture.md).
 
-Currently, two official plugins are available:
+## Стек
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+* **React 19**, **TypeScript** (строгие проверки: `noUnusedLocals`, `verbatimModuleSyntax`, `erasableSyntaxOnly`), **Vite**.
+* **Tailwind CSS 4** с дизайн-токенами в `src/index.css` (`@theme`): светлая и тёмная темы переключаются атрибутом `data-theme` на `<html>`.
+* **React Router 7**, **axios**, **lucide-react**.
+* **2GIS MapGL JS API** (`@2gis/mapgl`) — карты, метки и кластеры.
+* Линтер **oxlint**.
 
-## React Compiler
+## Запуск
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```bash
+npm install
+npm run dev        # http://localhost:5173
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Запросы `/api` Vite проксирует на `http://localhost:8080` (см. `vite.config.ts`), поэтому для разработки достаточно поднять бэкенд и базу:
+
+```bash
+docker compose up -d postgres     # из корня проекта: PostgreSQL с PostGIS
+cd ../backend && mvn spring-boot:run
+```
+
+> В dev-режиме проксируется только `/api`. Загруженные фото профилей отдаются по `/uploads/...` — они доступны при запуске через Docker (nginx), но не через Vite.
+
+Скрипты:
+
+| Команда | Назначение |
+| :--- | :--- |
+| `npm run dev` | Dev-сервер с HMR |
+| `npm run build` | Проверка типов (`tsc -b`) и production-сборка в `dist/` |
+| `npm run preview` | Просмотр собранной версии |
+| `npm run lint` | Проверка oxlint |
+
+## Переменные окружения
+
+Все переменные начинаются с `VITE_` и **встраиваются в бандл при сборке**. Пример — [`../.env.example`](../.env.example).
+
+| Переменная | Назначение |
+| :--- | :--- |
+| `VITE_2GIS_KEY` | Ключ 2GIS MapGL JS API ([platform.2gis.ru](https://platform.2gis.ru)). Без ключа вместо карты показывается заглушка, остальной интерфейс работает |
+| `VITE_2GIS_STYLE_ID` | ID своего стиля карты из [редактора стилей](https://styles.2gis.com); пусто — стандартный стиль |
+| `VITE_2GIS_STYLE_ID_DARK` | Тёмный стиль для тёмной темы; пусто — карта остаётся светлой |
+| `VITE_API_URL` | Адрес API; по умолчанию `/api/v1` (nginx в Docker, прокси Vite в dev) |
+
+Ключ и стили `VITE_2GIS_*` читаются из `.env` в **корне проекта** (рядом с `docker-compose.yml`) или из `frontend/.env`; второй приоритетнее. В Docker они передаются как build-аргументы, поэтому после изменения нужна пересборка: `docker compose up --build -d`.
+
+## Маршруты
+
+| Путь | Страница | Доступ |
+| :--- | :--- | :--- |
+| `/` , `/events` | Главная: карта 2GIS и список, поиск, фильтры; при разрешённой геолокации — расстояние до мероприятий | публично |
+| `/events/:id` | Карточка мероприятия, запись или заявка, обсуждение под событием, экспорт в календарь | публично (запись и сообщения — после входа) |
+| `/events/new` | Конструктор мероприятия | пользователь или одобренная организация |
+| `/events/:id/manage` | Заявки и участники | организатор мероприятия |
+| `/my` | Личный кабинет: «Я участвую», «Я организую» | вход |
+| `/recommended` | «Рекомендовано для вас»: подборка с причинами и «Не интересно»; пункт «Для вас» в верхнем меню и нижней панели | вход (не для администратора) |
+| `/auth` | Вход и регистрация (пользователь или организация) | публично |
+| `/profile`, `/profiles/:type/:id` | Свой профиль и публичные профили (`type` — `users` или `organizations`); в собственном профиле пользователя — блок «Мои интересы» | публично (редактирование — владелец) |
+| `/admin` | Модерация: организации, мероприятия, комментарии | администратор |
+
+## Структура `src/`
+
+```
+src/
+├── api/
+│   ├── client.ts            # axios, JWT в заголовке, разбор ошибок {"error": {...}}
+│   └── index.ts             # типизированные вызовы API: auth, profiles, events, participation, comments, me, admin, preferences, recommendations…
+├── context/
+│   ├── AuthContext.tsx      # текущий пользователь, вход/выход, демо-аккаунты, интересы пользователя
+│   └── ThemeContext.tsx     # светлая/тёмная тема (запоминается, по умолчанию — как в системе)
+├── lib/
+│   ├── mapgl.ts             # загрузка 2GIS SDK, хук useMapgl (пересоздание карты при смене темы)
+│   └── mapPins.ts           # DOM-элементы меток, кластеров и точки пользователя
+├── pages/                   # страницы-маршруты (см. таблицу выше)
+├── components/
+│   ├── constructor/         # редакторы конструктора: свои поля, вопросы участнику, сведения организации, теги
+│   ├── BlinkMap.tsx         # карта мероприятий: метки, кластеры, карточка выбранного события
+│   ├── LocationPicker.tsx   # выбор точки сбора кликом по карте
+│   ├── MiniMap.tsx          # статичная карта на странице мероприятия + ссылка на маршрут
+│   ├── FieldInput.tsx       # рендер поля формы по его описанию (основа конструктора)
+│   ├── JoinDialog.tsx       # диалог подтверждения записи: анкета, требования, сообщение
+│   ├── PreferencesForm.tsx  # форма интересов и предпочтений (PUT /me/preferences)
+│   ├── InterestsPanel.tsx   # блок «Мои интересы» в профиле: сводка + PreferencesForm
+│   ├── EventDiscussion.tsx  # обсуждение под событием: сообщения, значок организатора, скрытие, опрос раз в 8 с
+│   ├── Navbar.tsx, MobileTabBar.tsx, DemoRoleBar.tsx
+│   └── ui.tsx, Modal.tsx, EventCard.tsx, …   # общие элементы интерфейса
+├── utils/
+│   ├── format.ts            # даты в часовом поясе площадки, цены, подписи
+│   └── eventView.ts         # производные состояния события (идёт сейчас, мало мест, статус)
+└── types/index.ts           # типы, соответствующие DTO бэкенда
+```
+
+## Ключевые решения
+
+* **Аутентификация.** JWT хранится в `localStorage` и добавляется к запросам перехватчиком axios. Панель «Демо-режим» входит под сидовыми аккаунтами через тот же `POST /auth/login` — клиент не подменяет роль, а все права проверяет бэкенд.
+* **Конструктор на данных.** Форма создания строится из описаний полей шаблона (`FieldDef`): `FieldInput` рисует поле нужного типа, поэтому новые форматы мероприятий не требуют изменений клиента. Тот же компонент рисует анкету участника в `JoinDialog`.
+* **Каталог по области карты.** Главная запрашивает события для видимой области (центр и радиус до 300 км), а не весь список — иначе на масштабе страны не обойтись.
+* **Время площадки.** Время показывается в часовом поясе мероприятия и подписывается «местное», если оно отличается от пояса устройства; при создании введённое время трактуется как местное время площадки (`utils/format.ts`).
+* **Карты 2GIS.** SDK подгружается один раз; при смене темы карта пересоздаётся со стилем нужной темы, положение камеры сохраняется. Ошибки загрузки и отсутствие ключа показываются заглушкой `MapFallback`.
+* **Тема.** Цвета заданы токенами (`bg-page`, `text-ink`, `brand` …), выбор темы запоминается в `localStorage`.
+
+## Линтер
+
+Используется [oxlint](https://oxc.rs/docs/guide/usage/linter) с правилами `react/rules-of-hooks` (ошибка) и `react/only-export-components` (предупреждение) — см. `.oxlintrc.json`. Для типо-зависимых правил можно установить `oxlint-tsgolint` и добавить в конфиг `"options": { "typeAware": true }`.

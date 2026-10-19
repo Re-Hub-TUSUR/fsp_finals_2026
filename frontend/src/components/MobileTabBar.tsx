@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { CalendarDays, List, Map as MapIcon, Plus, ShieldCheck } from 'lucide-react';
+import { CalendarDays, List, Map as MapIcon, Plus, ShieldCheck, Sparkles } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 
 /** Нижняя навигация на мобильном: всё в зоне большого пальца, «создать» — по центру. */
@@ -42,6 +42,9 @@ export const MobileTabBar: React.FC = () => {
           </Link>
         </div>
       )}
+      {currentUser &&
+        !isAdmin &&
+        tab('/recommended', 'Для вас', <Sparkles className="w-6 h-6" />, location.pathname === '/recommended')}
       {currentUser &&
         !isAdmin &&
         tab('/my', 'Мои', <CalendarDays className="w-6 h-6" />, location.pathname === '/my')}

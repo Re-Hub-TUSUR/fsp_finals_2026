@@ -5,6 +5,7 @@ import { Building2, Edit3, Mail, Save, ShieldCheck, UserRound, X } from 'lucide-
 import { profilesApi } from '../api';
 import { errorMessage } from '../api/client';
 import { EventCard } from '../components/EventCard';
+import { InterestsPanel } from '../components/InterestsPanel';
 import { useAuth } from '../context/AuthContext';
 import type { Profile } from '../types';
 
@@ -70,6 +71,7 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
       <div className="flex gap-3"><button disabled={saving} className="flex items-center gap-2 rounded-md bg-brand px-4 py-2 text-on-brand disabled:opacity-50"><Save className="h-4 w-4" />{saving ? 'Сохранение...' : 'Сохранить'}</button><button type="button" onClick={() => { setEditing(false); setImageFile(undefined); }} className="flex items-center gap-2 rounded-md border px-4 py-2"><X className="h-4 w-4" />Отмена</button></div>
       {error && <p className="text-sm text-red-700">{error}</p>}
     </form>}
+    {type === 'users' && profile.canEdit && <InterestsPanel />}
     <section className="pt-8"><h2 className="text-2xl font-bold">Текущие мероприятия</h2>{profile.events.length ? <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-3">{profile.events.map((event) => <EventCard key={event.id} event={event} />)}</div> : <p className="mt-4 text-slate-500">Сейчас активных мероприятий нет.</p>}</section>
   </div>;
 }

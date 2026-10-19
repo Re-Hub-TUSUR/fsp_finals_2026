@@ -32,8 +32,11 @@ springdoc:
     path: /v3/api-docs
   swagger-ui:
     path: /swagger-ui/index.html
-    tags-sorter: alpha
+    # Теги идут в логическом порядке из OpenApiConfig, операции — по HTTP-методу
     operations-sorter: method
+    doc-expansion: none
+    persist-authorization: true
+    display-request-duration: true
 
 management:
   endpoints:

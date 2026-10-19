@@ -2,7 +2,7 @@ import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../context/ThemeContext';
-import { ArrowUpRight, ChevronDown, LogIn, LogOut, MapPin, Moon, Plus, Sun, UserRound } from 'lucide-react';
+import { ArrowUpRight, ChevronDown, LogIn, LogOut, MapPin, Moon, Plus, Sparkles, Sun, UserRound } from 'lucide-react';
 
 const Logo: React.FC = () => (
   <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — на главную">
@@ -14,7 +14,7 @@ const Logo: React.FC = () => (
 );
 
 export const Navbar: React.FC = () => {
-  const { currentUser, logout } = useAuth();
+  const { currentUser, logout, preferences } = useAuth();
   const { theme, toggleTheme } = useTheme();
   const location = useLocation();
 
@@ -42,7 +42,7 @@ export const Navbar: React.FC = () => {
 
           <span className="hidden lg:flex items-center gap-1.5 text-[17px] text-ink">
             <MapPin className="w-[18px] h-[18px] text-muted" />
-            Красноярск
+            {preferences?.homeCity?.name ?? 'Красноярск'}
             <ChevronDown className="w-4 h-4 text-muted" />
           </span>
 
@@ -50,6 +50,12 @@ export const Navbar: React.FC = () => {
             <Link to="/" className={linkClass(isActive('/'))}>
               Карта
             </Link>
+            {currentUser && !isAdmin && (
+              <Link to="/recommended" className={`${linkClass(isActive('/recommended'))} gap-1.5`}>
+                <Sparkles className="w-[18px] h-[18px] text-brand-ink" />
+                Для вас
+              </Link>
+            )}
             {currentUser && !isAdmin && (
               <Link to="/my" className={linkClass(isActive('/my'))}>
                 Мои события

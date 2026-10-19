@@ -14,7 +14,7 @@ import ru.sportikus.security.CurrentUser;
 @RestController
 @RequestMapping("/api/v1/auth")
 @RequiredArgsConstructor
-@Tag(name = "Auth", description = "Вход и профиль текущего пользователя")
+@Tag(name = "Auth", description = "Вход, регистрация пользователей и организаций, текущий профиль")
 public class AuthController {
 
     private final AuthService authService;
@@ -26,13 +26,18 @@ public class AuthController {
     }
 
     @PostMapping("/register/user")
-    @Operation(summary = "Регистрация обычного пользователя")
+    @Operation(summary = "Регистрация обычного пользователя",
+            description = "Создаёт аккаунт `ROLE_USER` и сразу возвращает JWT. Пароль — от 8 до 72 символов. "
+                    + "E-mail должен быть свободен, иначе `409`.")
     public AuthResponse registerUser(@Valid @RequestBody UserRegistrationRequest request) {
         return authService.registerUser(request);
     }
 
     @PostMapping("/register/organization")
-    @Operation(summary = "Регистрация организации с заявкой на модерацию")
+    @Operation(summary = "Регистрация организации с заявкой на модерацию",
+            description = "Создаёт аккаунт `ROLE_ORGANIZER` и организацию в статусе `PENDING`, возвращает JWT. "
+                    + "Реквизиты: ИНН — 10 или 12 цифр, ОГРН — 13 или 15, КПП — 9 цифр; ИНН и ОГРН уникальны (иначе `409`). "
+                    + "Публиковать мероприятия можно только после одобрения администратором.")
     public AuthResponse registerOrganization(@Valid @RequestBody OrganizationRegistrationRequest request) {
         return authService.registerOrganization(request);
     }
