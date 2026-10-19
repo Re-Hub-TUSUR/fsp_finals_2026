@@ -22,7 +22,7 @@ const AccountAvatar: React.FC<{ userId: number; src?: string }> = ({ userId, src
   return (
     <span
       key={`${userId}-${src ?? 'empty'}`}
-      className="w-[42px] h-[42px] rounded-full bg-surface-2 text-ink flex items-center justify-center overflow-hidden shrink-0"
+      className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-full bg-surface-2 text-ink flex items-center justify-center overflow-hidden shrink-0"
     >
       {src && !failed ? (
         <img
@@ -33,7 +33,7 @@ const AccountAvatar: React.FC<{ userId: number; src?: string }> = ({ userId, src
           onError={() => setFailed(true)}
         />
       ) : (
-        <UserRound className="w-5 h-5" />
+        <UserRound className="w-4 h-4 sm:w-5 sm:h-5" />
       )}
     </span>
   );
@@ -86,8 +86,8 @@ export const Navbar: React.FC = () => {
           : null;
 
   return (
-    <nav className="bg-card border-b border-line-2 relative z-40">
-      <div className="px-4 sm:px-6 h-16 flex items-center justify-between gap-4">
+    <nav className="bg-card border-b border-line-2 relative z-40 max-w-full overflow-hidden">
+      <div className="px-3 sm:px-6 h-16 flex items-center justify-between gap-2 sm:gap-4 max-w-full">
         <div className="flex-1 self-stretch flex items-center gap-4 min-w-0">
           <Logo />
 
@@ -150,14 +150,14 @@ export const Navbar: React.FC = () => {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 sm:gap-3">
+        <div className="flex items-center gap-1.5 sm:gap-3 shrink-0">
           <button
             type="button"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            className="w-[42px] h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors"
+            className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
           >
-            {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+            {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
 
           <NotificationBell />
@@ -173,8 +173,8 @@ export const Navbar: React.FC = () => {
           )}
 
           {currentUser && (
-            <div className="flex items-center gap-2.5" title={currentUser.organizationName ?? currentUser.fullName}>
-              <Link to="/profile" className="flex items-center gap-2.5" aria-label="Открыть профиль">
+            <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0" title={currentUser.organizationName ?? currentUser.fullName}>
+              <Link to="/profile" className="flex items-center gap-2.5 shrink-0" aria-label="Открыть профиль">
               <AccountAvatar key={`${currentUser.id}-${currentUser.avatarUrl ?? 'empty'}`} userId={currentUser.id} src={currentUser.avatarUrl} />
               <span className="hidden xl:flex flex-col leading-tight">
                 <span className="text-sm font-semibold text-ink max-w-[180px] truncate">
@@ -183,14 +183,14 @@ export const Navbar: React.FC = () => {
                 {orgStatus && <span className={`text-[11px] font-medium ${orgStatus.cls}`}>{orgStatus.text}</span>}
               </span>
               </Link>
-              <button type="button" onClick={logout} aria-label="Выйти" className="w-10 h-10 rounded-full flex items-center justify-center text-muted hover:bg-surface hover:text-ink">
-                <LogOut className="w-5 h-5" />
+              <button type="button" onClick={logout} aria-label="Выйти" className="w-9 h-9 sm:w-10 sm:h-10 rounded-full flex items-center justify-center text-muted hover:bg-surface hover:text-ink shrink-0">
+                <LogOut className="w-4 h-4 sm:w-5 sm:h-5" />
               </button>
             </div>
           )}
           {!currentUser && (
-            <Link to="/auth" className="flex items-center gap-2 h-[42px] px-4 rounded-[10px] bg-brand text-on-brand font-semibold">
-              <LogIn className="w-5 h-5" />
+            <Link to="/auth" className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-[42px] px-3 sm:px-4 rounded-[10px] bg-brand text-on-brand font-semibold text-sm sm:text-base shrink-0">
+              <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Войти</span>
             </Link>
           )}

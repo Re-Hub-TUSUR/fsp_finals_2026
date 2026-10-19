@@ -69,18 +69,18 @@ export const MyEventsPage: React.FC = () => {
   const archiveTotal = archivedParticipations.length + archivedManaged.length;
 
   return (
-    <div className="max-w-4xl mx-auto px-4 py-6">
+    <div className="max-w-4xl mx-auto px-3 sm:px-4 py-6 w-full min-w-0 overflow-x-hidden">
       <div className="flex items-center justify-between gap-3 mb-5">
-        <h1 className="text-3xl font-bold text-slate-900">Мои события</h1>
+        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900">Мои события</h1>
         <Link
           to="/events/new"
-          className="flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand px-4 py-2.5 rounded-xl text-sm font-semibold"
+          className="flex items-center gap-1.5 sm:gap-2 bg-brand hover:bg-brand-hover text-on-brand px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl text-xs sm:text-sm font-semibold shrink-0"
         >
           <PlusCircle className="w-4 h-4" /> Создать
         </Link>
       </div>
 
-      <div className="flex border-b border-slate-200 gap-6 mb-6" role="tablist">
+      <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0" role="tablist">
         <TabButton active={tab === 'participating'} onClick={() => setTab('participating')}>
           Я участвую ({activeParticipations.length})
         </TabButton>
@@ -115,16 +115,16 @@ export const MyEventsPage: React.FC = () => {
                 <li key={p.id} className="bg-white rounded-2xl border border-slate-200 p-4 shadow-sm">
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
-                      <Link to={`/events/${p.event.id}`} className="font-bold text-lg text-slate-900 hover:text-brand-ink">
+                      <Link to={`/events/${p.event.id}`} className="font-bold text-lg text-slate-900 hover:text-brand-ink break-words">
                         {p.event.title}
                       </Link>
                       <div className="mt-1 space-y-0.5 text-sm text-slate-600">
                         <div className="flex items-center gap-2">
-                          <Calendar className="w-4 h-4 text-slate-400" />
-                          {formatShortDateTime(p.event.startTime, p.event.timeZone)}
+                          <Calendar className="w-4 h-4 text-slate-400 shrink-0" />
+                          <span className="break-words">{formatShortDateTime(p.event.startTime, p.event.timeZone)}</span>
                         </div>
                         <div className="flex items-center gap-2">
-                          <MapPin className="w-4 h-4 text-slate-400" />
+                          <MapPin className="w-4 h-4 text-slate-400 shrink-0" />
                           <span className="truncate">{p.event.address}</span>
                         </div>
                       </div>
@@ -132,13 +132,13 @@ export const MyEventsPage: React.FC = () => {
                     <ParticipationBadge status={p.status} />
                   </div>
                   {p.decisionComment && p.status !== 'CANCELLED' && (
-                    <p className="mt-2 text-sm text-slate-600">Организатор: «{p.decisionComment}»</p>
+                    <p className="mt-2 text-sm text-slate-600 break-words">Организатор: «{p.decisionComment}»</p>
                   )}
                   {p.event.status !== 'PUBLISHED' && (
-                    <p className="mt-2 text-sm text-red-700">Мероприятие снято с публикации: {p.event.unpublishReason}</p>
+                    <p className="mt-2 text-sm text-red-700 break-words">Мероприятие снято с публикации: {p.event.unpublishReason}</p>
                   )}
                   {p.status === 'CONFIRMED' && p.ticketCode && (
-                    <div className="mt-3 flex items-center justify-between border-t border-slate-100 pt-3">
+                    <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-slate-100 pt-3">
                       {p.checkedIn ? (
                         <span className="inline-flex items-center gap-1 text-xs font-bold text-emerald-700 bg-emerald-100 px-2.5 py-1 rounded-full">
                           <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён {p.checkedInAt ? `(${p.checkedInAt.slice(11, 16)})` : ''}
@@ -150,7 +150,7 @@ export const MyEventsPage: React.FC = () => {
                       )}
                       <button
                         onClick={() => setSelectedTicket({ event: p.event!, participation: p })}
-                        className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand text-on-brand hover:bg-brand-hover px-3 py-1.5 rounded-xl transition shadow-sm"
+                        className="inline-flex items-center gap-1.5 text-xs font-bold bg-brand text-on-brand hover:bg-brand-hover px-3 py-1.5 rounded-xl transition shadow-sm shrink-0"
                       >
                         <QrCode className="w-3.5 h-3.5" /> Показать билет
                       </button>
@@ -248,7 +248,7 @@ const TabButton: React.FC<{ active: boolean; onClick: () => void; children: Reac
     role="tab"
     aria-selected={active}
     onClick={onClick}
-    className={`pb-3 text-base font-semibold border-b-2 transition-colors ${
+    className={`pb-3 text-sm sm:text-base font-semibold border-b-2 transition-colors shrink-0 whitespace-nowrap ${
       active ? 'border-brand text-brand-ink' : 'border-transparent text-slate-500 hover:text-slate-800'
     }`}
   >
