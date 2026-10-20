@@ -117,6 +117,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setCityOpen(true)}
             aria-label={`Город: ${cityName}. Выбрать другой`}
             title={cityName}
+            data-tour="city-selector"
             className="flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-[10px] text-ink hover:bg-surface"
           >
             <MapPin className="w-[18px] h-[18px]" />
@@ -124,7 +125,7 @@ export const Navbar: React.FC = () => {
           </button>
 
           {onHome && (
-            <label className="hidden lg:flex flex-[3] min-w-[140px] max-w-[640px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
+            <label data-tour="search-bar" className="hidden lg:flex flex-[3] min-w-[140px] max-w-[640px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
               <Search className="w-[19px] h-[19px] shrink-0" />
               <input
                 type="search"
@@ -150,7 +151,7 @@ export const Navbar: React.FC = () => {
           <div className="flex-1" />
 
           {/* До lg вкладки — только иконки (подпись в подсказке и aria-label), иначе не помещаются */}
-          <div className="hidden md:flex self-stretch gap-1 shrink-0">
+          <div data-tour="nav-map-feed" className="hidden md:flex self-stretch gap-1 shrink-0">
             <Link to={homeLink('map')} aria-label="Карта" title="Карта" className={linkClass(homeView === 'map')}>
               <MapIcon className="w-[18px] h-[18px] shrink-0" />
               <span className="hidden lg:inline">Карта</span>
@@ -160,7 +161,7 @@ export const Navbar: React.FC = () => {
               <span className="hidden lg:inline">Лента</span>
             </Link>
             {currentUser && !isAdmin && !isOrganizer && (
-              <Link to="/recommended" aria-label="Для вас" title="Для вас" className={linkClass(isActive('/recommended'))}>
+              <Link to="/recommended" data-tour="nav-recommended" aria-label="Для вас" title="Для вас" className={linkClass(isActive('/recommended'))}>
                 <Sparkles className="w-[18px] h-[18px] shrink-0 lg:hidden" />
                 <span className="hidden lg:inline">Для вас</span>
               </Link>
@@ -195,6 +196,7 @@ export const Navbar: React.FC = () => {
           {!isAdmin && (
             <Link
               to="/events/new"
+              data-tour="create-event"
               aria-label="Создать мероприятие"
               title="Создать мероприятие"
               className="hidden md:flex items-center gap-1.5 h-[42px] px-[11px] xl:px-4 rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors shrink-0"

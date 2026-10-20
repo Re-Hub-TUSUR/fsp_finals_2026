@@ -39,6 +39,9 @@ export function AuthPage() {
           ? await authApi.registerUser({ email: form.email, firstName: form.firstName, lastName: form.lastName, password: form.password })
           : await authApi.registerOrganization({ name: form.name, inn: form.inn, ogrn: form.ogrn, kpp: form.kpp, email: form.email, password: form.password });
         acceptAuth(result.token, result.user);
+        if (mode === 'user') {
+          sessionStorage.setItem('sportikus_start_tour', '1');
+        }
       }
       navigate(safeNext(next, mode === 'organization' ? '/profile' : '/'));
     } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }

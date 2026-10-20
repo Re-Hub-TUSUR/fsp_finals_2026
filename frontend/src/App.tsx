@@ -20,6 +20,7 @@ import { LandingPage } from './pages/LandingPage';
 import { GuestHeader } from './components/landing/GuestHeader';
 import { getToken } from './api/client';
 import { GUEST_PATHS } from './utils/redirect';
+import { OnboardingTour } from './components/OnboardingTour';
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
 function PageFade({ children }: { children: ReactNode }) {
@@ -55,6 +56,7 @@ function AppShell() {
   return (
     /* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */
     <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
+      {!guest && <OnboardingTour />}
       <AchievementToast />
       <OfflineBanner />
       {guest ? <GuestHeader /> : <Navbar />}
