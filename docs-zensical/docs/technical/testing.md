@@ -15,31 +15,38 @@ cd frontend && npm run lint        # oxlint
 
 ## Backend
 
-JUnit 5 и AssertJ. Тестовые классы:
+JUnit 5, AssertJ и Mockito. На момент написания — 12 классов и 102 теста:
 
 | Класс | Что проверяет |
 |-------|---------------|
 | `FieldValidatorTest` | Валидатор полей конструктора: описания и значения |
 | `SlugUtilTest` | Нормализация названия вида спорта в slug |
-| `ParticipationServiceTest` | Машина состояний участия: запись, заявка, лимит мест, решения организатора, отмена |
+| `ParticipationServiceTest` | Машина состояний участия: запись, заявка, очередь, лимит мест, решения организатора, отмена |
 | `WeightedRankerTest` | Ранжирование рекомендаций: интересы, расстояние, штрафы, местное время, разнообразие |
 | `BannedWordFilterTest` | Срабатывания фильтра, обходы через латиницу и разделители, отсутствие ложных срабатываний на обычных спортивных текстах |
 | `RouterAiModerationClientTest` | Разбор ответа ИИ |
 | `EventModerationServiceTest` | Решения «одобрить», «отклонить», «ИИ недоступен» |
 | `FriendshipServiceTest` | Заявки в друзья, принятие, встречные заявки |
+| `EventInviteServiceTest` | Приглашения: повторно не зовёт, пропускает идущих, проверка статуса и срока мероприятия, состояния друзей |
+| `EventReminderServiceTest` | Напоминания: окно ровно 24 часа от текущего момента |
 | `MapCacheKeyTest` | Нормализация фильтра и ключ кэша карты |
 | `RedisMapCacheTest` | Кэш карты: версии, промахи, устойчивость к ошибкам хранилища |
 
 ## Frontend
 
-Vitest, Testing Library и jsdom (`vitest.config.ts`, `src/test/setup.ts`). На момент написания — 14 файлов и 139 тестов.
+Vitest, Testing Library и jsdom (`vitest.config.ts`, `src/test/setup.ts`). На момент написания — 27 файлов и 274 теста.
 
 | Область | Файлы |
 |---------|-------|
-| Чистая логика | `utils/format`, `utils/eventView`, `utils/moderation`, `utils/eventsSnapshot` |
+| Чистая логика | `utils/format`, `utils/eventView`, `utils/moderation`, `utils/eventsSnapshot`, `utils/camera`, `utils/weather`, `utils/redirect` |
 | Конструктор форм | `FieldInput`, `TagInput`, `CustomFieldsEditor`, `QuestionsEditor` |
 | Карточки и статусы | `EventCard`, `MapEventCard`, `EventBits`, `ParticipationBadge` |
 | Диалог записи | `JoinDialog`: обязательные вопросы, требования организатора, ошибки сервера |
+| Тест интересов | `InterestQuiz`: шесть шагов, подбор видов спорта по возрасту и досугу, шаг уровня, сохранение предпочтений, ошибка сохранения, «Повторить» при сбое справочников |
+| Обучающий тур | `OnboardingTour`: запуск, пропуск, шаги, приглашение в тест |
+| Сканер билетов | `CheckInScannerModal`: HTTPS, ошибки камеры, один скан — одна отметка, фото, фонарик, ручной ввод |
+| Приглашения и уведомления | `InviteFriendsModal`, `NotificationBell`, `PwaBanners` |
+| Устойчивость к сбоям | `ErrorNotice` (блок ошибки с «Повторить»), `CancelParticipationDialog` (подтверждение отмены участия) |
 | Регрессия | `CreateEventPage`: выбор режима «свободный вход» не ломает страницу |
 
 Тесты, которые касаются 2GIS (`LocationPicker`) или сети (`api`, `AuthContext`), подменяют эти модули: SDK карты в jsdom не загружается.

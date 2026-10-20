@@ -27,6 +27,7 @@ nav = [
     { "Инженерия" = [
         { "Обзор" = "technical/index.md" },
         { "Архитектура" = "technical/architecture.md" },
+        { "Клиент" = "technical/frontend.md" },
         { "Модель данных" = "technical/data-model.md" },
         { "API" = "technical/api.md" },
         { "Конструктор мероприятий" = "technical/constructor.md" },

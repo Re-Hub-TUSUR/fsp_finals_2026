@@ -36,6 +36,10 @@ erDiagram
         string join_mode "OPEN, APPROVAL"
         string status "PUBLISHED, MODERATION, ARCHIVED"
         string moderation_status
+        string recurrence_rule "NONE, WEEKLY, CUSTOM"
+        int recurrence_interval_days "1-365"
+        uuid recurrence_series_id
+        bigint next_occurrence_id FK
         jsonb fields "снимок шаблона"
         jsonb details
         jsonb registration_fields
@@ -50,7 +54,7 @@ erDiagram
     }
 ```
 
-У события ровно один организатор: либо `organizer_user_id`, либо `organizer_org_id`. Статусы события — `PUBLISHED`, `UNPUBLISHED`, `CANCELLED`, `MODERATION`, `ARCHIVED`; статусы автопроверки — `CLEAN`, `PENDING`, `FLAGGED`, `REJECTED`, `REVIEWED`.
+У события ровно один организатор: либо `organizer_user_id`, либо `organizer_org_id`. Статусы события — `PUBLISHED`, `UNPUBLISHED`, `CANCELLED`, `MODERATION`, `ARCHIVED`; статусы автопроверки — `CLEAN`, `PENDING`, `FLAGGED`, `REJECTED`, `REVIEWED`. Повторяющиеся занятия одной серии связаны общим `recurrence_series_id`; `next_occurrence_id` указывает на следующее занятие (`ON DELETE SET NULL`, уникален).
 
 ## Участие, обсуждение и социальные связи
 
@@ -63,12 +67,14 @@ erDiagram
     users ||--o{ friendships : "дружба"
     users ||--o{ organization_subscriptions : "подписывается"
     organizations ||--o{ organization_subscriptions : "подписчики"
+    users ||--o{ notifications : "получает"
+    events ||--o{ notifications : "о мероприятии"
 
     participations {
         bigint id PK
         bigint event_id FK
         bigint user_id FK
-        string status "PENDING, CONFIRMED, REJECTED, CANCELLED"
+        string status "PENDING, CONFIRMED, REJECTED, CANCELLED, WAITLISTED"
         jsonb answers
         string ticket_code UK "SPT-XXXXXXXX"
         boolean checked_in
@@ -83,6 +89,15 @@ erDiagram
     organization_subscriptions {
         bigint user_id PK
         bigint organization_id PK
+    }
+    notifications {
+        bigint id PK
+        bigint user_id FK
+        string type "EVENT_INVITE, EVENT_REMINDER, ..."
+        string link_url
+        bigint sender_user_id FK
+        bigint event_id FK
+        boolean is_read
     }
 ```
 
@@ -103,6 +118,9 @@ erDiagram
         bigint home_city_id FK
         int max_distance_km
         jsonb preferred_times
+        string skill_level
+        int max_price
+        int birth_year
     }
     user_affinities {
         bigint user_id PK
@@ -128,6 +146,8 @@ erDiagram
 - Частичные уникальные индексы по ИНН и ОГРН организаций.
 - В `friendships` — `CHECK (requester_id <> recipient_id)`, статус из набора `PENDING` и `ACCEPTED`, уникальный индекс по неупорядоченной паре `(LEAST, GREATEST)`: одна строка на пару пользователей.
 - У подписок составной первичный ключ `(user_id, organization_id)`.
+- Частичный уникальный индекс `uq_notifications_event_reminder (user_id, event_id, type) WHERE type = 'EVENT_REMINDER'`: одно напоминание на участника и мероприятие.
+- В `events`: `CHECK` на `recurrence_interval_days` от 1 до 365, уникальность `next_occurrence_id` (у занятия не больше одного предыдущего), индекс по `recurrence_series_id`.
 
 ## Миграции
 
@@ -143,6 +163,11 @@ erDiagram
 | `V6__friendships.sql` | Дружба пользователей |
 | `V7__organization_subscriptions.sql` | Подписки на организации |
 | `V8__tickets_and_checkin.sql` | Код билета, отметка о входе; коды для уже подтверждённых участий |
+| `V9__notifications_and_invites.sql` | Центр уведомлений и приглашения друзей, демо-уведомления |
+| `V10__number_field_bounds.sql` | Границы числовых полей шаблонов (расстояние, число команд и игроков, длительность) |
+| `V11__recurring_events.sql` | Повторяющиеся мероприятия: правило, серия, ссылка на следующее занятие |
+| `V12__custom_recurrence_interval.sql` | Свой интервал повторения в днях (1–365), еженедельные получают 7 |
+| `V13__event_reminders.sql` | Уникальный индекс напоминаний о мероприятиях |
 | `R__demo_data.sql` | Повторяемая миграция: идемпотентные демо-данные |
 
 !!! note "Порядок миграций"

@@ -82,7 +82,9 @@ public class EventController {
                     + "дискриминация, насилие, 18+, финансовые схемы, мат). Если фильтр насторожился — а также для своего вида "
                     + "спорта или категории «Другое» — мероприятие проверяет ИИ (обычно 1–3 секунды, ответ приходит в этом же запросе):\n"
                     + "* `status = PUBLISHED` — опубликовано (сомнительное, но одобренное ИИ помечается для администратора);\n"
-                    + "* `status = UNPUBLISHED` — отклонено, причина в `unpublishReason` (видна автору).")
+                    + "* `status = UNPUBLISHED` — отклонено, причина в `unpublishReason` (видна автору).\n\n"
+                    + "**Повтор.** `recurrenceRule`: `NONE` (по умолчанию), `WEEKLY` (каждые 7 дней) или `CUSTOM` — тогда обязателен "
+                    + "`recurrenceIntervalDays` от 1 до 365. Следующее занятие создаётся при завершении текущего.")
     public EventResponse create(@Valid @RequestBody CreateEventRequest request) {
         AuthUser author = CurrentUser.require();
         EventResponse created = eventService.create(author, request);
@@ -99,7 +101,9 @@ public class EventController {
     @Operation(summary = "Завершить мероприятие и перенести его в архив",
             description = "Только организатор и только после времени окончания: статус `PUBLISHED` → `ARCHIVED`. "
                     + "Архивное мероприятие пропадает из каталога, карты и рекомендаций, но остаётся в архиве организатора и "
-                    + "подтверждённых участников (`/me/events`, `/me/participations`). Повторное завершение и завершение снятого — `409`.")
+                    + "подтверждённых участников (`/me/events`, `/me/participations`). Повторное завершение и завершение снятого — `409`. "
+                    + "У повторяющегося мероприятия одновременно создаётся следующее занятие (`nextOccurrenceId`): та же карточка, "
+                    + "дата сдвинута на интервал по местному времени площадки и не оказывается в прошлом.")
     public EventResponse complete(@PathVariable Long id) {
         return eventService.complete(CurrentUser.require(), id);
     }

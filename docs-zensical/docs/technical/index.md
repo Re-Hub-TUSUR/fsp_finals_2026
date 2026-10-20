@@ -8,8 +8,9 @@ icon: lucide/wrench
 
 | Страница | О чём |
 |----------|-------|
-| [Архитектура](architecture.md) | Принципы, компоненты, модули backend, ключевые потоки, безопасность, архитектурные решения |
-| [Модель данных](data-model.md) | ER-диаграмма, ограничения целостности, миграции V1–V8 |
+| [Архитектура](architecture.md) | Принципы, компоненты, модули backend, ключевые потоки (участие, очередь, билеты, повторы, уведомления), безопасность, архитектурные решения |
+| [Клиент](frontend.md) | Гость и возврат после входа, обучающий тур, тест интересов, сканер, поведение при сбоях сети |
+| [Модель данных](data-model.md) | ER-диаграмма, ограничения целостности, миграции V1–V13 |
 | [API](api.md) | Группы эндпоинтов, доступ, формат ошибок |
 | [Конструктор мероприятий](constructor.md) | Шаблоны, поля, анкета участника, валидатор |
 | [Рекомендательная система](recommendations.md) | Кандидаты, ранжирование, сигналы, кэш, фоновые задачи |
@@ -41,12 +42,14 @@ icon: lucide/wrench
 │       │   ├── template, form   # конструктор: шаблоны, поля, валидатор
 │       │   ├── event, participation, comment, admin
 │       │   ├── friendship, subscription, achievement
+│       │   ├── notification     # уведомления, приглашения, напоминания (jobs)
+│       │   ├── stats            # публичная сводка для приветственной страницы
 │       │   ├── moderation       # автопроверка: фильтр + ИИ (RouterAI)
 │       │   ├── preference, recommendation
 │       │   └── common, config   # ошибки, Security, OpenAPI, планировщик
-│       └── resources/db/migration   # V1–V8 + R__demo_data
+│       └── resources/db/migration   # V1–V13 + R__demo_data
 ├── frontend/                    # React + Vite + TypeScript
-├── docs/architecture.md         # исходный технический обзор
+├── docs/architecture.md         # технический обзор (дублирует раздел «Инженерия»)
 ├── docs-zensical/               # эта документация (Zensical)
 ├── scripts/build_pdf.py         # сборка PDF из этой документации
 └── docker-compose.yml           # postgres (PostGIS), redis, backend, frontend

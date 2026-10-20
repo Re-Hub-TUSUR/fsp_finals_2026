@@ -26,7 +26,7 @@ public class NotificationController {
 
     @GetMapping("/me/notifications")
     @Operation(summary = "Получить список уведомлений и количество непрочитанных",
-            description = "Типы: `EVENT_INVITE` (приглашение друга), `PARTICIPATION_CONFIRMED` и `PARTICIPATION_REJECTED` (решение организатора), "
+            description = "Типы: `EVENT_INVITE` (приглашение друга), `EVENT_REMINDER` (напоминание за сутки до начала), `PARTICIPATION_CONFIRMED` и `PARTICIPATION_REJECTED` (решение организатора), "
                     + "`FRIEND_REQUEST` и `FRIEND_ACCEPTED`, `WAITLIST_SPOT_AVAILABLE` и `WAITLIST_SPOT_TAKEN` (очередь). "
                     + "У каждого есть `linkUrl` — куда перейти в приложении. Свежие — первыми.")
     public NotificationListResponse getNotifications() {

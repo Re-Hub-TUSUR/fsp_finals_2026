@@ -30,7 +30,9 @@ public class PreferencesController {
 
     @PutMapping
     @Operation(summary = "Сохранить интересы и предпочтения",
-            description = "Вызывается из формы регистрации и из профиля. Полностью заменяет сохранённые значения.")
+            description = "Вызывается из формы регистрации, из профиля и из теста интересов (6 шагов: год рождения, тип досуга, время, виды спорта, уровень, город и радиус). "
+                    + "Полностью заменяет сохранённые значения: поля, которых нет в запросе, очищаются. Год рождения (`birthYear`) используется как жёсткий фильтр "
+                    + "по возрастным ограничениям мероприятий.")
     public PreferencesDto update(@Valid @RequestBody UpdatePreferencesRequest request) {
         return preferencesService.update(CurrentUser.require().id(), request);
     }
