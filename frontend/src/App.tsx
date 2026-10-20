@@ -1,26 +1,39 @@
+import { lazy, Suspense } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { Navbar } from './components/Navbar';
-import { MobileTabBar } from './components/MobileTabBar';
-import { HomePage } from './pages/HomePage';
-import { CreateEventPage } from './pages/CreateEventPage';
-import { EventPage } from './pages/EventPage';
-import { ManageEventPage } from './pages/ManageEventPage';
-import { MyEventsPage } from './pages/MyEventsPage';
-import { AdminPage } from './pages/AdminPage';
-import { RecommendedPage } from './pages/RecommendedPage';
-import { NotificationsPage } from './pages/NotificationsPage';
 import { AuthPage } from './pages/AuthPage';
-import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 import { AchievementToast } from './components/AchievementToast';
-import { InstallAppBanner, OfflineBanner } from './components/PwaBanners';
+import { OfflineBanner } from './components/PwaBanners';
 import { LandingPage } from './pages/LandingPage';
 import { GuestHeader } from './components/landing/GuestHeader';
 import { getToken } from './api/client';
 import { GUEST_PATHS } from './utils/redirect';
-import { OnboardingTour } from './components/OnboardingTour';
+
+/*
+ * Разбиение бандла по страницам: гость получает только лендинг и вход (они импортируются сразу),
+ * а карта 2GIS, QR-сканер, админка и остальные экраны приходят отдельными чанками после входа.
+ * Страницы экспортируются именованно, поэтому для React.lazy заворачиваем их в { default }.
+ */
+const page = <K extends string>(load: () => Promise<Record<K, React.ComponentType>>, name: K) =>
+  lazy(() => load().then((m) => ({ default: m[name] })));
+
+const HomePage = page(() => import('./pages/HomePage'), 'HomePage');
+const CreateEventPage = page(() => import('./pages/CreateEventPage'), 'CreateEventPage');
+const EventPage = page(() => import('./pages/EventPage'), 'EventPage');
+const ManageEventPage = page(() => import('./pages/ManageEventPage'), 'ManageEventPage');
+const MyEventsPage = page(() => import('./pages/MyEventsPage'), 'MyEventsPage');
+const AdminPage = page(() => import('./pages/AdminPage'), 'AdminPage');
+const RecommendedPage = page(() => import('./pages/RecommendedPage'), 'RecommendedPage');
+const NotificationsPage = page(() => import('./pages/NotificationsPage'), 'NotificationsPage');
+const OwnProfilePage = page(() => import('./pages/ProfilePage'), 'OwnProfilePage');
+const ProfilePage = page(() => import('./pages/ProfilePage'), 'ProfilePage');
+// Оболочка вошедшего пользователя тоже не нужна гостю
+const Navbar = page(() => import('./components/Navbar'), 'Navbar');
+const MobileTabBar = page(() => import('./components/MobileTabBar'), 'MobileTabBar');
+const InstallAppBanner = page(() => import('./components/PwaBanners'), 'InstallAppBanner');
+const OnboardingTour = page(() => import('./components/OnboardingTour'), 'OnboardingTour');
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
 function PageFade({ children }: { children: ReactNode }) {
@@ -28,6 +41,15 @@ function PageFade({ children }: { children: ReactNode }) {
   return (
     <div key={pathname === '/' ? '/events' : pathname} className="anim-fade h-full">
       {children}
+    </div>
+  );
+}
+
+/** Заглушка на время загрузки чанка страницы. */
+function PageLoader() {
+  return (
+    <div className="flex h-full items-center justify-center" role="status" aria-label="Загрузка">
+      <span className="h-8 w-8 animate-spin rounded-full border-[3px] border-line-2 border-t-ink motion-reduce:animate-none" />
     </div>
   );
 }
@@ -56,13 +78,23 @@ function AppShell() {
   return (
     /* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */
     <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
-      {!guest && <OnboardingTour />}
+      {!guest && (
+        <Suspense fallback={null}>
+          <OnboardingTour />
+        </Suspense>
+      )}
       <AchievementToast />
       <OfflineBanner />
-      {guest ? <GuestHeader /> : <Navbar />}
+      {/* Высота как у Navbar, чтобы шапка не прыгала, пока грузится её чанк */}
+      {guest ? <GuestHeader /> : (
+        <Suspense fallback={<div className="h-16 shrink-0 border-b border-line-2 bg-card" />}>
+          <Navbar />
+        </Suspense>
+      )}
 
       <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-full">
         <PageFade>
+        <Suspense fallback={<PageLoader />}>
         <Routes>
           <Route path="/welcome" element={guest ? <LandingPage /> : <Navigate to="/" replace />} />
           <Route path="/" element={<HomePage />} />
@@ -79,11 +111,16 @@ function AppShell() {
           <Route path="/profiles/:type/:id" element={<ProfilePage />} />
           <Route path="*" element={<Navigate to="/" replace />} />
         </Routes>
+        </Suspense>
         </PageFade>
       </main>
 
-      {!guest && <InstallAppBanner />}
-      {!guest && <MobileTabBar />}
+      {!guest && (
+        <Suspense fallback={null}>
+          <InstallAppBanner />
+          <MobileTabBar />
+        </Suspense>
+      )}
     </div>
   );
 }

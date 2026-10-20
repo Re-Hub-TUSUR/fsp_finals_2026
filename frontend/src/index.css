@@ -264,14 +264,17 @@ body {
     }
   }
 
-  /* 3D-рендер телефона на лендинге медленно «парит» */
+  /* 3D-рендер телефона на лендинге медленно «парит» — только на широких экранах,
+     на телефоне бесконечная анимация лишь тратит батарею */
   @keyframes sp-float {
     50% {
       transform: translateY(-10px) rotate(-0.6deg);
     }
   }
-  .sp-float {
-    animation: sp-float 6s ease-in-out infinite;
+  @media (min-width: 640px) {
+    .sp-float {
+      animation: sp-float 6s ease-in-out infinite;
+    }
   }
 }
 
