@@ -24,6 +24,7 @@ import type {
   OrganizationSubscription,
   CheckInResult,
   NotificationListResponse,
+  InviteFriend,
   InviteFriendsPayload,
   InviteFriendsResult,
 } from '../types';
@@ -105,6 +106,9 @@ export const eventsApi = {
   icsUrl: (id: number) => `${api.defaults.baseURL}/events/${id}/ics`,
   inviteFriends: (id: number | string, payload: InviteFriendsPayload) =>
     api.post<InviteFriendsResult>(`/events/${id}/invite`, payload).then((r) => r.data),
+  /** Мои друзья с отметкой, можно ли их позвать на это мероприятие. */
+  inviteCandidates: (id: number | string) =>
+    api.get<InviteFriend[]>(`/events/${id}/invite/friends`).then((r) => r.data),
 };
 
 export const participationApi = {

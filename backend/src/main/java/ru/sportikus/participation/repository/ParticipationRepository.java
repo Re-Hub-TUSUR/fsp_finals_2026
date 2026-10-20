@@ -38,6 +38,14 @@ public interface ParticipationRepository extends JpaRepository<Participation, Lo
 
     List<Participation> findByUserIdAndEventIdIn(Long userId, Collection<Long> eventIds);
 
+    /** Кто из перечисленных пользователей активно участвует в мероприятии (записан, ждёт решения или в очереди). */
+    @Query("""
+            select p.user.id from Participation p
+            where p.event.id = :eventId and p.user.id in :userIds and p.status in :statuses
+            """)
+    List<Long> findUserIdsByEventAndStatuses(@Param("eventId") Long eventId, @Param("userIds") Collection<Long> userIds,
+                                             @Param("statuses") Collection<ParticipationStatus> statuses);
+
     interface FriendAttendee {
         Long getEventId();
         Long getUserId();

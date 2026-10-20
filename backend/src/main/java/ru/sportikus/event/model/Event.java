@@ -20,6 +20,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 
 @Entity
 @Table(name = "events")
@@ -61,6 +62,20 @@ public class Event {
 
     @Column(name = "end_time", nullable = false)
     private Instant endTime;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "recurrence_rule", nullable = false)
+    @Builder.Default
+    private RecurrenceRule recurrenceRule = RecurrenceRule.NONE;
+
+    @Column(name = "recurrence_interval_days")
+    private Integer recurrenceIntervalDays;
+
+    @Column(name = "recurrence_series_id")
+    private UUID recurrenceSeriesId;
+
+    @Column(name = "next_occurrence_id")
+    private Long nextOccurrenceId;
 
     @Column(nullable = false)
     private Double lat;

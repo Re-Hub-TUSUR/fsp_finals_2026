@@ -10,6 +10,7 @@ import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.model.OrgDetails;
+import ru.sportikus.event.model.RecurrenceRule;
 import ru.sportikus.event.model.SkillLevel;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
@@ -36,6 +37,8 @@ public record CreateEventRequest(
 
         @NotNull Instant startTime,
         @NotNull Instant endTime,
+        RecurrenceRule recurrenceRule,
+        @Min(1) @Max(365) Integer recurrenceIntervalDays,
 
         @NotNull @DecimalMin("-90") @DecimalMax("90") Double lat,
         @NotNull @DecimalMin("-180") @DecimalMax("180") Double lng,

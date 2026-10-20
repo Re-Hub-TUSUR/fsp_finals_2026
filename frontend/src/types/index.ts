@@ -109,6 +109,20 @@ export interface InviteFriendsPayload {
 export interface InviteFriendsResult {
   invitedCount: number;
   invitedUserIds: number[];
+  /** Уже звали на это мероприятие — повторно не отправлено. */
+  alreadyInvitedIds: number[];
+  /** Уже записаны, подали заявку, в очереди или организуют — не отправлено. */
+  alreadyParticipatingIds: number[];
+}
+
+/** Можно ли позвать друга на мероприятие: AVAILABLE — можно, INVITED — уже звали, PARTICIPATING — уже идёт. */
+export type InviteFriendState = 'AVAILABLE' | 'INVITED' | 'PARTICIPATING';
+
+export interface InviteFriend {
+  userId: number;
+  fullName: string;
+  avatarUrl?: string;
+  state: InviteFriendState;
 }
 
 export interface Sport {
@@ -234,6 +248,9 @@ export interface SportEvent {
   organizerUserId?: number;
   startTime: string;
   endTime: string;
+  recurrenceRule?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  recurrenceIntervalDays?: number;
+  nextOccurrenceId?: number;
   lat: number;
   lng: number;
   address: string;
@@ -324,6 +341,8 @@ export interface CreateEventPayload {
   templateId?: number;
   startTime: string;
   endTime: string;
+  recurrenceRule?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  recurrenceIntervalDays?: number;
   lat: number;
   lng: number;
   address: string;

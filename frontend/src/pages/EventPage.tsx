@@ -180,6 +180,8 @@ export const EventPage: React.FC = () => {
   const archived = event.status === 'ARCHIVED';
   const unpublished = event.status !== 'PUBLISHED' && !archived;
   const onReview = event.status === 'MODERATION';
+  // Звать друзей может пользователь, пока мероприятие опубликовано и запись открыта (то же правило — на сервере)
+  const canInvite = currentUser?.role === 'ROLE_USER' && event.status === 'PUBLISHED' && !closed;
   const autoRejected = isAutoRejected(event);
   const ages = formatAges(event.minAge, event.maxAge);
   const filled = Math.min(100, Math.round((event.confirmedCount / event.capacity) * 100));
@@ -189,7 +191,7 @@ export const EventPage: React.FC = () => {
 
   const panel = (() => {
     if (archived) {
-      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.</div>;
+      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.{event.nextOccurrenceId && <Link to={`/events/${event.nextOccurrenceId}`} className="mt-2 block text-brand-ink hover:underline">Открыть следующее событие →</Link>}</div>;
     }
     if (unpublished) {
       return (
@@ -509,7 +511,7 @@ export const EventPage: React.FC = () => {
                     <p className="text-xs text-slate-500">Вы можете пойти вместе!</p>
                   </div>
                 </div>
-                {currentUser && currentUser.role === 'ROLE_USER' && (
+                {canInvite && (
                   <button
                     type="button"
                     onClick={() => setInviteOpen(true)}
@@ -529,6 +531,7 @@ export const EventPage: React.FC = () => {
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
               <Fact icon={<Clock className="w-5 h-5" />} label="Когда">
                 {formatDateTime(event.startTime, event.timeZone)} – {formatTime(event.endTime, event.timeZone)}
+                {event.recurrenceRule !== 'NONE' && event.recurrenceIntervalDays && <span className="block text-sm font-semibold text-brand-ink">Повторяется через {event.recurrenceIntervalDays} дн.</span>}
                 {event.timeZone && isForeignZone(event.timeZone) && (
                   <span className="block text-xs text-slate-500">
                     Местное время{event.cityName ? `: ${event.cityName}` : ''} ({utcLabel(event.timeZone)})
@@ -725,7 +728,7 @@ export const EventPage: React.FC = () => {
 
             {/* Социальные действия: Позвать друзей и Поделиться */}
             <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
-              {currentUser && currentUser.role === 'ROLE_USER' && (
+              {canInvite && (
                 <button
                   type="button"
                   onClick={() => setInviteOpen(true)}
@@ -739,7 +742,7 @@ export const EventPage: React.FC = () => {
                 type="button"
                 onClick={() => setShareOpen(true)}
                 className={`w-full py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors shadow-2xs ${
-                  !currentUser || currentUser.role !== 'ROLE_USER' ? 'col-span-2' : ''
+                  !canInvite ? 'col-span-2' : ''
                 }`}
               >
                 <Share2 className="w-4 h-4 text-slate-600" />
@@ -798,7 +801,7 @@ export const EventPage: React.FC = () => {
       )}
       {completeOpen && (
         <Modal title="Завершить событие?" onClose={() => setCompleteOpen(false)}>
-          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.</p>
+          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.{event.recurrenceRule !== 'NONE' && event.recurrenceIntervalDays ? ` Следующее событие автоматически создастся через ${event.recurrenceIntervalDays} дн.` : ''}</p>
           {actionError && <p className="mt-3 text-sm text-red-700">{actionError}</p>}
           <div className="mt-5 flex justify-end gap-3">
             <button type="button" onClick={() => setCompleteOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold">Отмена</button>

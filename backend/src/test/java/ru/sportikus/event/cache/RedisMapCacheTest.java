@@ -47,6 +47,7 @@ class RedisMapCacheTest {
         return new EventResponse(id, "Утренний бег", null, new SportDto(1L, "Бег", "running", false), null,
                 "Анна", null, false, null, 7L,
                 Instant.parse("2030-01-01T07:00:00Z"), Instant.parse("2030-01-01T08:00:00Z"),
+                null, null, null,
                 55.75, 37.61, "Парк", "Москва", "Europe/Moscow",
                 10, 3, 0, JoinMode.OPEN, SkillLevel.ANY, BigDecimal.ZERO, null, null, null, null,
                 EventStatus.PUBLISHED, null,

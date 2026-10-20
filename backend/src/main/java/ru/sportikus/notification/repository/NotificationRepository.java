@@ -6,7 +6,9 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import ru.sportikus.notification.model.Notification;
+import ru.sportikus.notification.model.NotificationType;
 
+import java.util.Collection;
 import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
@@ -21,6 +23,14 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     List<Notification> findRecentByUserId(@Param("userId") Long userId);
 
     long countByUserIdAndReadFalse(Long userId);
+
+    /** Кому из перечисленных отправитель уже отправлял уведомление этого типа об этом мероприятии. */
+    @Query("""
+            select distinct n.user.id from Notification n
+            where n.type = :type and n.senderUser.id = :senderId and n.event.id = :eventId and n.user.id in :userIds
+            """)
+    List<Long> findRecipientIds(@Param("type") NotificationType type, @Param("senderId") Long senderId,
+                                @Param("eventId") Long eventId, @Param("userIds") Collection<Long> userIds);
 
     @Modifying
     @Query("update Notification n set n.read = true where n.user.id = :userId and n.read = false")
