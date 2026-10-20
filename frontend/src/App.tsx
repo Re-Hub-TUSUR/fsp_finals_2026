@@ -2,7 +2,6 @@ import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
-import { DemoRoleBar } from './components/DemoRoleBar';
 import { Navbar } from './components/Navbar';
 import { MobileTabBar } from './components/MobileTabBar';
 import { HomePage } from './pages/HomePage';
@@ -37,9 +36,6 @@ function App() {
           <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
             <AchievementToast />
             <OfflineBanner />
-            {/* Демо-панель для жюри: вход под любым сидовым аккаунтом в 1 клик */}
-            <DemoRoleBar />
-
             <Navbar />
 
             <main className="flex-1 min-h-0 overflow-y-auto overflow-x-hidden max-w-full">

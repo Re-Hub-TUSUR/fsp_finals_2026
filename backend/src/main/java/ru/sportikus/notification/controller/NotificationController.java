@@ -20,7 +20,10 @@ public class NotificationController {
     private final NotificationService notificationService;
 
     @GetMapping("/me/notifications")
-    @Operation(summary = "Получить список уведомлений и количество непрочитанных")
+    @Operation(summary = "Получить список уведомлений и количество непрочитанных",
+            description = "Типы: `EVENT_INVITE` (приглашение друга), `PARTICIPATION_CONFIRMED` и `PARTICIPATION_REJECTED` (решение организатора), "
+                    + "`FRIEND_REQUEST` и `FRIEND_ACCEPTED`, `WAITLIST_SPOT_AVAILABLE` и `WAITLIST_SPOT_TAKEN` (очередь). "
+                    + "У каждого есть `linkUrl` — куда перейти в приложении. Свежие — первыми.")
     public NotificationListResponse getNotifications() {
         return notificationService.getNotifications(CurrentUser.require());
     }
@@ -38,7 +41,10 @@ public class NotificationController {
     }
 
     @PostMapping("/events/{id}/invite")
-    @Operation(summary = "Пригласить друзей на мероприятие (отправляет уведомления)")
+    @Operation(summary = "Пригласить друзей на мероприятие (отправляет уведомления)",
+            description = "Приглашать можно только подтверждённых друзей и только на опубликованное мероприятие (иначе `409`); "
+                    + "остальные идентификаторы молча пропускаются. Ответ — сколько приглашено и кто. Друзья получают `EVENT_INVITE` "
+                    + "с необязательным сообщением.")
     public InviteFriendsResponse inviteFriends(
             @PathVariable Long id,
             @Valid @RequestBody InviteFriendsRequest req

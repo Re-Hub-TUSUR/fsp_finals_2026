@@ -133,8 +133,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     async (roleKey: DemoRoleKey) => {
       try {
         await loginAs(roleKey);
-      } catch {
+      } catch (error) {
         setAuthError('Не удалось войти под выбранной ролью');
+        throw error;
       }
     },
     [loginAs],
