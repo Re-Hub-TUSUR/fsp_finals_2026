@@ -308,6 +308,20 @@ input[type='search']::-webkit-search-decoration {
   display: none;
 }
 
+/* Сканер билетов (CheckInScannerModal): видео камеры на весь экран, рамку рисуем сами.
+   html5-qrcode задаёт видео ширину в пикселях — растягиваем и обрезаем по контейнеру. */
+.scanner-reader video {
+  width: 100% !important;
+  height: 100% !important;
+  object-fit: cover;
+}
+.scanner-idle {
+  background: repeating-conic-gradient(#26272b 0 25%, #1e1f22 0 50%) 0 0 / 56px 56px;
+}
+.scanner-sheet {
+  box-shadow: 0 -10px 32px -6px color-mix(in oklab, var(--color-brand) 55%, transparent);
+}
+
 /* Метки мероприятий поверх карты 2GIS (src/lib/mapPins.ts) — по макету «Карта и Лента»:
    плоские круги с пиктограммой спорта, без свечений и пульсации.
    Позиционирует MapGL, поэтому у корня метки нет transform/position-смещений. */
