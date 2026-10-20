@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { flushSync } from 'react-dom';
+import { createPortal, flushSync } from 'react-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   AlertTriangle,
@@ -33,15 +33,15 @@ interface CheckInScannerModalProps {
 /** Уголки рамки сканирования (как в системной камере). */
 const FrameCorners: React.FC = () => (
   <>
-    <span className="absolute left-0 top-0 w-11 h-11 border-l-[3px] border-t-[3px] border-white rounded-tl-[22px]" />
-    <span className="absolute right-0 top-0 w-11 h-11 border-r-[3px] border-t-[3px] border-white rounded-tr-[22px]" />
-    <span className="absolute left-0 bottom-0 w-11 h-11 border-l-[3px] border-b-[3px] border-white rounded-bl-[22px]" />
-    <span className="absolute right-0 bottom-0 w-11 h-11 border-r-[3px] border-b-[3px] border-white rounded-br-[22px]" />
+    <span className="absolute left-0 top-0 w-11 h-11 border-l-[3px] border-t-[3px] border-[#fff] rounded-tl-[22px]" />
+    <span className="absolute right-0 top-0 w-11 h-11 border-r-[3px] border-t-[3px] border-[#fff] rounded-tr-[22px]" />
+    <span className="absolute left-0 bottom-0 w-11 h-11 border-l-[3px] border-b-[3px] border-[#fff] rounded-bl-[22px]" />
+    <span className="absolute right-0 bottom-0 w-11 h-11 border-r-[3px] border-b-[3px] border-[#fff] rounded-br-[22px]" />
   </>
 );
 
 const roundButton =
-  'w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-md text-white flex items-center justify-center transition-colors hover:bg-white/25 disabled:opacity-60 disabled:hover:bg-white/15';
+  'w-[52px] h-[52px] shrink-0 rounded-2xl bg-[#fff]/15 border border-[#fff]/25 backdrop-blur-md text-[#fff] flex items-center justify-center transition-colors hover:bg-[#fff]/25 disabled:opacity-60 disabled:hover:bg-[#fff]/15';
 
 /**
  * Контроль входа: камера на весь экран с рамкой, распознавание QR с фото, фонарик,
@@ -233,7 +233,9 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
       ? 'Камера недоступна'
       : 'Камера выключена';
 
-  return (
+  // Портал в body: внутри страницы (анимированный контейнер с прокруткой) fixed привязывается к нему,
+  // и окно оказывается под шапкой и нижней панелью приложения
+  return createPortal(
     <div className="fixed inset-0 z-[2100] bg-black/70 flex sm:items-center sm:justify-center sm:p-4">
       <div
         role="dialog"
@@ -252,15 +254,15 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           <div aria-hidden="true" className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
           <header className="relative px-6 pt-[max(1.75rem,env(safe-area-inset-top))] pr-20">
-            <h2 id="checkin-title" className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white">
+            <h2 id="checkin-title" className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#fff]">
               Контроль входа участников
             </h2>
-            <p className="mt-3 text-sm font-medium text-white/85 line-clamp-2">{event.title}</p>
+            <p className="mt-3 text-sm font-medium text-[#fff]/85 line-clamp-2">{event.title}</p>
             <button
               type="button"
               onClick={close}
               aria-label="Закрыть"
-              className="absolute right-5 top-[max(1.75rem,env(safe-area-inset-top))] w-11 h-11 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/30 transition-colors"
+              className="absolute right-5 top-[max(1.75rem,env(safe-area-inset-top))] w-11 h-11 rounded-full bg-[#fff]/20 backdrop-blur-md text-[#fff] flex items-center justify-center hover:bg-[#fff]/30 transition-colors"
             >
               <X className="w-5 h-5" strokeWidth={2.4} />
             </button>
@@ -272,10 +274,10 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
               <FrameCorners />
               {!cameraActive && (
                 <>
-                  <span className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white">
+                  <span className="w-16 h-16 rounded-2xl bg-[#fff]/15 backdrop-blur-md flex items-center justify-center text-[#fff]">
                     {cameraStarting ? <Loader2 className="w-7 h-7 animate-spin" /> : <CameraOff className="w-7 h-7" />}
                   </span>
-                  <p className="mt-3 text-sm font-semibold text-white">{frameMessage}</p>
+                  <p className="mt-3 text-sm font-semibold text-[#fff]">{frameMessage}</p>
                 </>
               )}
             </div>
@@ -284,7 +286,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           {(support !== 'ok' || cameraError) && (
             <p
               role={cameraError ? 'alert' : 'status'}
-              className="relative mx-6 mb-3 rounded-xl bg-black/55 backdrop-blur-md px-3.5 py-2.5 text-xs leading-snug text-white"
+              className="relative mx-6 mb-3 rounded-xl bg-black/55 backdrop-blur-md px-3.5 py-2.5 text-xs leading-snug text-[#fff]"
             >
               {cameraError ?? CAMERA_PROBLEM_MESSAGES[support as Exclude<typeof support, 'ok'>]}
             </p>
@@ -427,6 +429,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           </form>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };
