@@ -115,7 +115,6 @@ public class AdminService {
     }
 
     private Event findEvent(Long id) {
-        return eventRepository.findDetailedById(id)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        return eventRepository.requireDetailed(id);
     }
 }

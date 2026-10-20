@@ -1,6 +1,6 @@
 package ru.sportikus.notification.repository;
 
-import org.springframework.data.jpa.repository.EntityGraph;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -14,6 +14,7 @@ import java.util.List;
 
 public interface NotificationRepository extends JpaRepository<Notification, Long> {
 
+    /** Последние уведомления пользователя; размер выборки задаёт {@code page}. */
     @Query("""
             select n from Notification n
             left join fetch n.senderUser
@@ -21,7 +22,7 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
             where n.user.id = :userId
             order by n.createdAt desc
             """)
-    List<Notification> findRecentByUserId(@Param("userId") Long userId);
+    List<Notification> findRecentByUserId(@Param("userId") Long userId, Pageable page);
 
     long countByUserIdAndReadFalse(Long userId);
 

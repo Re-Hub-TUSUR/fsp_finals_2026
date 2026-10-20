@@ -116,8 +116,7 @@ public class EventService {
     /** Карточка доступна по прямой ссылке и для снятых с публикации мероприятий (с указанием причины). */
     @Transactional(readOnly = true)
     public EventResponse details(Long id, Optional<AuthUser> viewer) {
-        Event event = eventRepository.findDetailedById(id)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event event = eventRepository.requireDetailed(id);
         return mapper.toDetails(event, viewer.map(AuthUser::id).orElse(null),
                 viewer.map(AuthUser::isAdmin).orElse(false));
     }
@@ -214,8 +213,7 @@ public class EventService {
 
     @Transactional
     public EventResponse complete(AuthUser auth, Long eventId) {
-        Event event = eventRepository.findForUpdate(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event event = eventRepository.requireForUpdate(eventId);
         if (!EventAccess.isManager(event, auth.id())) {
             throw ApiException.forbidden("Завершить мероприятие может только его создатель");
         }
@@ -395,8 +393,7 @@ public class EventService {
     /** Событие в формате iCalendar для добавления в календарь телефона одним нажатием. */
     @Transactional(readOnly = true)
     public String ics(Long id) {
-        Event e = eventRepository.findDetailedById(id)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event e = eventRepository.requireDetailed(id);
         StringBuilder sb = new StringBuilder();
         line(sb, "BEGIN:VCALENDAR");
         line(sb, "VERSION:2.0");

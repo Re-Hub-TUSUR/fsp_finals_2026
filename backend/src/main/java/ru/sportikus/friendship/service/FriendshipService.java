@@ -134,7 +134,7 @@ public class FriendshipService {
 
     private User target(AuthUser auth, Long userId) {
         if (auth.id().equals(userId)) throw ApiException.badRequest("Нельзя добавить себя в друзья");
-        User target = userRepository.findById(userId).orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
+        User target = userRepository.require(userId);
         if ("ROLE_ADMIN".equals(target.getRole())) throw ApiException.forbidden("Администратор не участвует в дружбе");
         if ("ROLE_ORGANIZER".equals(target.getRole())) {
             throw ApiException.forbidden("Дружба доступна только между пользователями — на организацию можно подписаться");

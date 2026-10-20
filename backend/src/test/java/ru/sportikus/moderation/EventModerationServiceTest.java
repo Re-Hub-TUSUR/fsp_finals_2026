@@ -3,6 +3,7 @@ package ru.sportikus.moderation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -35,7 +36,8 @@ import static org.mockito.Mockito.when;
 class EventModerationServiceTest {
 
     @Mock LlmModerationClient llm;
-    @Mock EventRepository eventRepository;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) EventRepository eventRepository;
     @Mock TransactionTemplate tx;
 
     ModerationProperties props;

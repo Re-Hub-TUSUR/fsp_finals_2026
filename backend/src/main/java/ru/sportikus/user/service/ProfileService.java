@@ -44,7 +44,7 @@ public class ProfileService {
 
     @Transactional(readOnly = true)
     public ProfileResponse user(Long id, AuthUser viewer) {
-        User user = userRepository.findById(id).orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
+        User user = userRepository.require(id);
         boolean owner = viewer != null && viewer.id().equals(id);
         var events = eventRepository.findByOrganizerUserIdAndStatusOrderByStartTimeAsc(id, EventStatus.PUBLISHED);
         return new ProfileResponse(id, "USER", user.getFullName(), user.getEmail(), null, user.getAvatarUrl(),
@@ -71,7 +71,7 @@ public class ProfileService {
     @Transactional
     public ProfileResponse updateUser(Long id, AuthUser viewer, ProfileUpdateRequest request) {
         if (!id.equals(viewer.id())) throw ApiException.forbidden("Редактировать профиль может только его владелец");
-        User user = userRepository.findById(id).orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
+        User user = userRepository.require(id);
         user.setFullName(request.name().trim());
         user.setAvatarUrl(blankToNull(request.imageUrl()));
         return user(id, viewer);
@@ -91,7 +91,7 @@ public class ProfileService {
     @Transactional
     public ProfileResponse uploadUserImage(Long id, AuthUser viewer, MultipartFile file) {
         if (!id.equals(viewer.id())) throw ApiException.forbidden("Изменить фото может только владелец профиля");
-        User user = userRepository.findById(id).orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
+        User user = userRepository.require(id);
         user.setAvatarUrl(storeImage(file));
         return user(id, viewer);
     }

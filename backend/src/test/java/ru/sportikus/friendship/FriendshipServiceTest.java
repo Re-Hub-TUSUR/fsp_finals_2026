@@ -3,6 +3,7 @@ package ru.sportikus.friendship;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -29,7 +30,8 @@ import static org.mockito.Mockito.*;
 class FriendshipServiceTest {
     private static final AuthUser IVAN = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
     @Mock FriendshipRepository friendships;
-    @Mock UserRepository users;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) UserRepository users;
     @Mock ru.sportikus.organization.repository.OrganizationRepository organizations;
     @Mock ru.sportikus.notification.service.NotificationService notifications;
     FriendshipService service;

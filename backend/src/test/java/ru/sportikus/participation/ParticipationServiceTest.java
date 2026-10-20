@@ -3,6 +3,7 @@ package ru.sportikus.participation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -50,9 +51,11 @@ class ParticipationServiceTest {
     private static final AuthUser PARTICIPANT = new AuthUser(2L, "olga@sport.ru", "ROLE_USER");
     private static final AuthUser ORGANIZER = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
 
-    @Mock EventRepository eventRepository;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) EventRepository eventRepository;
     @Mock ParticipationRepository participationRepository;
-    @Mock UserRepository userRepository;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) UserRepository userRepository;
     @Mock EventMapper eventMapper;
     @Mock ApplicationEventPublisher events;
     @Mock ru.sportikus.preference.repository.UserPreferencesRepository preferences;

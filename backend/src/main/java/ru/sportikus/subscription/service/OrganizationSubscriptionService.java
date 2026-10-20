@@ -10,9 +10,12 @@ import ru.sportikus.security.AuthUser;
 import ru.sportikus.subscription.dto.OrganizationSubscriptionResponse;
 import ru.sportikus.subscription.model.OrganizationSubscription;
 import ru.sportikus.subscription.repository.OrganizationSubscriptionRepository;
+import ru.sportikus.subscription.repository.OrganizationSubscriptionRepository.SubscriberCount;
 import ru.sportikus.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,11 +49,18 @@ public class OrganizationSubscriptionService {
     @Transactional(readOnly = true)
     public List<OrganizationSubscriptionResponse> mine(AuthUser auth) {
         rejectNonUser(auth);
-        return repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
+        List<OrganizationSubscription> items = repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
                 .filter(item -> "APPROVED".equals(item.getOrganization().getStatus()))
+                .toList();
+        if (items.isEmpty()) return List.of();
+        // Счётчики подписчиков всех организаций — одним сгруппированным запросом
+        Map<Long, Long> counts = repository.countByOrganizations(
+                        items.stream().map(item -> item.getOrganization().getId()).toList()).stream()
+                .collect(Collectors.toMap(SubscriberCount::getOrganizationId, SubscriberCount::getCnt));
+        return items.stream()
                 .map(item -> new OrganizationSubscriptionResponse(
                         item.getOrganization().getId(), item.getOrganization().getName(), item.getOrganization().getLogoUrl(),
-                        repository.countByOrganizationId(item.getOrganization().getId()), item.getCreatedAt()))
+                        counts.getOrDefault(item.getOrganization().getId(), 0L), item.getCreatedAt()))
                 .toList();
     }
 

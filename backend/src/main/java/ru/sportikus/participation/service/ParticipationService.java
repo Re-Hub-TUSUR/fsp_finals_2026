@@ -226,8 +226,7 @@ public class ParticipationService {
     /** Все заявки и участники мероприятия — только для организатора. */
     @Transactional(readOnly = true)
     public List<ParticipationResponse> listForManager(AuthUser auth, Long eventId) {
-        Event event = eventRepository.findDetailedById(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event event = eventRepository.requireDetailed(eventId);
         if (!EventAccess.isManager(event, auth.id())) {
             throw ApiException.forbidden("Заявки видит только организатор мероприятия");
         }
@@ -239,8 +238,7 @@ public class ParticipationService {
     /** Экспорт участников мероприятия в формате CSV (Excel-совместимый UTF-8 с BOM). */
     @Transactional(readOnly = true)
     public byte[] exportCsv(AuthUser auth, Long eventId) {
-        Event event = eventRepository.findDetailedById(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event event = eventRepository.requireDetailed(eventId);
         if (!EventAccess.isManager(event, auth.id())) {
             throw ApiException.forbidden("Экспорт участников доступен только организатору мероприятия");
         }
@@ -375,8 +373,7 @@ public class ParticipationService {
     /** Контроль входа на мероприятие организатором по коду билета (из QR-кода). */
     @Transactional
     public CheckInResponse checkIn(AuthUser auth, Long eventId, String rawTicketCode) {
-        Event event = eventRepository.findDetailedById(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        Event event = eventRepository.requireDetailed(eventId);
         if (!EventAccess.isManager(event, auth.id()) && !auth.isAdmin()) {
             throw ApiException.forbidden("Отмечать билеты может только организатор мероприятия");
         }
@@ -440,8 +437,7 @@ public class ParticipationService {
     }
 
     private Event lockEvent(Long eventId) {
-        return eventRepository.findForUpdate(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        return eventRepository.requireForUpdate(eventId);
     }
 
     private static String generateTicketCode() {

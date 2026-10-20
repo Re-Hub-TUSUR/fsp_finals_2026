@@ -10,6 +10,7 @@ import ru.sportikus.comment.repository.CommentRepository;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.event.model.Event;
 import ru.sportikus.event.repository.EventRepository;
+import ru.sportikus.event.service.EventAccess;
 import ru.sportikus.security.AuthUser;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
@@ -38,22 +39,13 @@ public class CommentService {
         Event event = eventRepository.findById(eventId)
                 .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
 
-        User user = userRepository.findById(currentUser.id())
-                .orElseThrow(() -> ApiException.notFound("Пользователь не найден"));
-
-        boolean isOrganizer = false;
-        if (event.getOrganizerUser() != null && event.getOrganizerUser().getId().equals(user.getId())) {
-            isOrganizer = true;
-        } else if (event.getOrganizerOrg() != null && event.getOrganizerOrg().getOwner() != null
-                && event.getOrganizerOrg().getOwner().getId().equals(user.getId())) {
-            isOrganizer = true;
-        }
+        User user = userRepository.require(currentUser.id());
 
         Comment comment = Comment.builder()
                 .event(event)
                 .user(user)
                 .text(req.text().trim())
-                .isOrganizer(isOrganizer)
+                .isOrganizer(EventAccess.isManager(event, user.getId()))
                 .isHidden(false)
                 .build();
 
@@ -72,7 +64,7 @@ public class CommentService {
 
         boolean canHide = currentUser.isAdmin()
                 || comment.getUser().getId().equals(currentUser.id())
-                || isEventOrganizer(comment.getEvent(), currentUser);
+                || EventAccess.isManager(comment.getEvent(), currentUser.id());
 
         if (!canHide) {
             throw ApiException.forbidden("Недостаточно прав для модерации этого комментария");
@@ -88,13 +80,5 @@ public class CommentService {
         return commentRepository.findAllByOrderByCreatedAtDesc().stream()
                 .map(c -> CommentDto.from(c, true))
                 .toList();
-    }
-
-    private boolean isEventOrganizer(Event event, AuthUser user) {
-        if (event.getOrganizerUser() != null && event.getOrganizerUser().getId().equals(user.id())) {
-            return true;
-        }
-        return event.getOrganizerOrg() != null && event.getOrganizerOrg().getOwner() != null
-                && event.getOrganizerOrg().getOwner().getId().equals(user.id());
     }
 }

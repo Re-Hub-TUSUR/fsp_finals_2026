@@ -113,8 +113,7 @@ public class EventInviteService {
     }
 
     private Event load(Long eventId) {
-        return eventRepository.findDetailedById(eventId)
-                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        return eventRepository.requireDetailed(eventId);
     }
 
     /** Подтверждённые друзья пользователя: id → пользователь. */
