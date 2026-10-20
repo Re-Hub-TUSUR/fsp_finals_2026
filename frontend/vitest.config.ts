@@ -8,5 +8,7 @@ export default defineConfig({
     setupFiles: ['./src/test/setup.ts'],
     css: false,
     globals: false,
+    // Сценарные тесты (квиз, сканер) проходят десятки кликов: под нагрузкой 5 секунд по умолчанию не хватает
+    testTimeout: 15000,
   },
 })

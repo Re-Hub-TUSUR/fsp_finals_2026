@@ -180,6 +180,8 @@ export const EventPage: React.FC = () => {
   const archived = event.status === 'ARCHIVED';
   const unpublished = event.status !== 'PUBLISHED' && !archived;
   const onReview = event.status === 'MODERATION';
+  // Звать друзей может пользователь, пока мероприятие опубликовано и запись открыта (то же правило — на сервере)
+  const canInvite = currentUser?.role === 'ROLE_USER' && event.status === 'PUBLISHED' && !closed;
   const autoRejected = isAutoRejected(event);
   const ages = formatAges(event.minAge, event.maxAge);
   const filled = Math.min(100, Math.round((event.confirmedCount / event.capacity) * 100));
@@ -509,7 +511,7 @@ export const EventPage: React.FC = () => {
                     <p className="text-xs text-slate-500">Вы можете пойти вместе!</p>
                   </div>
                 </div>
-                {currentUser && currentUser.role === 'ROLE_USER' && (
+                {canInvite && (
                   <button
                     type="button"
                     onClick={() => setInviteOpen(true)}
@@ -725,7 +727,7 @@ export const EventPage: React.FC = () => {
 
             {/* Социальные действия: Позвать друзей и Поделиться */}
             <div className="pt-4 border-t border-slate-100 grid grid-cols-2 gap-2">
-              {currentUser && currentUser.role === 'ROLE_USER' && (
+              {canInvite && (
                 <button
                   type="button"
                   onClick={() => setInviteOpen(true)}
@@ -739,7 +741,7 @@ export const EventPage: React.FC = () => {
                 type="button"
                 onClick={() => setShareOpen(true)}
                 className={`w-full py-2.5 px-3 rounded-xl border border-slate-200 text-xs font-bold text-slate-800 hover:bg-slate-50 flex items-center justify-center gap-1.5 transition-colors shadow-2xs ${
-                  !currentUser || currentUser.role !== 'ROLE_USER' ? 'col-span-2' : ''
+                  !canInvite ? 'col-span-2' : ''
                 }`}
               >
                 <Share2 className="w-4 h-4 text-slate-600" />
