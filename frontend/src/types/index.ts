@@ -234,6 +234,9 @@ export interface SportEvent {
   organizerUserId?: number;
   startTime: string;
   endTime: string;
+  recurrenceRule?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  recurrenceIntervalDays?: number;
+  nextOccurrenceId?: number;
   lat: number;
   lng: number;
   address: string;
@@ -324,6 +327,8 @@ export interface CreateEventPayload {
   templateId?: number;
   startTime: string;
   endTime: string;
+  recurrenceRule?: 'NONE' | 'WEEKLY' | 'CUSTOM';
+  recurrenceIntervalDays?: number;
   lat: number;
   lng: number;
   address: string;

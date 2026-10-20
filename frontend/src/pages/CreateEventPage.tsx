@@ -70,6 +70,8 @@ export const CreateEventPage: React.FC = () => {
 
   const [start, setStart] = useState(() => toLocalInput(defaultStart()));
   const [end, setEnd] = useState(() => toLocalInput(new Date(defaultStart().getTime() + 2 * 3600000)));
+  const [recurrenceRule, setRecurrenceRule] = useState<'NONE' | 'CUSTOM'>('NONE');
+  const [recurrenceIntervalDays, setRecurrenceIntervalDays] = useState(7);
   const [address, setAddress] = useState('');
   const [addressSearch, setAddressSearch] = useState<'idle' | 'loading' | 'found' | 'missing'>('idle');
   const [coords, setCoords] = useState<[number, number]>(KRASNOYARSK);
@@ -231,6 +233,8 @@ export const CreateEventPage: React.FC = () => {
       templateId: template.id,
       startTime: startIso,
       endTime: endIso,
+      recurrenceRule,
+      recurrenceIntervalDays: recurrenceRule === 'CUSTOM' ? recurrenceIntervalDays : undefined,
       lat: coords[0],
       lng: coords[1],
       address: address.trim(),
@@ -454,6 +458,27 @@ export const CreateEventPage: React.FC = () => {
                   onChange={(e) => setEnd(e.target.value)}
                   className={inputClass}
                 />
+              </div>
+            </div>
+            <div>
+              <span className={labelClass}>Повторение</span>
+              <div className="rounded-xl border border-slate-200 p-4">
+                <label className="flex cursor-pointer items-center gap-3">
+                  <input type="checkbox" checked={recurrenceRule === 'CUSTOM'} onChange={(e) => setRecurrenceRule(e.target.checked ? 'CUSTOM' : 'NONE')} className="h-5 w-5 accent-brand" />
+                  <span>
+                    <b className="block text-slate-900">Повторять событие</b>
+                    <span className="text-sm text-slate-500">Следующее событие создастся после завершения текущего</span>
+                  </span>
+                </label>
+                {recurrenceRule === 'CUSTOM' && (
+                  <label htmlFor="ev-recurrence-days" className="mt-4 block text-sm font-semibold text-slate-700">
+                    Повторять через
+                    <span className="mt-1 flex max-w-xs items-center gap-2">
+                      <input id="ev-recurrence-days" type="number" required min={1} max={365} value={recurrenceIntervalDays} onChange={(e) => setRecurrenceIntervalDays(Number(e.target.value))} className={inputClass} />
+                      <span className="whitespace-nowrap font-normal text-slate-600">дней</span>
+                    </span>
+                  </label>
+                )}
               </div>
             </div>
             <div>
