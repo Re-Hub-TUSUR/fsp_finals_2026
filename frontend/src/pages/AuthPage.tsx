@@ -1,21 +1,26 @@
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
-import { Building2, UserRound } from 'lucide-react';
+import { Building2, ShieldCheck, UserRound } from 'lucide-react';
 import { authApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import type { DemoRoleKey } from '../context/AuthContext';
 
 type Mode = 'login' | 'user' | 'organization';
 
 export function AuthPage() {
-  const { currentUser, login, acceptAuth } = useAuth();
+  const { currentUser, login, acceptAuth, switchRole } = useAuth();
   const navigate = useNavigate();
   const [mode, setMode] = useState<Mode>('login');
   const [form, setForm] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
-  if (currentUser) return <Navigate to="/" replace />;
+  const [demoBusy, setDemoBusy] = useState<DemoRoleKey | null>(null);
+  if (currentUser) {
+    const destination = currentUser.role === 'ROLE_ADMIN' ? '/admin' : currentUser.role === 'ROLE_ORGANIZER' ? '/profile' : '/';
+    return <Navigate to={destination} replace />;
+  }
 
   const change = (key: string, value: string) => setForm((old) => ({ ...old, [key]: value }));
   const submit = async (e: FormEvent) => {
@@ -43,6 +48,18 @@ export function AuthPage() {
       />
     </label>
   );
+
+  const demoLogin = async (role: DemoRoleKey, destination: string) => {
+    setDemoBusy(role); setError('');
+    try {
+      await switchRole(role);
+      navigate(destination);
+    } catch (err) {
+      setError(errorMessage(err, 'Не удалось выполнить демо-вход'));
+    } finally {
+      setDemoBusy(null);
+    }
+  };
 
   return (
     <div className="mx-auto max-w-lg px-3 sm:px-4 py-8 sm:py-12 w-full min-w-0 overflow-x-hidden">
@@ -117,7 +134,27 @@ export function AuthPage() {
             {busy ? 'Подождите...' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
           </button>
         </form>
+
+        {mode === 'login' && (
+          <div className="mt-6 border-t border-line-2 pt-5">
+            <p className="mb-3 text-center text-sm font-semibold text-muted">Демо-вход</p>
+            <div className="grid gap-2 sm:grid-cols-3">
+              <DemoLoginButton icon={<UserRound className="h-4 w-4" />} label="Пользователь" busy={demoBusy === 'user'} disabled={demoBusy !== null || busy} onClick={() => void demoLogin('user', '/')} />
+              <DemoLoginButton icon={<Building2 className="h-4 w-4" />} label="Организатор" busy={demoBusy === 'enisey'} disabled={demoBusy !== null || busy} onClick={() => void demoLogin('enisey', '/profile')} />
+              <DemoLoginButton icon={<ShieldCheck className="h-4 w-4" />} label="Администратор" busy={demoBusy === 'admin'} disabled={demoBusy !== null || busy} onClick={() => void demoLogin('admin', '/admin')} />
+            </div>
+          </div>
+        )}
       </div>
     </div>
+  );
+}
+
+function DemoLoginButton({ icon, label, busy, disabled, onClick }: { icon: ReactNode; label: string; busy: boolean; disabled: boolean; onClick: () => void }) {
+  return (
+    <button type="button" disabled={disabled} onClick={onClick} className="flex min-h-11 items-center justify-center gap-2 rounded-xl border border-line-2 bg-surface px-3 py-2.5 text-sm font-bold text-ink transition hover:border-brand hover:bg-brand-tint disabled:cursor-not-allowed disabled:opacity-50">
+      {icon}
+      <span>{busy ? 'Входим...' : label}</span>
+    </button>
   );
 }
