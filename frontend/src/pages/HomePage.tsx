@@ -4,7 +4,7 @@ import { ChevronLeft, List, Loader2, Maximize2, Search, SearchX, X } from 'lucid
 import type { City, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
 import { CoverCard, EventRow } from '../components/HomeCards';
-import { MapSheet, type SheetState } from '../components/MapSheet';
+import { MapSheet } from '../components/MapSheet';
 import { EventDetailPanel } from '../components/EventDetailPanel';
 import {
   CountBadge,
@@ -71,7 +71,6 @@ export const HomePage: React.FC = () => {
   const [hoveredId, setHoveredId] = useState<number | null>(null);
   // Десктоп: список у карты можно свернуть; мобильный: шторка над картой
   const [panelClosed, setPanelClosed] = useState(false);
-  const [sheet, setSheet] = useState<SheetState>('peek');
   const [detailId, setDetailId] = useState<number | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   // Каталог доступен и без ключа карты; после инициализации 2ГИС уточнит область.
@@ -80,7 +79,6 @@ export const HomePage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
 
   const listColRef = useRef<HTMLDivElement>(null);
-  const sheetListRef = useRef<HTMLDivElement>(null);
 
   // Точка отсчёта радиуса и расстояний: геопозиция, иначе домашняя точка из профиля
   const origin = useMemo<LatLng | null>(
@@ -273,18 +271,14 @@ export const HomePage: React.FC = () => {
   // Синхронизация выбора: прокручиваем список у карты (десктоп) и в шторке (мобильный) к выбранному ряду
   useEffect(() => {
     if (selectedId == null) return;
-    for (const box of [listColRef.current, sheetListRef.current]) {
+    for (const box of [listColRef.current]) {
       const el = box?.querySelector<HTMLElement>(`[data-eid="${selectedId}"]`);
       if (box && el && (el.offsetTop < box.scrollTop || el.offsetTop + el.offsetHeight > box.scrollTop + box.clientHeight))
         box.scrollTo({ top: el.offsetTop - 8, behavior: 'smooth' });
     }
   }, [selectedId]);
 
-  // Выбор метки на мобильном сворачивает шторку до карточки события
-  const pickOnMap = (event: SportEvent | null) => {
-    setSelectedId(event?.id ?? null);
-    if (event) setSheet('peek');
-  };
+  const pickOnMap = (event: SportEvent | null) => setSelectedId(event?.id ?? null);
 
   const locate = () =>
     navigator.geolocation?.getCurrentPosition(
@@ -473,7 +467,7 @@ export const HomePage: React.FC = () => {
           {/* Правый нижний угол; на мобильном — над свёрнутой шторкой, в раскрытой не нужен */}
           {view === 'map' && (
             <label
-              className={`absolute right-3 ${selectedEvent ? 'bottom-[218px]' : 'bottom-[120px]'} lg:right-4 lg:bottom-4 z-20 ${sheet === 'half' ? 'hidden lg:flex' : 'flex'} items-center gap-1.5 h-8 px-2.5 rounded-lg border border-line-2 bg-card text-ink text-xs font-semibold shadow-[0_2px_8px_rgba(20,30,45,0.12)] cursor-pointer select-none`}
+              className={`absolute right-3 ${selectedEvent ? 'bottom-[218px]' : 'bottom-[120px]'} lg:right-4 lg:bottom-4 z-20 flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-line-2 bg-card text-ink text-xs font-semibold shadow-[0_2px_8px_rgba(20,30,45,0.12)] cursor-pointer select-none`}
             >
               <input
                 type="checkbox"
@@ -566,19 +560,11 @@ export const HomePage: React.FC = () => {
               {mobileHeader(true)}
             </div>
             <MapSheet
-              state={sheet}
-              onStateChange={setSheet}
-              events={visibleEvents}
               selected={selectedEvent}
               me={origin}
-              title={panelTitle}
-              sub={resultLine}
-              onPick={(e) => setSelectedId(e.id)}
               onClearSelection={() => setSelectedId(null)}
               onMore={openDetail}
               onJoined={() => setReloadTick((t) => t + 1)}
-              empty={empty}
-              listRef={sheetListRef}
             />
           </>
         )}
