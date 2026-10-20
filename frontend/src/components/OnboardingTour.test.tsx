@@ -60,7 +60,7 @@ describe('OnboardingTour', () => {
     renderWithRouter(['/?tour=1']);
 
     expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
-    expect(screen.getByText('Шаг 1 из 5')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 1 из 8')).toBeInTheDocument();
     expect(screen.getByText('Пропустить обучение')).toBeInTheDocument();
     expect(screen.getByText('Далее')).toBeInTheDocument();
   });
@@ -74,7 +74,7 @@ describe('OnboardingTour', () => {
     fireEvent.click(nextBtn);
 
     expect(await screen.findByText('Карта и Лента событий')).toBeInTheDocument();
-    expect(screen.getByText('Шаг 2 из 5')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 2 из 8')).toBeInTheDocument();
   });
 
   it('advances to next step on clicking anywhere on the overlay backdrop', async () => {
@@ -129,13 +129,41 @@ describe('OnboardingTour', () => {
 
     expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
 
-    // 5 steps to reach final
-    for (let i = 0; i < 5; i++) {
+    // 5 шагов по интерфейсу и 3 шага стенда записи до финала
+    for (let i = 0; i < 8; i++) {
       fireEvent.click(screen.getByText('Далее'));
     }
 
     expect(await screen.findByText('Добро пожаловать в Sportikus!')).toBeInTheDocument();
     expect(screen.getByText('Пройти тест прямо сейчас')).toBeInTheDocument();
     expect(screen.getByText('Позже, перейти к событиям')).toBeInTheDocument();
+  });
+
+  it('после шага 5 показывает стенд записи: карточка, заявка, QR-билет', async () => {
+    renderWithRouter(['/?tour=1']);
+    expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByText('Далее'));
+
+    expect(await screen.findByText('Как записаться: карточка')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 6 из 8')).toBeInTheDocument();
+    const stand = screen.getByRole('group', { name: /Демонстрационный пример/ });
+    expect(stand).toHaveTextContent('Утренняя пробежка в парке');
+    expect(stand).toHaveTextContent('Записаться');
+    // Стенд — макет: в нём нет настоящих кнопок, которые могли бы что-то отправить
+    expect(stand.querySelector('button')).toBeNull();
+
+    fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Как записаться: заявка')).toBeInTheDocument();
+    expect(screen.getByRole('group', { name: /Демонстрационный пример/ })).toHaveTextContent('Отправить заявку');
+    expect(await screen.findByText('Бегу впервые в компании — подскажете темп?', {}, { timeout: 4000 })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Как записаться: QR-билет')).toBeInTheDocument();
+    expect(screen.getByText('SPT-DEMO2026')).toBeInTheDocument();
+    expect(await screen.findByAltText('Пример QR-кода билета SPT-DEMO2026')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Добро пожаловать в Sportikus!')).toBeInTheDocument();
+    expect(screen.getByText('Финал')).toBeInTheDocument();
   });
 });

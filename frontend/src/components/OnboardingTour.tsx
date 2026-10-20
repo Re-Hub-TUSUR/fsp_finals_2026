@@ -3,9 +3,12 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import {
   ChevronLeft,
   ChevronRight,
+  ClipboardPen,
   Compass,
+  FileText,
   MapPin,
   PartyPopper,
+  QrCode,
   SlidersHorizontal,
   Sparkles,
   Ticket,
@@ -13,13 +16,17 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { InterestQuiz } from './InterestQuiz';
+import { TourDemoStand, type TourDemoKind } from './TourDemoStand';
 
 export interface TourStep {
   id: string;
   selector: string;
   title: string;
-  badge: string;
+  /** Подпись вместо «Шаг N из M» (только у финала). */
+  badge?: string;
   description: string;
+  /** Показательный стенд записи вместо подсветки элемента интерфейса. */
+  demo?: TourDemoKind;
   hint?: string;
   icon: React.ReactNode;
 }
@@ -29,7 +36,6 @@ const TOUR_STEPS: TourStep[] = [
     id: 'recommendations',
     selector: '[data-tour="nav-recommended-mobile"], [data-tour="nav-recommended"]',
     title: 'Персональные рекомендации',
-    badge: 'Шаг 1 из 5',
     description:
       'Sportikus умеет составлять подборку лично под вас! Вкладка «Для вас» находит события по вашим любимым видам спорта, уровню и расписанию. Сейчас мы покажем сайт, а в конце предложим пройти 1-минутный тест интересов.',
     hint: '✨ Сначала покажем интерфейс, а затем настроим рекомендации',
@@ -39,7 +45,6 @@ const TOUR_STEPS: TourStep[] = [
     id: 'map-and-feed',
     selector: '[data-tour="nav-map-feed-mobile"], [data-tour="nav-map-feed"]',
     title: 'Карта и Лента событий',
-    badge: 'Шаг 2 из 5',
     description:
       'Переключайтесь между списком мероприятий в «Ленте» и интерактивной 2ГИС-картой: стадионы, парки, манежи и залы с указанием дистанции от вас, свободными местами и расписанием.',
     hint: '📍 На карте удобно находить тренировки прямо возле дома или работы',
@@ -49,7 +54,6 @@ const TOUR_STEPS: TourStep[] = [
     id: 'filters',
     selector: '[data-tour="filter-button-mobile"], [data-tour="filter-bar"]',
     title: 'Умные фильтры и радиус',
-    badge: 'Шаг 3 из 5',
     description:
       'Выбирайте любимый спорт (футбол, волейбол, бег, теннис и др.), задавайте удобный радиус (1, 3, 5 км), фильтруйте по дате, времени суток и уровню сложности — от новичка до профи.',
     hint: '⚡ Нажмите на фильтры или вид спорта для мгновенного поиска',
@@ -59,7 +63,6 @@ const TOUR_STEPS: TourStep[] = [
     id: 'search-and-city',
     selector: '[data-tour="search-bar-mobile"], [data-tour="city-selector"], [data-tour="search-bar"]',
     title: 'Поиск и локации',
-    badge: 'Шаг 4 из 5',
     description:
       'Ищите тренировки по названию площадки, спортклубу или имени организатора. А если приехали в другой город — переключайте локацию в шапке в один клик.',
     hint: '🔍 Быстрый поиск работает по всем площадкам и городам',
@@ -69,11 +72,40 @@ const TOUR_STEPS: TourStep[] = [
     id: 'create-and-tickets',
     selector: '[data-tour="create-event-mobile"], [data-tour="create-event"]',
     title: 'Организация и QR-билеты',
-    badge: 'Шаг 5 из 5',
     description:
       'Создавайте собственные матчи и турниры в удобном конструкторе или записывайтесь на чужие. После подтверждения заявки вы получаете персональный QR-билет для быстрой отметки организатором.',
     hint: '🎫 Ваши билеты всегда доступны в разделе «Мои события»',
     icon: <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
+  },
+  {
+    id: 'demo-event',
+    selector: '',
+    demo: 'event',
+    title: 'Как записаться: карточка',
+    description:
+      'Покажем запись на примере — ничего не отправляется. В карточке видно время, место, уровень, цену, что взять с собой и сколько осталось мест. Всё подходит — «Записаться».',
+    hint: '👀 Условия видны до записи — сюрпризов на месте не будет',
+    icon: <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
+  },
+  {
+    id: 'demo-form',
+    selector: '',
+    demo: 'form',
+    title: 'Как записаться: заявка',
+    description:
+      'При записи по заявке организатор может задать пару вопросов: ответьте, подтвердите условия и отправьте. При свободной записи вы участвуете сразу.',
+    hint: '🔔 О решении организатора придёт уведомление',
+    icon: <ClipboardPen className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
+  },
+  {
+    id: 'demo-ticket',
+    selector: '',
+    demo: 'ticket',
+    title: 'Как записаться: QR-билет',
+    description:
+      'Когда участие подтверждено, появляется билет с QR-кодом. На входе покажите его организатору — он отсканирует код телефоном. Билет открывается даже без интернета.',
+    hint: '🎫 Билет лежит в «Моих событиях», а за сутки до начала придёт напоминание',
+    icon: <QrCode className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
   },
   {
     id: 'final-quiz-invitation',
@@ -155,6 +187,8 @@ export const OnboardingTour: React.FC = () => {
 
   const currentStep = TOUR_STEPS[stepIndex] || TOUR_STEPS[0];
   const isFinalStep = stepIndex === TOUR_STEPS.length - 1;
+  // Финал не считается шагом: «Шаг N из M» только для обучающих шагов
+  const stepBadge = currentStep.badge ?? `Шаг ${stepIndex + 1} из ${TOUR_STEPS.length - 1}`;
 
   // Измерение высоты карточки
   useLayoutEffect(() => {
@@ -292,8 +326,9 @@ export const OnboardingTour: React.FC = () => {
       top: '50%',
       left: '50%',
       transform: 'translate(-50%, -50%)',
-      width: isMobile ? 'calc(100vw - 24px)' : '400px',
-      maxWidth: '420px',
+      // На десктопе стенд записи стоит справа от текста, поэтому карточка шире, но не выше экрана
+      width: isMobile ? 'calc(100vw - 24px)' : currentStep.demo ? `${Math.min(760, viewportW - 32)}px` : '400px',
+      maxWidth: currentStep.demo ? '760px' : '420px',
     };
   } else {
     const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -361,6 +396,10 @@ export const OnboardingTour: React.FC = () => {
       arrowLeftPx = Math.max(24, Math.min(cardW - 24, targetCenterX - left));
     }
   }
+
+  const demoStand = currentStep.demo ? (
+    <TourDemoStand key={currentStep.id} kind={currentStep.demo} participantName={currentUser?.fullName} />
+  ) : null;
 
   // Расчёт размеров spotlight выреза
   const spotX = targetRect ? Math.max(0, targetRect.left - pad) : 0;
@@ -472,11 +511,19 @@ export const OnboardingTour: React.FC = () => {
               </div>
             )}
 
+            <div
+              className={
+                currentStep.demo && !isMobile
+                  ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,330px)] items-center gap-5'
+                  : undefined
+              }
+            >
+            <div className="min-w-0">
             {/* Заголовок и бейдж шага */}
             <div className="flex items-center justify-between gap-2 mb-2">
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-extrabold bg-brand-tint text-brand-ink border border-brand-line">
                 {currentStep.icon}
-                {currentStep.badge}
+                {stepBadge}
               </span>
             </div>
 
@@ -488,7 +535,11 @@ export const OnboardingTour: React.FC = () => {
               {currentStep.description}
             </p>
 
-            {currentStep.hint && (
+            {/* На телефоне стенд идёт сразу под текстом, на десктопе — отдельной колонкой справа */}
+            {currentStep.demo && isMobile && demoStand}
+
+            {/* На телефоне у шагов стенда подсказку убираем: иначе карточка не помещается в экран */}
+            {currentStep.hint && !(currentStep.demo && isMobile) && (
               <div className="flex items-start gap-1.5 p-2 sm:p-2.5 rounded-xl bg-surface border border-line-2 text-[11px] sm:text-xs text-ink mb-3 sm:mb-4">
                 <span className="shrink-0 text-sm sm:text-base leading-none">💡</span>
                 <span className="leading-snug">{currentStep.hint}</span>
@@ -559,6 +610,9 @@ export const OnboardingTour: React.FC = () => {
                 Щёлкните в любое место экрана для перехода
               </p>
             )}
+            </div>
+            {currentStep.demo && !isMobile && demoStand}
+            </div>
           </div>
         </div>
       )}
