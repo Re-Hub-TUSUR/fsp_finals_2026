@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, List, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
+import { ChevronLeft, List, LocateFixed, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
 import type { City, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
 import { CoverCard, EventRow } from '../components/HomeCards';
@@ -62,6 +62,7 @@ export const HomePage: React.FC = () => {
   const radiusTouched = useRef(false);
   const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
   const [filtersOpen, setFiltersOpen] = useState(false);
+  const [locateSignal, setLocateSignal] = useState(0);
 
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
@@ -369,6 +370,16 @@ export const HomePage: React.FC = () => {
             </button>
           )}
         </label>
+        {floating && (
+          <button
+            type="button"
+            onClick={() => setLocateSignal((n) => n + 1)}
+            aria-label="Моё местоположение"
+            className="w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-brand-ink shadow-[0_4px_16px_rgba(20,30,45,0.14)]"
+          >
+            <LocateFixed className="w-[22px] h-[22px]" />
+          </button>
+        )}
         <button
           type="button"
           onClick={() => setFiltersOpen(true)}
@@ -450,6 +461,7 @@ export const HomePage: React.FC = () => {
           <BlinkMap
             events={visibleEvents}
             center={selectedCityCenter}
+            locateSignal={locateSignal}
             selectedEvent={selectedEvent}
             hoveredId={hoveredId}
             onSelectEvent={pickOnMap}

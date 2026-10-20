@@ -116,7 +116,7 @@ export const Navbar: React.FC = () => {
             onClick={() => setCityOpen(true)}
             aria-label={`Город: ${cityName}. Выбрать другой`}
             title={cityName}
-            className="hidden md:flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-[10px] text-ink hover:bg-surface"
+            className="flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-[10px] text-ink hover:bg-surface"
           >
             <MapPin className="w-[18px] h-[18px]" />
             <ChevronDown className="w-4 h-4 text-muted" />

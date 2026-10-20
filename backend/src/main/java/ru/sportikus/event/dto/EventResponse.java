@@ -4,6 +4,7 @@ import com.fasterxml.jackson.annotation.JsonInclude;
 import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.model.OrgDetails;
+import ru.sportikus.event.model.RecurrenceRule;
 import ru.sportikus.event.model.SkillLevel;
 import ru.sportikus.form.CustomField;
 import ru.sportikus.form.FieldDef;
@@ -37,6 +38,9 @@ public record EventResponse(
 
         Instant startTime,
         Instant endTime,
+        RecurrenceRule recurrenceRule,
+        Integer recurrenceIntervalDays,
+        Long nextOccurrenceId,
         Double lat,
         Double lng,
         String address,
@@ -79,7 +83,7 @@ public record EventResponse(
         return new EventResponse(
                 id, title, description, sport, template,
                 organizerName, organizerAvatar, byOrganization, organizationId, organizerUserId,
-                startTime, endTime, lat, lng, address, cityName, timeZone,
+                startTime, endTime, recurrenceRule, recurrenceIntervalDays, nextOccurrenceId, lat, lng, address, cityName, timeZone,
                 capacity, confirmedCount, waitlistCount, joinMode, skillLevel, price, registrationDeadline, minAge, maxAge,
                 requiredEquipment, status, unpublishReason,
                 fields, details, customFields, registrationFields, orgDetails,

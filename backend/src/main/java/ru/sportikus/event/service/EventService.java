@@ -19,6 +19,7 @@ import ru.sportikus.event.model.Event;
 import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.model.OrgDetails;
 import ru.sportikus.event.model.ProgramItem;
+import ru.sportikus.event.model.RecurrenceRule;
 import ru.sportikus.event.model.SkillLevel;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.repository.EventSpecs;
@@ -38,12 +39,15 @@ import ru.sportikus.user.repository.UserRepository;
 
 import java.time.Duration;
 import java.time.Instant;
+import java.time.ZoneId;
 import java.time.ZoneOffset;
+import java.time.ZonedDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.UUID;
 
 @Service
 @RequiredArgsConstructor
@@ -156,6 +160,12 @@ public class EventService {
         OrgDetails orgDetails = org == null ? rejectOrgDetails(req.orgDetails()) : normalizeOrgDetails(req.orgDetails());
 
         Sport sport = sportService.resolve(req.sportId(), req.customSportName(), author);
+        RecurrenceRule recurrenceRule = req.recurrenceRule() == null ? RecurrenceRule.NONE : req.recurrenceRule();
+        Integer recurrenceIntervalDays = recurrenceRule == RecurrenceRule.WEEKLY
+                ? 7 : recurrenceRule == RecurrenceRule.CUSTOM ? req.recurrenceIntervalDays() : null;
+        if (recurrenceRule == RecurrenceRule.CUSTOM && recurrenceIntervalDays == null) {
+            throw ApiException.badRequest("Укажите интервал повторения в днях");
+        }
 
         Event event = Event.builder()
                 .title(req.title().trim())
@@ -166,6 +176,9 @@ public class EventService {
                 .organizerOrg(org)
                 .startTime(req.startTime())
                 .endTime(req.endTime())
+                .recurrenceRule(recurrenceRule)
+                .recurrenceIntervalDays(recurrenceIntervalDays)
+                .recurrenceSeriesId(recurrenceRule != RecurrenceRule.NONE ? UUID.randomUUID() : null)
                 .lat(req.lat())
                 .lng(req.lng())
                 .address(req.address().trim())
@@ -216,8 +229,63 @@ public class EventService {
             throw ApiException.conflict("Снятое или отменённое мероприятие нельзя завершить");
         }
         event.setStatus(ru.sportikus.event.model.EventStatus.ARCHIVED);
+        if (event.getRecurrenceRule() != RecurrenceRule.NONE) {
+            Event next = eventRepository.save(nextOccurrence(event));
+            event.setNextOccurrenceId(next.getId());
+        }
         mapCacheInvalidator.mapDataChanged();
         return mapper.toDetails(event, auth.id());
+    }
+
+    private Event nextOccurrence(Event source) {
+        int intervalDays = source.getRecurrenceIntervalDays() == null ? 7 : source.getRecurrenceIntervalDays();
+        ZoneId zone = source.getTimeZone() == null ? ZoneOffset.UTC : ZoneId.of(source.getTimeZone());
+        ZonedDateTime nextLocalStart = source.getStartTime().atZone(zone).plusDays(intervalDays);
+        Instant nextStart = nextLocalStart.toInstant();
+        while (!nextStart.isAfter(Instant.now())) {
+            nextLocalStart = nextLocalStart.plusDays(intervalDays);
+            nextStart = nextLocalStart.toInstant();
+        }
+        Duration shift = Duration.between(source.getStartTime(), nextStart);
+        return Event.builder()
+                .title(source.getTitle())
+                .description(source.getDescription())
+                .sport(source.getSport())
+                .template(source.getTemplate())
+                .organizerUser(source.getOrganizerUser())
+                .organizerOrg(source.getOrganizerOrg())
+                .startTime(nextStart)
+                .endTime(source.getEndTime().plus(shift))
+                .recurrenceRule(RecurrenceRule.CUSTOM)
+                .recurrenceIntervalDays(intervalDays)
+                .recurrenceSeriesId(source.getRecurrenceSeriesId() != null
+                        ? source.getRecurrenceSeriesId() : UUID.randomUUID())
+                .lat(source.getLat())
+                .lng(source.getLng())
+                .address(source.getAddress())
+                .city(source.getCity())
+                .timeZone(source.getTimeZone())
+                .capacity(source.getCapacity())
+                .joinMode(source.getJoinMode())
+                .skillLevel(source.getSkillLevel())
+                .requiredEquipment(source.getRequiredEquipment())
+                .price(source.getPrice())
+                .registrationDeadline(source.getRegistrationDeadline() == null
+                        ? null : source.getRegistrationDeadline().plus(shift))
+                .minAge(source.getMinAge())
+                .maxAge(source.getMaxAge())
+                .fields(new ArrayList<>(source.getFields()))
+                .details(new java.util.LinkedHashMap<>(source.getDetails()))
+                .customFields(new ArrayList<>(source.getCustomFields()))
+                .registrationFields(new ArrayList<>(source.getRegistrationFields()))
+                .orgDetails(source.getOrgDetails())
+                .status(ru.sportikus.event.model.EventStatus.PUBLISHED)
+                .moderationStatus(source.getModerationStatus())
+                .moderationReason(source.getModerationReason())
+                .moderationHits(new ArrayList<>(source.getModerationHits()))
+                .moderationModel(source.getModerationModel())
+                .moderatedAt(source.getModeratedAt())
+                .build();
     }
 
     /**

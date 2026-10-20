@@ -191,7 +191,7 @@ export const EventPage: React.FC = () => {
 
   const panel = (() => {
     if (archived) {
-      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.</div>;
+      return <div className="rounded-xl bg-slate-100 border border-slate-200 p-4 text-slate-700 font-semibold">Мероприятие завершено и находится в архиве.{event.nextOccurrenceId && <Link to={`/events/${event.nextOccurrenceId}`} className="mt-2 block text-brand-ink hover:underline">Открыть следующее событие →</Link>}</div>;
     }
     if (unpublished) {
       return (
@@ -531,6 +531,7 @@ export const EventPage: React.FC = () => {
             <div className="grid sm:grid-cols-2 gap-x-6 gap-y-4">
               <Fact icon={<Clock className="w-5 h-5" />} label="Когда">
                 {formatDateTime(event.startTime, event.timeZone)} – {formatTime(event.endTime, event.timeZone)}
+                {event.recurrenceRule !== 'NONE' && event.recurrenceIntervalDays && <span className="block text-sm font-semibold text-brand-ink">Повторяется через {event.recurrenceIntervalDays} дн.</span>}
                 {event.timeZone && isForeignZone(event.timeZone) && (
                   <span className="block text-xs text-slate-500">
                     Местное время{event.cityName ? `: ${event.cityName}` : ''} ({utcLabel(event.timeZone)})
@@ -800,7 +801,7 @@ export const EventPage: React.FC = () => {
       )}
       {completeOpen && (
         <Modal title="Завершить событие?" onClose={() => setCompleteOpen(false)}>
-          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.</p>
+          <p className="text-slate-700">Событие будет перенесено в архив организатора и подтверждённых участников.{event.recurrenceRule !== 'NONE' && event.recurrenceIntervalDays ? ` Следующее событие автоматически создастся через ${event.recurrenceIntervalDays} дн.` : ''}</p>
           {actionError && <p className="mt-3 text-sm text-red-700">{actionError}</p>}
           <div className="mt-5 flex justify-end gap-3">
             <button type="button" onClick={() => setCompleteOpen(false)} className="rounded-xl border border-slate-300 px-4 py-2.5 font-semibold">Отмена</button>
