@@ -101,7 +101,7 @@ export const Navbar: React.FC = () => {
           </button>
 
           {onHome && (
-            <label className="hidden lg:flex flex-1 min-w-[200px] max-w-[420px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
+            <label className="hidden lg:flex flex-[3] min-w-[140px] max-w-[640px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
               <Search className="w-[19px] h-[19px] shrink-0" />
               <input
                 type="search"

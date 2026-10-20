@@ -441,10 +441,10 @@ export const HomePage: React.FC = () => {
       {sub && <span className="hidden lg:inline text-sm text-muted ml-1">{sub}</span>}
     </div>
   );
-  const grid = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(310px,1fr))] gap-3 lg:gap-4';
+  const grid = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-[repeat(auto-fill,minmax(min(100%,280px),1fr))] gap-3 lg:gap-4';
 
   const feed = (
-    <div className="max-w-[1400px] px-3 lg:px-8 pt-1.5 lg:pt-6 pb-10 flex flex-col gap-6 lg:gap-8">
+    <div className="w-full max-w-[1400px] mx-auto px-3 sm:px-5 lg:px-8 pt-1.5 lg:pt-6 pb-10 flex flex-col gap-5 sm:gap-6 lg:gap-8">
       {errorBox}
 
 
