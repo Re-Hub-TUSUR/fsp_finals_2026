@@ -1,8 +1,10 @@
+import { useEffect, useState } from 'react';
 import { describe, expect, it, vi, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { OnboardingTour } from './OnboardingTour';
 import { AuthProvider } from '../context/AuthContext';
+import { tourDemo, useTourDemo } from '../utils/tourDemo';
 
 // Mock client api
 vi.mock('../api/client', () => ({
@@ -34,6 +36,31 @@ vi.mock('../api', () => ({
   },
 }));
 
+/** Заменяет главную: пока тур включил учебную встречу, показывает её метку и карточку, как карта. */
+function DemoMapStub() {
+  const demo = useTourDemo();
+  const [open, setOpen] = useState(false);
+  useEffect(() => {
+    if (demo.openRequest > 0) setOpen(true);
+  }, [demo.openRequest]);
+  useEffect(() => {
+    if (!demo.active) setOpen(false);
+  }, [demo.active]);
+  if (!demo.active) return null;
+  return (
+    <>
+      <button type="button" data-tour="demo-pin" onClick={() => { setOpen(true); tourDemo.reportOpened(); }}>
+        Метка учебной встречи
+      </button>
+      {open && (
+        <div data-tour="demo-card">
+          <button type="button" onClick={() => tourDemo.reportJoinClicked()}>Подать заявку</button>
+        </div>
+      )}
+    </>
+  );
+}
+
 describe('OnboardingTour', () => {
   beforeEach(() => {
     localStorage.clear();
@@ -50,6 +77,7 @@ describe('OnboardingTour', () => {
           <div data-tour="filter-bar">Фильтры</div>
           <div data-tour="search-bar">Поиск</div>
           <div data-tour="create-event">Создать</div>
+          <DemoMapStub />
           <OnboardingTour />
         </AuthProvider>
       </MemoryRouter>
@@ -60,7 +88,7 @@ describe('OnboardingTour', () => {
     renderWithRouter(['/?tour=1']);
 
     expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
-    expect(screen.getByText('Шаг 1 из 5')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 1 из 9')).toBeInTheDocument();
     expect(screen.getByText('Пропустить обучение')).toBeInTheDocument();
     expect(screen.getByText('Далее')).toBeInTheDocument();
   });
@@ -74,7 +102,7 @@ describe('OnboardingTour', () => {
     fireEvent.click(nextBtn);
 
     expect(await screen.findByText('Карта и Лента событий')).toBeInTheDocument();
-    expect(screen.getByText('Шаг 2 из 5')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 2 из 9')).toBeInTheDocument();
   });
 
   it('advances to next step on clicking anywhere on the overlay backdrop', async () => {
@@ -129,13 +157,65 @@ describe('OnboardingTour', () => {
 
     expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
 
-    // 5 steps to reach final
-    for (let i = 0; i < 5; i++) {
+    // 5 шагов по интерфейсу и 4 шага учебной записи до финала
+    for (let i = 0; i < 9; i++) {
       fireEvent.click(screen.getByText('Далее'));
     }
 
     expect(await screen.findByText('Добро пожаловать в Sportikus!')).toBeInTheDocument();
     expect(screen.getByText('Пройти тест прямо сейчас')).toBeInTheDocument();
     expect(screen.getByText('Позже, перейти к событиям')).toBeInTheDocument();
+  });
+
+  it('после шага 5 ведёт по учебной записи: метка на карте → карточка → заявка → билет, затем убирает встречу', async () => {
+    renderWithRouter(['/?tour=1']);
+    expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
+    expect(screen.queryByText('Метка учебной встречи')).not.toBeInTheDocument();
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByText('Далее'));
+
+    expect(await screen.findByText('Найдите встречу на карте')).toBeInTheDocument();
+    expect(screen.getByText('Шаг 6 из 9')).toBeInTheDocument();
+    // Пользователь сам нажимает на метку — тур идёт за ним
+    fireEvent.click(await screen.findByText('Метка учебной встречи'));
+    expect(await screen.findByText('Карточка встречи')).toBeInTheDocument();
+
+    // «Подать заявку» в карточке ведёт к заявке; на сервер ничего не уходит
+    fireEvent.click(screen.getByText('Подать заявку'));
+    expect(await screen.findByText('Как записаться: заявка')).toBeInTheDocument();
+    const stand = screen.getByRole('group', { name: /Демонстрационный пример/ });
+    expect(stand).toHaveTextContent('Отправить заявку');
+    expect(stand.querySelector('button')).toBeNull();
+    expect(await screen.findByText('Бегу впервые в компании — подскажете темп?', {}, { timeout: 4000 })).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Как записаться: QR-билет')).toBeInTheDocument();
+    expect(screen.getByText('SPT-DEMO2026')).toBeInTheDocument();
+    expect(await screen.findByAltText('Пример QR-кода билета SPT-DEMO2026')).toBeInTheDocument();
+    expect(screen.getByText('Метка учебной встречи')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Добро пожаловать в Sportikus!')).toBeInTheDocument();
+    expect(screen.getByText('Финал')).toBeInTheDocument();
+    // Обучение закончилось — учебной встречи на карте больше нет
+    expect(screen.queryByText('Метка учебной встречи')).not.toBeInTheDocument();
+  });
+
+  it('«Далее» на шаге с меткой сам открывает карточку учебной встречи', async () => {
+    renderWithRouter(['/?tour=1']);
+    expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
+    for (let i = 0; i < 6; i++) fireEvent.click(screen.getByText('Далее'));
+
+    expect(await screen.findByText('Карточка встречи')).toBeInTheDocument();
+    expect(screen.getByText('Подать заявку')).toBeInTheDocument();
+  });
+
+  it('пропуск обучения посреди записи убирает учебную встречу', async () => {
+    renderWithRouter(['/?tour=1']);
+    expect(await screen.findByText('Персональные рекомендации')).toBeInTheDocument();
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByText('Далее'));
+    expect(await screen.findByText('Метка учебной встречи')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText('Пропустить обучение'));
+    expect(screen.queryByText('Метка учебной встречи')).not.toBeInTheDocument();
   });
 });

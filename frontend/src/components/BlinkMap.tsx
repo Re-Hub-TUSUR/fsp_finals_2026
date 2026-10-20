@@ -10,6 +10,7 @@ import { Minus, Plus } from 'lucide-react';
 import { Spinner } from './ui';
 import { currentPosition } from '../utils/geolocation';
 import { DEFAULT_CITY_CENTER } from '../constants';
+import { isDemoEvent } from '../utils/tourDemo';
 
 export interface MapViewport extends LatLng {
   radiusKm: number;
@@ -238,8 +239,8 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
 
     for (const event of events) {
       const [x, y] = map.project(toLngLat(event.lat, event.lng));
-      // Выбранную и подсвеченную метку не прячем в кластер
-      const selected = event.id === selectedId || event.id === hoveredId;
+      // Выбранную и подсвеченную метку не прячем в кластер, как и демо-событие тура: его нужно найти
+      const selected = event.id === selectedId || event.id === hoveredId || isDemoEvent(event);
       const group =
         radius && !selected ? groups.find((g) => !g.selected && Math.hypot(g.x - x, g.y - y) < radius) : undefined;
       if (group) group.items.push(event);
@@ -249,7 +250,9 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
     const markers = groups.map((group) => {
       if (group.items.length === 1) {
         const event = group.items[0];
-        const isSelected = event.id === selectedId;
+        // Учебную встречу тура рисуем как выбранную (заливка и подпись) и поверх соседей — её должно быть видно сразу
+        const demo = isDemoEvent(event);
+        const isSelected = event.id === selectedId || demo;
         const isHovered = !isSelected && event.id === hoveredId;
         const size = pinSize(isSelected, isHovered);
         const html = pinElement(event, isSelected, isHovered);
@@ -262,7 +265,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
           html,
           anchor: [size / 2, size / 2],
           interactive: true,
-          zIndex: isSelected ? 4 : isHovered ? 3 : 2,
+          zIndex: demo ? 5 : isSelected ? 4 : isHovered ? 3 : 2,
         });
       }
 

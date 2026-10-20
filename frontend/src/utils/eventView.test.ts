@@ -129,16 +129,8 @@ describe('eventStatus', () => {
   });
 
   it('is not "special" for a comfortably open event', () => {
-    // Дата фикстуры — сегодня; без явного «завтра» тест падал бы, пока событие «идёт сейчас»
-    const tomorrow = Date.now() + 86_400_000;
-    const status = eventStatus(
-      baseEvent({
-        capacity: 10,
-        confirmedCount: 2,
-        startTime: new Date(tomorrow).toISOString(),
-        endTime: new Date(tomorrow + 7_200_000).toISOString(),
-      }),
-    );
+    // Дата в будущем: иначе в день фикстуры событие становится «идёт сейчас»
+    const status = eventStatus(baseEvent({ startTime: '2099-06-01T10:00:00Z', endTime: '2099-06-01T12:00:00Z', capacity: 10, confirmedCount: 2 }));
     expect(status.special).toBe(false);
     expect(status.label).toBe('2 из 10');
   });
@@ -341,7 +333,8 @@ describe('capacityText', () => {
 
 describe('время в поясе места проведения', () => {
   const KRSK = 'Asia/Krasnoyarsk'; // UTC+7
-  const ev = { startTime: '2026-10-20T12:30:00Z', endTime: '2026-10-20T14:00:00Z', timeZone: KRSK };
+  // Дата в будущем: в день фикстуры, пока событие идёт, ряд показывает «Сейчас» вместо времени
+  const ev = { startTime: '2099-06-01T12:30:00Z', endTime: '2099-06-01T14:00:00Z', timeZone: KRSK };
 
   it('карточка, ряд и диапазон показывают одно и то же местное время', () => {
     expect(formatCardDate(ev.startTime, KRSK)).toContain('19:30');
