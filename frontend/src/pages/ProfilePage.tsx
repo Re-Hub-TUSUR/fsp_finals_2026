@@ -158,39 +158,33 @@ export function ProfilePage({ forcedType, forcedId }: { forcedType?: 'users' | '
   const isOrg = profile.type === 'ORGANIZATION';
   const friendshipAction = !isOrg && !profile.canEdit ? profile.friendshipState ?? 'NONE' : null;
   return <div className="mx-auto max-w-6xl px-3 sm:px-4 py-6 sm:py-8 w-full min-w-0 overflow-x-hidden">
-    <section className="flex flex-col gap-6 border-b border-slate-200 pb-8 sm:flex-row sm:items-start">
-      <div className="flex h-20 w-20 sm:h-24 sm:w-24 shrink-0 items-center justify-center overflow-hidden rounded-md bg-slate-200">
-        {profile.imageUrl ? <img src={profile.imageUrl} alt="" className="h-full w-full object-cover" /> : isOrg ? <Building2 className="h-10 w-10 text-slate-500" /> : <UserRound className="h-10 w-10 text-slate-500" />}
+    <section className="grid gap-5 border-b border-line pb-8 sm:grid-cols-[auto_minmax(0,1fr)] sm:gap-7 lg:grid-cols-[auto_minmax(0,1fr)_auto] lg:gap-8">
+      <div className="flex h-24 w-24 sm:h-28 sm:w-28 lg:h-32 lg:w-32 shrink-0 items-center justify-center overflow-hidden rounded-3xl bg-surface-2">
+        {profile.imageUrl ? <img src={profile.imageUrl} alt="" className="h-full w-full object-cover" /> : isOrg ? <Building2 className="h-11 w-11 text-muted" /> : <UserRound className="h-11 w-11 text-muted" />}
       </div>
-      <div className="min-w-0 flex-1">
-        <div className="flex flex-wrap items-start justify-between gap-3">
-          <div><p className="text-sm font-semibold text-emerald-700">{isOrg ? 'Организация' : 'Пользователь'}</p><h1 className="text-2xl sm:text-3xl font-bold text-slate-900 break-words">{profile.name}</h1></div>
-          {profile.canEdit && (
-            <>
-              <button
-                type="button"
-                onClick={() => {
-                  window.dispatchEvent(new CustomEvent('start-sportikus-tour'));
-                }}
-                className="flex items-center justify-center gap-1.5 rounded-md border border-line-2 bg-card px-3 py-2 text-sm font-semibold text-ink hover:bg-surface w-full sm:w-auto"
-              >
-                <GraduationCap className="h-4 w-4 text-brand-ink" /> Обучение по сайту
-              </button>
-              <button onClick={() => setEditing(true)} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold w-full sm:w-auto"><Edit3 className="h-4 w-4" />Редактировать профиль</button>
-            </>
-          )}
-          {forcedId != null && <button onClick={logout} className="flex items-center justify-center gap-2 rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold text-red-700 w-full sm:w-auto"><LogOut className="h-4 w-4" />Выйти из аккаунта</button>}
-          {isOrg && currentUser?.role === 'ROLE_USER' && !profile.canEdit && <button disabled={subscriptionBusy} onClick={toggleSubscription} className={`rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50 w-full sm:w-auto ${profile.subscribed ? 'border border-slate-300' : 'bg-brand text-on-brand'}`}>{profile.subscribed ? 'Отписаться' : 'Подписаться'}</button>}
-          {friendshipAction === 'NONE' && <button disabled={friendBusy} onClick={() => setFriendship('request', profile.id)} className="rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50 w-full sm:w-auto">Добавить в друзья</button>}
-          {friendshipAction === 'OUTGOING_PENDING' && <button disabled={friendBusy} onClick={() => setFriendship('remove', profile.id)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 w-full sm:w-auto">Заявка отправлена · Отменить</button>}
-          {friendshipAction === 'INCOMING_PENDING' && <div className="flex gap-2 w-full sm:w-auto"><button disabled={friendBusy} onClick={() => setFriendship('accept', profile.id)} className="flex-1 sm:flex-initial rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Принять заявку</button><button disabled={friendBusy} onClick={() => setFriendship('reject', profile.id)} className="flex-1 sm:flex-initial rounded-md border border-slate-300 px-3 py-2 text-sm font-semibold">Отклонить</button></div>}
-          {friendshipAction === 'FRIENDS' && <button disabled={friendBusy} onClick={() => setFriendship('remove', profile.id)} className="rounded-md border border-slate-300 px-4 py-2 text-sm font-semibold disabled:opacity-50 w-full sm:w-auto">Удалить из друзей</button>}
-        </div>
-        <p className="mt-3 flex items-center gap-2 text-slate-600 break-words"><Mail className="h-4 w-4 shrink-0" />{profile.email}</p>
+      <div className="min-w-0 pt-1">
+        <div><p className="text-sm font-semibold text-brand">{isOrg ? 'Организация' : 'Пользователь'}</p><h1 className="mt-1 text-3xl sm:text-4xl font-bold text-ink break-words">{profile.name}</h1></div>
+        <p className="mt-3 flex items-center gap-2 text-muted break-words"><Mail className="h-5 w-5 shrink-0" />{profile.email}</p>
         {profile.description && <p className="mt-4 max-w-3xl text-slate-700 break-words">{profile.description}</p>}
         {isOrg && <div className="mt-4 flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-600"><span>ИНН: {profile.inn ?? 'не указан'}</span><span>ОГРН: {profile.ogrn ?? 'не указан'}</span><span>КПП: {profile.kpp ?? 'не указан'}</span></div>}
         {isOrg && <p className="mt-3 flex items-center gap-2 text-sm font-semibold"><ShieldCheck className="h-4 w-4 shrink-0" />Статус: {profile.status === 'APPROVED' ? 'одобрена' : profile.status === 'REJECTED' ? 'отклонена' : 'на рассмотрении'}</p>}
         {isOrg && <p className="mt-2 text-sm font-semibold text-slate-600">Подписчиков: {profile.subscriberCount ?? 0}</p>}
+      </div>
+      <div className="flex w-full flex-col gap-3 sm:col-span-2 lg:col-span-1 lg:w-72">
+        {profile.canEdit && <button onClick={() => setEditing(true)} className="flex min-h-14 w-full items-center justify-center gap-2 rounded-2xl border border-line bg-card px-5 py-3 font-semibold text-ink transition-colors hover:bg-surface"><Edit3 className="h-4 w-4" />Редактировать профиль</button>}
+        {(profile.canEdit || forcedId != null) && <div className="flex flex-wrap items-center justify-between gap-x-5 gap-y-2 px-2 lg:justify-end">
+          {profile.canEdit && <button
+            type="button"
+            onClick={() => window.dispatchEvent(new CustomEvent('start-sportikus-tour'))}
+            className="flex items-center gap-1.5 py-1 text-sm font-semibold text-brand hover:text-brand-ink"
+          ><GraduationCap className="h-4 w-4" />Обучение по сайту</button>}
+          {forcedId != null && <button onClick={logout} className="flex items-center gap-1.5 py-1 text-sm font-semibold text-muted hover:text-ink"><LogOut className="h-4 w-4" />Выйти</button>}
+        </div>}
+        {isOrg && currentUser?.role === 'ROLE_USER' && !profile.canEdit && <button disabled={subscriptionBusy} onClick={toggleSubscription} className={`w-full rounded-md px-4 py-2 text-sm font-semibold disabled:opacity-50 ${profile.subscribed ? 'border border-line' : 'bg-brand text-on-brand'}`}>{profile.subscribed ? 'Отписаться' : 'Подписаться'}</button>}
+        {friendshipAction === 'NONE' && <button disabled={friendBusy} onClick={() => setFriendship('request', profile.id)} className="w-full rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Добавить в друзья</button>}
+        {friendshipAction === 'OUTGOING_PENDING' && <button disabled={friendBusy} onClick={() => setFriendship('remove', profile.id)} className="w-full rounded-md border border-line px-4 py-2 text-sm font-semibold disabled:opacity-50">Заявка отправлена · Отменить</button>}
+        {friendshipAction === 'INCOMING_PENDING' && <div className="flex w-full gap-2"><button disabled={friendBusy} onClick={() => setFriendship('accept', profile.id)} className="flex-1 rounded-md bg-brand px-4 py-2 text-sm font-semibold text-on-brand disabled:opacity-50">Принять заявку</button><button disabled={friendBusy} onClick={() => setFriendship('reject', profile.id)} className="flex-1 rounded-md border border-line px-3 py-2 text-sm font-semibold">Отклонить</button></div>}
+        {friendshipAction === 'FRIENDS' && <button disabled={friendBusy} onClick={() => setFriendship('remove', profile.id)} className="w-full rounded-md border border-line px-4 py-2 text-sm font-semibold disabled:opacity-50">Удалить из друзей</button>}
       </div>
     </section>
     {editing && <form onSubmit={save} className="my-6 space-y-4 border-b border-slate-200 pb-6">
