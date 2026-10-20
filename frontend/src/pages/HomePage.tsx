@@ -44,12 +44,12 @@ import {
 import { currentPosition, positionIfGranted } from '../utils/geolocation';
 import { useDebouncedValue } from '../hooks/useDebouncedValue';
 import { useNow } from '../hooks/useNow';
+import { DEFAULT_CITY_CENTER } from '../constants';
 
 /** Событие с предвычисленными полями для сортировки и группировки ленты. */
 type Item = { e: SportEvent; km: number | null; live: boolean; start: number };
 type Section = { key: string; title: string; sub?: string; live?: boolean; items: Item[] };
 
-const KRASNOYARSK: LatLng = { lat: 56.0153, lng: 92.8932 };
 // В режиме радиуса грузим сразу 10 км — меньшие радиусы и счётчики считаются на клиенте
 const RADIUS_FETCH_KM = 10;
 // «Без ограничения» в списке — весь город
@@ -81,7 +81,7 @@ export const HomePage: React.FC = () => {
   const [detailId, setDetailId] = useState<number | null>(null);
   const [me, setMe] = useState<LatLng | null>(null);
   // Каталог доступен и без ключа карты; после инициализации 2ГИС уточнит область.
-  const [viewport, setViewport] = useState<MapViewport>({ ...KRASNOYARSK, radiusKm: 50 });
+  const [viewport, setViewport] = useState<MapViewport>({ ...DEFAULT_CITY_CENTER, radiusKm: 50 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -137,7 +137,7 @@ export const HomePage: React.FC = () => {
   // город, иначе Красноярск). Видимая область карты — только если включено «Искать при перемещении карты»
   const selectedCity = cities.find((city) => String(city.id) === params.get('city'));
   const selectedCityCenter = selectedCity ? { lat: selectedCity.lat, lng: selectedCity.lng } : null;
-  const cityCenter = selectedCityCenter ?? origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
+  const cityCenter = selectedCityCenter ?? origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : DEFAULT_CITY_CENTER);
   const byViewport = view === 'map' && moveSearch;
   // Панорамирование шлёт moveend очередью: запрашиваем события, когда карта успокоилась
   const settledViewport = useDebouncedValue(viewport, 400);

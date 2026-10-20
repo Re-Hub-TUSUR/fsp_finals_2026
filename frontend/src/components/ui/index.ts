@@ -3,6 +3,7 @@ export { Button } from './Button';
 export type { ButtonProps } from './Button';
 export { buttonClasses } from './buttonStyles';
 export type { ButtonSize, ButtonVariant } from './buttonStyles';
+export { Alert } from './Alert';
 export { Badge, CountBadge } from './Badge';
 export type { BadgeTone } from './Badge';
 export { Card } from './Card';

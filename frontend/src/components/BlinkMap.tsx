@@ -9,6 +9,7 @@ import { MapEventCard } from './MapEventCard';
 import { Minus, Plus } from 'lucide-react';
 import { Spinner } from './ui';
 import { currentPosition } from '../utils/geolocation';
+import { DEFAULT_CITY_CENTER } from '../constants';
 
 export interface MapViewport extends LatLng {
   radiusKm: number;
@@ -49,7 +50,6 @@ const RADIUS_COLORS = {
 };
 
 // Center of Krasnoyarsk ([lng, lat] для 2GIS)
-const KRASNOYARSK_COORDS: LngLat = [92.8932, 56.0153];
 // Радиус склейки меток в кластер (px) и зум, с которого кластеры не нужны
 const CLUSTER_RADIUS = 72;
 const CLUSTER_MAX_ZOOM = 15.8;
@@ -110,7 +110,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   const [notice, setNotice] = useState<string | null>(null);
 
   const { instance, error } = useMapgl(containerRef, {
-    center: KRASNOYARSK_COORDS,
+    center: toLngLat(DEFAULT_CITY_CENTER.lat, DEFAULT_CITY_CENTER.lng),
     zoom: 13,
     pitch: PITCH_3D,
     rotation: ROTATION_3D,
