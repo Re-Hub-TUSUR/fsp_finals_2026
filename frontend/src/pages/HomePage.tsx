@@ -346,6 +346,7 @@ export const HomePage: React.FC = () => {
     <div className="lg:hidden flex flex-col pt-2">
       <div className="flex gap-2 px-3">
         <label
+          data-tour="search-bar-mobile"
           className={`flex-1 min-w-0 h-[50px] flex items-center gap-2.5 pl-3.5 pr-1.5 rounded-xl bg-card border border-line-2 text-muted focus-within:border-ink ${
             floating ? 'shadow-[0_4px_16px_rgba(20,30,45,0.14)]' : ''
           }`}
