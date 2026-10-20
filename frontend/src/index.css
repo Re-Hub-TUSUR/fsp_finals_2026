@@ -67,6 +67,9 @@ body,
   --color-pin-ring: #ffffff;
 
   --color-snow: #ffffff;
+  /* Не инвертируются темой: тёмные фото-секции лендинга и светлая «сцена» под 3D-рендеры */
+  --color-night: #15171a;
+  --color-stage: #f3f3f5;
   --color-white: #ffffff;
   --color-slate-50: #f4f5f7;
   --color-slate-100: #f2f4f7;
@@ -241,6 +244,37 @@ body {
   animation: sp-rise 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) both;
   @media (prefers-reduced-motion: reduce) {
     animation: none;
+  }
+}
+
+/* Лендинг: блоки проявляются при прокрутке. Scroll-driven animations — прогрессивное улучшение:
+   без поддержки (Firefox) или при prefers-reduced-motion блоки просто видны сразу. */
+@keyframes sp-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(24px);
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  @supports ((animation-timeline: view()) and (animation-range: entry)) {
+    .sp-reveal {
+      animation: sp-reveal linear backwards;
+      animation-timeline: view();
+      animation-range: entry 0% entry 70%;
+    }
+  }
+
+  /* 3D-рендер телефона на лендинге медленно «парит» — только на широких экранах,
+     на телефоне бесконечная анимация лишь тратит батарею */
+  @keyframes sp-float {
+    50% {
+      transform: translateY(-10px) rotate(-0.6deg);
+    }
+  }
+  @media (min-width: 640px) {
+    .sp-float {
+      animation: sp-float 6s ease-in-out infinite;
+    }
   }
 }
 
