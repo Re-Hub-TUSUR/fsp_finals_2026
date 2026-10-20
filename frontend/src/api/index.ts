@@ -95,16 +95,32 @@ export const subscriptionsApi = {
   unsubscribe: (organizationId: number) => api.delete(`/organizations/${organizationId}/subscription`),
 };
 
+/**
+ * Справочник, который не меняется за сессию: первый запрос кэшируется и делится между экранами
+ * (лента, шапка, анкета, конструктор). Ошибка не кэшируется — следующий вызов спросит сервер снова.
+ */
+function cachedOnce<T>(load: () => Promise<T>): () => Promise<T> {
+  let pending: Promise<T> | null = null;
+  return () => {
+    pending ??= load().catch((error) => {
+      pending = null;
+      throw error;
+    });
+    return pending;
+  };
+}
+
 export const catalogApi = {
-  sports: () => api.get<Sport[]>('/sports').then((r) => r.data),
-  templates: () => api.get<EventTemplate[]>('/templates').then((r) => r.data),
+  sports: cachedOnce(() => api.get<Sport[]>('/sports').then((r) => r.data)),
+  templates: cachedOnce(() => api.get<EventTemplate[]>('/templates').then((r) => r.data)),
 };
 
 export const eventsApi = {
-  list: (query: EventQuery = {}) =>
+  list: (query: EventQuery = {}, signal?: AbortSignal) =>
     api
       .get<SportEvent[]>('/events', {
         params: { ...query, sport: query.sport?.length ? query.sport.join(',') : undefined },
+        signal,
       })
       .then((r) => r.data),
   get: (id: number | string) => api.get<SportEvent>(`/events/${id}`).then((r) => r.data),
@@ -160,7 +176,7 @@ export const adminApi = {
 };
 
 export const citiesApi = {
-  list: () => api.get<City[]>('/cities').then((r) => r.data),
+  list: cachedOnce(() => api.get<City[]>('/cities').then((r) => r.data)),
   nearest: (lat: number, lng: number) => api.get<City>('/cities/nearest', { params: { lat, lng } }).then((r) => r.data),
 };
 

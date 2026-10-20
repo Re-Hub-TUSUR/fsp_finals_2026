@@ -10,6 +10,7 @@ import {
 import { commentsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { usePolling } from '../hooks/usePolling';
 import type { EventComment } from '../types';
 import { formatDateTime } from '../utils/format';
 import { Button, LoadingBlock } from './ui';
@@ -54,14 +55,9 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
   useEffect(() => {
     isFirstLoad.current = true;
     void fetchComments(false);
-
-    // Автообновление (polling) каждые 8 секунд
-    const interval = setInterval(() => {
-      void fetchComments(true);
-    }, 8000);
-
-    return () => clearInterval(interval);
   }, [fetchComments]);
+  // Новые сообщения подтягиваем раз в 8 секунд, пока вкладка открыта
+  usePolling(() => void fetchComments(true), 8_000);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();

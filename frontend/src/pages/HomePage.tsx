@@ -42,8 +42,11 @@ import {
   type LatLng,
 } from '../utils/eventView';
 import { currentPosition, positionIfGranted } from '../utils/geolocation';
+import { useDebouncedValue } from '../hooks/useDebouncedValue';
+import { useNow } from '../hooks/useNow';
 
-type Item = { e: SportEvent; km: number | null };
+/** Событие с предвычисленными полями для сортировки и группировки ленты. */
+type Item = { e: SportEvent; km: number | null; live: boolean; start: number };
 type Section = { key: string; title: string; sub?: string; live?: boolean; items: Item[] };
 
 const KRASNOYARSK: LatLng = { lat: 56.0153, lng: 92.8932 };
@@ -64,7 +67,6 @@ export const HomePage: React.FC = () => {
   const [cities, setCities] = useState<City[]>([]);
   const [filters, setFilters] = useState<HomeFilterState>(DEFAULT_FILTERS);
   const radiusTouched = useRef(false);
-  const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
   const [filtersOpen, setFiltersOpen] = useState(false);
   const [locateSignal, setLocateSignal] = useState(0);
 
@@ -129,10 +131,7 @@ export const HomePage: React.FC = () => {
     if (origin && !radiusTouched.current) setFilters((f) => (f.radius === 'all' ? { ...f, radius: '5' } : f));
   }, [origin]);
 
-  useEffect(() => {
-    const t = setTimeout(() => setDebouncedQuery(q.trim()), 300);
-    return () => clearTimeout(t);
-  }, [q]);
+  const debouncedQuery = useDebouncedValue(q.trim(), 300);
 
   // Область загрузки: радиус от точки отсчёта; без радиуса — весь город (точка отсчёта или домашний
   // город, иначе Красноярск). Видимая область карты — только если включено «Искать при перемещении карты»
@@ -140,16 +139,22 @@ export const HomePage: React.FC = () => {
   const selectedCityCenter = selectedCity ? { lat: selectedCity.lat, lng: selectedCity.lng } : null;
   const cityCenter = selectedCityCenter ?? origin ?? (preferences?.homeCity ? { lat: preferences.homeCity.lat, lng: preferences.homeCity.lng } : KRASNOYARSK);
   const byViewport = view === 'map' && moveSearch;
-  const fetchCenter = selectedCityCenter ?? (radiusOn && origin ? origin : byViewport ? viewport : cityCenter);
-  const fetchRadius = radiusOn ? RADIUS_FETCH_KM : byViewport ? viewport.radiusKm : CITY_RADIUS_KM;
+  // Панорамирование шлёт moveend очередью: запрашиваем события, когда карта успокоилась
+  const settledViewport = useDebouncedValue(viewport, 400);
+  const fetchCenter = selectedCityCenter ?? (radiusOn && origin ? origin : byViewport ? settledViewport : cityCenter);
+  const fetchRadius = radiusOn ? RADIUS_FETCH_KM : byViewport ? settledViewport.radiusKm : CITY_RADIUS_KM;
 
+  // Выбор города в шапке переносит область поиска на его центр
+  const cityLat = selectedCity?.lat;
+  const cityLng = selectedCity?.lng;
   useEffect(() => {
-    if (selectedCityCenter) setViewport({ ...selectedCityCenter, radiusKm: CITY_RADIUS_KM });
-  }, [selectedCityCenter?.lat, selectedCityCenter?.lng]);
+    if (cityLat != null && cityLng != null) setViewport({ lat: cityLat, lng: cityLng, radiusKm: CITY_RADIUS_KM });
+  }, [cityLat, cityLng]);
 
   useEffect(() => {
     if (!ready) return;
-    let cancelled = false;
+    const controller = new AbortController();
+    const cancelled = () => controller.signal.aborted;
     setLoading(true);
     // Снимок прошлой загрузки: пины появляются сразу, запрос ниже обновит их актуальными данными
     const snapshot: SnapshotQuery = {
@@ -175,18 +180,17 @@ export const HomePage: React.FC = () => {
         q: debouncedQuery || undefined,
         skillLevel: filters.skill || undefined,
         joinMode: filters.joinMode || undefined,
-      })
+      }, controller.signal)
       .then((list) => {
-        if (cancelled) return;
+        if (cancelled()) return;
         setEvents(list);
         setError(null);
         if (snapshotId) writeEventsSnapshot(snapshotId, list);
       })
-      .catch((e) => !cancelled && setError(errorMessage(e, 'Не удалось загрузить мероприятия')))
-      .finally(() => !cancelled && setLoading(false));
-    return () => {
-      cancelled = true;
-    };
+      .catch((e) => !cancelled() && setError(errorMessage(e, 'Не удалось загрузить мероприятия')))
+      .finally(() => !cancelled() && setLoading(false));
+    // Новые параметры отменяют прошлый запрос, а не просто игнорируют его ответ
+    return () => controller.abort();
     // currentUser?.id — чтобы после смены роли обновились статусы «Вы участвуете»
   }, [
     ready,
@@ -201,15 +205,16 @@ export const HomePage: React.FC = () => {
     reloadTick,
   ]);
 
+  const now = useNow();
   // Клиентские фильтры: «когда», радиус, свободные места, бесплатные
   const base = useMemo<Item[]>(
     () =>
       events
-        .map((e) => ({ e, km: origin ? distanceKm(origin, e) : null }))
+        .map((e) => ({ e, km: origin ? distanceKm(origin, e) : null, live: isLive(e, now), start: new Date(e.startTime).getTime() }))
         .filter(({ e }) => matchesWhen(e, filters.when))
         .filter(({ e }) => !filters.freeOnly || spotsLeft(e) > 0)
         .filter(({ e }) => !filters.freeCost || !e.price),
-    [events, origin, filters.when, filters.freeOnly, filters.freeCost],
+    [events, origin, filters.when, filters.freeOnly, filters.freeCost, now],
   );
 
   const visible = useMemo<Item[]>(() => {
@@ -219,10 +224,10 @@ export const HomePage: React.FC = () => {
       .sort((a, b) => {
         const friends = (b.e.friendsAttending?.length ?? 0) - (a.e.friendsAttending?.length ?? 0);
         if (friends) return friends;
-        const live = Number(isLive(b.e)) - Number(isLive(a.e));
+        const live = Number(b.live) - Number(a.live);
         if (live) return live;
         if (a.km != null && b.km != null) return a.km - b.km;
-        return new Date(a.e.startTime).getTime() - new Date(b.e.startTime).getTime();
+        return a.start - b.start;
       });
   }, [base, radiusOn, filters.radius]);
 
@@ -249,9 +254,9 @@ export const HomePage: React.FC = () => {
 
   const sections = useMemo<Section[]>(() => {
     const out: Section[] = [];
-    const live = visible.filter(({ e }) => isLive(e));
+    const live = visible.filter((v) => v.live);
     if (live.length) out.push({ key: 'live', title: 'Идут сейчас', sub: 'Ещё можно присоединиться', live: true, items: live });
-    const rest = visible.filter(({ e }) => !isLive(e));
+    const rest = visible.filter((v) => !v.live);
     if (origin) {
       for (const band of DISTANCE_BANDS) {
         const items = rest.filter(({ km }) => km != null && km >= band.from && km < band.to);
@@ -259,7 +264,8 @@ export const HomePage: React.FC = () => {
       }
     } else {
       // Без геопозиции группируем по дате
-      const byDay = (pred: (d: number) => boolean) => rest.filter(({ e }) => pred(dayDiff(new Date(e.startTime), new Date(), e.timeZone)));
+      const today = new Date(now);
+      const byDay = (pred: (d: number) => boolean) => rest.filter(({ e, start }) => pred(dayDiff(new Date(start), today, e.timeZone)));
       const groups: [string, Item[]][] = [
         ['Сегодня', byDay((d) => d <= 0)],
         ['Завтра', byDay((d) => d === 1)],
@@ -268,7 +274,7 @@ export const HomePage: React.FC = () => {
       for (const [title, items] of groups) if (items.length) out.push({ key: title, title, items });
     }
     return out;
-  }, [visible, origin]);
+  }, [visible, origin, now]);
 
 
   // Синхронизация выбора: прокручиваем список у карты (десктоп) и в шторке (мобильный) к выбранному ряду
@@ -561,8 +567,8 @@ export const HomePage: React.FC = () => {
                   event={e}
                   me={origin}
                   active={e.id === selectedId}
-                  onPick={() => setSelectedId(e.id)}
-                  onHover={(h) => setHoveredId(h ? e.id : null)}
+                  onPick={setSelectedId}
+                  onHover={setHoveredId}
                 />
               ))}
               {empty}

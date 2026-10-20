@@ -7,23 +7,32 @@ const sportKm = (event: SportEvent, me: LatLng | null) =>
   me ? `${event.sport.name} · ${formatDistance(distanceKm(me, event))}` : event.sport.name;
 
 /** Плоский ряд списка рядом с картой (десктоп) и в шторке (мобильный): время слева, статус текстом. */
-export const EventRow: React.FC<{
+/** Мемоизирован: при наведении и выборе перерисовываются только два затронутых ряда, а не весь список. */
+export const EventRow = React.memo(function EventRow({
+  event,
+  me,
+  active,
+  onPick,
+  onHover,
+  compact = false,
+}: {
   event: SportEvent;
   me: LatLng | null;
   active: boolean;
-  onPick: () => void;
-  onHover?: (hovered: boolean) => void;
+  /** Стабильные колбэки с id: иначе memo не сработает */
+  onPick: (id: number) => void;
+  onHover?: (id: number | null) => void;
   /** Мобильная шторка: без адреса и полосы мест */
   compact?: boolean;
-}> = ({ event, me, active, onPick, onHover, compact = false }) => {
+}) {
   const t = rowTime(event);
   return (
     <button
       type="button"
       data-eid={event.id}
-      onClick={onPick}
-      onMouseEnter={onHover && (() => onHover(true))}
-      onMouseLeave={onHover && (() => onHover(false))}
+      onClick={() => onPick(event.id)}
+      onMouseEnter={onHover && (() => onHover(event.id))}
+      onMouseLeave={onHover && (() => onHover(null))}
       aria-pressed={active}
       className={`w-full shrink-0 text-left flex border-b border-line transition-all ${
         compact ? 'gap-3.5 px-4 py-3.5' : 'gap-4 px-5 py-4'
@@ -56,4 +65,4 @@ export const EventRow: React.FC<{
       </div>
     </button>
   );
-};
+});

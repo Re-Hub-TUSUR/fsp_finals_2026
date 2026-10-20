@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Inbox, X } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
+import { usePolling } from '../hooks/usePolling';
 import type { AppNotification } from '../types';
 import { NotificationItem } from './NotificationItem';
 import { LoadingBlock } from './ui';
@@ -32,11 +33,9 @@ export const NotificationBell: React.FC = () => {
   }, [currentUser]);
 
   useEffect(() => {
-    if (!currentUser) return;
-    void fetchNotifications(true);
-    const interval = setInterval(() => void fetchNotifications(false), 20000);
-    return () => clearInterval(interval);
+    if (currentUser) void fetchNotifications(true);
   }, [currentUser, fetchNotifications]);
+  usePolling(() => void fetchNotifications(false), 20_000, !!currentUser);
 
   // Закрытие при клике вне панели
   useEffect(() => {
