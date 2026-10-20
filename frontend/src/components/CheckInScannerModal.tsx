@@ -3,19 +3,19 @@ import { flushSync } from 'react-dom';
 import { Html5Qrcode } from 'html5-qrcode';
 import {
   AlertTriangle,
-  Camera,
   CameraOff,
   CheckCircle2,
-  ImageUp,
+  Flashlight,
+  FlashlightOff,
+  Image as ImageIcon,
   Loader2,
-  QrCode,
   ShieldAlert,
-  UserCheck,
+  Users,
   X,
 } from 'lucide-react';
 import { participationApi } from '../api';
 import { errorMessage } from '../api/client';
-import type { CheckInResult, Participation, SportEvent } from '../types';
+import type { CheckInResult, SportEvent } from '../types';
 import {
   CAMERA_PROBLEM_MESSAGES,
   cameraSupport,
@@ -26,17 +26,28 @@ import {
 
 interface CheckInScannerModalProps {
   event: SportEvent;
-  confirmedParticipants: Participation[];
   onCheckInSuccess?: (result: CheckInResult) => void;
   onClose: () => void;
 }
 
-export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
-  event,
-  confirmedParticipants,
-  onCheckInSuccess,
-  onClose,
-}) => {
+/** Уголки рамки сканирования (как в системной камере). */
+const FrameCorners: React.FC = () => (
+  <>
+    <span className="absolute left-0 top-0 w-11 h-11 border-l-[3px] border-t-[3px] border-white rounded-tl-[22px]" />
+    <span className="absolute right-0 top-0 w-11 h-11 border-r-[3px] border-t-[3px] border-white rounded-tr-[22px]" />
+    <span className="absolute left-0 bottom-0 w-11 h-11 border-l-[3px] border-b-[3px] border-white rounded-bl-[22px]" />
+    <span className="absolute right-0 bottom-0 w-11 h-11 border-r-[3px] border-b-[3px] border-white rounded-br-[22px]" />
+  </>
+);
+
+const roundButton =
+  'w-[52px] h-[52px] shrink-0 rounded-2xl bg-white/15 border border-white/25 backdrop-blur-md text-white flex items-center justify-center transition-colors hover:bg-white/25 disabled:opacity-60 disabled:hover:bg-white/15';
+
+/**
+ * Контроль входа: камера на весь экран с рамкой, распознавание QR с фото, фонарик,
+ * снизу — счётчик отмеченных и ручной ввод кода билета.
+ */
+export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event, onCheckInSuccess, onClose }) => {
   const [code, setCode] = useState('');
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState<CheckInResult | null>(null);
@@ -44,6 +55,9 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
   const [cameraStarting, setCameraStarting] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [photoBusy, setPhotoBusy] = useState(false);
+  const [torchSupported, setTorchSupported] = useState(false);
+  const [torchOn, setTorchOn] = useState(false);
+  const [counts, setCounts] = useState<{ checked: number; total: number } | null>(null);
   // Проверяем сразу при открытии: по http:// камеры нет, и организатор должен узнать это до клика
   const [support] = useState(() => cameraSupport());
 
@@ -54,6 +68,17 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
   const lastScanRef = useRef<{ code: string; at: number } | null>(null);
   const readerElementId = 'html5-qr-reader';
   const photoElementId = 'html5-qr-photo';
+
+  // Сколько подтверждённых уже прошли; без прав на список — хотя бы общее число участников
+  useEffect(() => {
+    participationApi
+      .forEvent(event.id)
+      .then((list) => {
+        const confirmed = list.filter((p) => p.status === 'CONFIRMED');
+        setCounts({ checked: confirmed.filter((p) => p.checkedIn).length, total: confirmed.length });
+      })
+      .catch(() => setCounts({ checked: 0, total: event.confirmedCount }));
+  }, [event.id, event.confirmedCount]);
 
   // Обработка кода билета (из камеры, фото или ввода)
   const processTicketCode = async (rawCode: string) => {
@@ -69,6 +94,8 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
       setResult(res);
       navigator.vibrate?.(res.success ? 80 : [60, 40, 60]);
       if (res.success) {
+        setCounts((c) => (c ? { ...c, checked: Math.min(c.total, c.checked + 1) } : c));
+        setCode('');
         onCheckInSuccess?.(res);
       }
     } catch (err) {
@@ -97,7 +124,6 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
     void processTicketCode(code);
   };
 
-  // Запуск камеры
   const startCamera = async () => {
     if (cameraActive || cameraStarting) return;
     setCameraError(null);
@@ -105,25 +131,21 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
       setCameraError(CAMERA_PROBLEM_MESSAGES[support]);
       return;
     }
-    // html5-qrcode берёт ширину видео из ширины контейнера в момент запуска: скрытый контейнер
-    // даёт видео шириной 0 и чёрный экран. Поэтому сначала показываем контейнер, потом запускаем
+    // html5-qrcode берёт ширину видео из ширины контейнера в момент запуска — он должен быть уже отрисован
     flushSync(() => setCameraStarting(true));
     try {
       const html5QrCode = new Html5Qrcode(readerElementId);
       scannerRef.current = html5QrCode;
-
-      await html5QrCode.start(
-        { facingMode: 'environment' },
-        {
-          fps: 10,
-          qrbox: { width: 250, height: 250 },
-        },
-        handleScan,
-        () => {
-          // Кадр без QR — ждём следующий
-        },
-      );
+      // Без qrbox распознаётся весь кадр, а рамку рисуем сами — так QR находится, даже если он не по центру
+      await html5QrCode.start({ facingMode: 'environment' }, { fps: 10 }, handleScan, () => {
+        // Кадр без QR — ждём следующий
+      });
       setCameraActive(true);
+      try {
+        setTorchSupported(html5QrCode.getRunningTrackCameraCapabilities().torchFeature().isSupported());
+      } catch {
+        setTorchSupported(false);
+      }
     } catch (err) {
       console.warn('Camera start error:', err);
       scannerRef.current = null;
@@ -134,7 +156,33 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
     }
   };
 
-  // Запасной путь: системная камера телефона делает фото, QR распознаётся с картинки. Работает и без https
+  const stopCamera = async () => {
+    if (scannerRef.current?.isScanning) {
+      try {
+        await scannerRef.current.stop();
+        scannerRef.current.clear();
+      } catch (err) {
+        console.warn('Camera stop error:', err);
+      }
+    }
+    scannerRef.current = null;
+    setCameraActive(false);
+    setTorchOn(false);
+    setTorchSupported(false);
+  };
+
+  const toggleTorch = async () => {
+    const scanner = scannerRef.current;
+    if (!scanner?.isScanning) return;
+    try {
+      await scanner.getRunningTrackCameraCapabilities().torchFeature().apply(!torchOn);
+      setTorchOn(!torchOn);
+    } catch {
+      setCameraError('Не удалось включить фонарик на этом устройстве');
+    }
+  };
+
+  // Распознавание QR с фото: из галереи или системной камерой. Работает и без https
   const scanPhoto = async (file: File) => {
     setCameraError(null);
     setPhotoBusy(true);
@@ -156,188 +204,99 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
     }
   };
 
-  const stopCamera = async () => {
-    if (scannerRef.current && scannerRef.current.isScanning) {
-      try {
-        await scannerRef.current.stop();
-        await scannerRef.current.clear();
-      } catch (err) {
-        console.warn('Camera stop error:', err);
-      }
-    }
-    scannerRef.current = null;
-    setCameraActive(false);
+  const close = () => {
+    void stopCamera();
+    onClose();
   };
 
   useEffect(() => {
-    return () => {
-      if (scannerRef.current && scannerRef.current.isScanning) {
-        void scannerRef.current.stop().catch(() => {});
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape') return;
+      if (scannerRef.current?.isScanning) void scannerRef.current.stop().catch(() => {});
+      onClose();
     };
-  }, []);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [onClose]);
 
-  const checkedInCount = confirmedParticipants.filter((p) => p.checkedIn).length;
+  // Камеру отпускаем при любом закрытии окна, в том числе при уходе со страницы
+  useEffect(
+    () => () => {
+      if (scannerRef.current?.isScanning) void scannerRef.current.stop().catch(() => {});
+    },
+    [],
+  );
+
+  const frameMessage = cameraStarting
+    ? 'Включаем камеру…'
+    : support !== 'ok'
+      ? 'Камера недоступна'
+      : 'Камера выключена';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-lg bg-card rounded-3xl shadow-2xl overflow-hidden border border-slate-200 animate-in fade-in zoom-in-95 duration-200">
-        {/* Шапка модалки */}
-        <div className="bg-ink text-page p-5 flex items-center justify-between border-b border-slate-800">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-brand/20 text-brand flex items-center justify-center font-bold">
-              <QrCode className="w-5 h-5" />
-            </div>
-            <div>
-              <h2 className="text-lg font-bold">Контроль входа участников</h2>
-              <p className="text-xs text-slate-400 truncate max-w-[300px]">{event.title}</p>
-            </div>
+    <div className="fixed inset-0 z-[2100] bg-black/70 flex sm:items-center sm:justify-center sm:p-4">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="checkin-title"
+        className="relative w-full h-dvh sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-[440px] sm:rounded-[32px] overflow-hidden bg-[#1c1d20] flex flex-col shadow-2xl"
+      >
+        {/* Камера на весь экран; без неё — тёмная «шахматка» */}
+        <div className="relative flex-1 min-h-0 flex flex-col">
+          <div className="absolute inset-0 overflow-hidden">
+            <div id={readerElementId} className="scanner-reader w-full h-full" />
           </div>
-          <button
-            onClick={() => {
-              void stopCamera();
-              onClose();
-            }}
-            aria-label="Закрыть"
-            className="w-8 h-8 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center justify-center transition"
-          >
-            <X className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Прогресс-бар чек-ина */}
-        <div className="bg-slate-50 border-b border-slate-200 px-5 py-3 flex items-center justify-between text-xs">
-          <span className="text-slate-600 font-medium flex items-center gap-1.5">
-            <UserCheck className="w-4 h-4 text-brand-ink" />
-            Отмечено на мероприятии:
-          </span>
-          <span className="font-extrabold text-slate-900 bg-card px-2.5 py-1 rounded-full border border-slate-200">
-            {checkedInCount} / {confirmedParticipants.length} чел.
-          </span>
-        </div>
-
-        <div className="p-6 space-y-6 max-h-[75vh] overflow-y-auto">
-          {/* Результат проверки билета */}
-          {result && (
-            <div
-              className={`p-4 rounded-2xl border transition-all animate-in zoom-in-95 ${
-                result.success
-                  ? 'bg-brand-tint border-brand-line text-ink'
-                  : result.status === 'ALREADY_CHECKED_IN'
-                  ? 'bg-amber-50 border-amber-200 text-amber-900'
-                  : 'bg-red-50 border-red-200 text-red-900'
-              }`}
-            >
-              <div className="flex items-start gap-3">
-                {result.success ? (
-                  <CheckCircle2 className="w-6 h-6 text-brand-ink shrink-0 mt-0.5" />
-                ) : result.status === 'ALREADY_CHECKED_IN' ? (
-                  <AlertTriangle className="w-6 h-6 text-amber-600 shrink-0 mt-0.5" />
-                ) : (
-                  <ShieldAlert className="w-6 h-6 text-red-600 shrink-0 mt-0.5" />
-                )}
-                <div className="min-w-0 flex-1">
-                  <h3 className="font-extrabold text-base leading-snug">
-                    {result.success
-                      ? 'Вход разрешён!'
-                      : result.status === 'ALREADY_CHECKED_IN'
-                      ? 'Билет уже использован!'
-                      : 'Вход отклонён!'}
-                  </h3>
-                  <p className="text-xs mt-1">{result.message}</p>
-
-                  {result.participant && (
-                    <div className="mt-3 pt-3 border-t border-line flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        {result.participant.avatarUrl ? (
-                          <img
-                            src={result.participant.avatarUrl}
-                            alt=""
-                            className="w-6 h-6 rounded-full object-cover"
-                          />
-                        ) : null}
-                        <b className="font-semibold">{result.participant.fullName}</b>
-                      </div>
-                      <code className="font-mono text-[11px] bg-card/70 px-2 py-0.5 rounded">
-                        {result.ticketCode}
-                      </code>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
+          {!cameraActive && (
+            <div aria-hidden="true" className="scanner-idle absolute inset-0" />
           )}
+          <div aria-hidden="true" className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
-          {/* Видоискатель камеры */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500">
-                Сканирование камерой
-              </span>
-              {support === 'ok' && (
-                <button
-                  type="button"
-                  onClick={cameraActive ? stopCamera : startCamera}
-                  disabled={cameraStarting}
-                  className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition disabled:opacity-60 ${
-                    cameraActive
-                      ? 'bg-red-50 text-red-700 hover:bg-red-100'
-                      : 'bg-brand/10 text-brand hover:bg-brand/20'
-                  }`}
-                >
-                  {cameraActive ? (
-                    <>
-                      <CameraOff className="w-3.5 h-3.5" /> Выключить камеру
-                    </>
-                  ) : (
-                    <>
-                      <Camera className="w-3.5 h-3.5" /> Включить камеру
-                    </>
-                  )}
-                </button>
+          <header className="relative px-6 pt-[max(1.75rem,env(safe-area-inset-top))] pr-20">
+            <h2 id="checkin-title" className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-white">
+              Контроль входа участников
+            </h2>
+            <p className="mt-3 text-sm font-medium text-white/85 line-clamp-2">{event.title}</p>
+            <button
+              type="button"
+              onClick={close}
+              aria-label="Закрыть"
+              className="absolute right-5 top-[max(1.75rem,env(safe-area-inset-top))] w-11 h-11 rounded-full bg-white/20 backdrop-blur-md text-white flex items-center justify-center hover:bg-white/30 transition-colors"
+            >
+              <X className="w-5 h-5" strokeWidth={2.4} />
+            </button>
+          </header>
+
+          {/* Рамка сканирования */}
+          <div className="relative flex-1 min-h-0 flex items-center justify-center px-6">
+            <div className="relative w-60 h-60 max-w-[70vw] max-h-[70vw] flex flex-col items-center justify-center text-center">
+              <FrameCorners />
+              {!cameraActive && (
+                <>
+                  <span className="w-16 h-16 rounded-2xl bg-white/15 backdrop-blur-md flex items-center justify-center text-white">
+                    {cameraStarting ? <Loader2 className="w-7 h-7 animate-spin" /> : <CameraOff className="w-7 h-7" />}
+                  </span>
+                  <p className="mt-3 text-sm font-semibold text-white">{frameMessage}</p>
+                </>
               )}
             </div>
+          </div>
 
-            {support !== 'ok' && (
-              <p role="status" className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                {CAMERA_PROBLEM_MESSAGES[support]}
-              </p>
-            )}
+          {(support !== 'ok' || cameraError) && (
+            <p
+              role={cameraError ? 'alert' : 'status'}
+              className="relative mx-6 mb-3 rounded-xl bg-black/55 backdrop-blur-md px-3.5 py-2.5 text-xs leading-snug text-white"
+            >
+              {cameraError ?? CAMERA_PROBLEM_MESSAGES[support as Exclude<typeof support, 'ok'>]}
+            </p>
+          )}
 
-            <div
-              id={readerElementId}
-              className={`w-full overflow-hidden rounded-2xl border border-slate-200 bg-slate-950 min-h-[220px] text-slate-400 text-xs ${
-                cameraActive || cameraStarting ? 'block' : 'hidden'
-              }`}
-            />
-
-            {cameraStarting && (
-              <p role="status" className="flex items-center gap-2 text-xs text-slate-600">
-                <Loader2 className="w-4 h-4 animate-spin shrink-0" />
-                Включаем камеру… Если браузер спросит, разрешите доступ.
-              </p>
-            )}
-
-            {!cameraActive && !cameraStarting && support === 'ok' && (
-              <button
-                type="button"
-                onClick={startCamera}
-                className="w-full cursor-pointer border-2 border-dashed border-slate-200 hover:border-brand/40 bg-slate-50 hover:bg-slate-100/70 rounded-2xl p-6 text-center transition"
-              >
-                <Camera className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                <p className="text-xs font-semibold text-slate-700">Нажмите, чтобы включить камеру</p>
-                <p className="text-[11px] text-slate-400 mt-0.5">
-                  Наведите объектив на QR-код участника. Браузер попросит разрешение на камеру
-                </p>
-              </button>
-            )}
-
+          {/* Кнопки: фото с QR, включение камеры, фонарик */}
+          <div className="relative flex items-center gap-3 px-6 pb-12">
             <div id={photoElementId} className="hidden" />
             <input
               ref={photoInputRef}
               type="file"
               accept="image/*"
-              capture="environment"
               className="hidden"
               aria-label="Фото QR-кода"
               onChange={(e) => {
@@ -349,96 +308,123 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({
               type="button"
               onClick={() => photoInputRef.current?.click()}
               disabled={photoBusy || busy}
-              className="w-full inline-flex items-center justify-center gap-2 rounded-xl border border-slate-300 px-4 py-2.5 text-xs font-semibold text-slate-700 hover:bg-slate-50 disabled:opacity-60 transition"
+              aria-label="Распознать QR с фото"
+              title="Распознать QR с фото"
+              className={roundButton}
             >
-              {photoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageUp className="w-4 h-4" />}
-              Сфотографировать QR
+              {photoBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
             </button>
 
-            {cameraError && (
-              <p role="alert" className="text-xs text-amber-800 bg-amber-50 p-2.5 rounded-xl border border-amber-200">
-                {cameraError}
-              </p>
+            {!cameraActive && support === 'ok' ? (
+              <button
+                type="button"
+                onClick={() => void startCamera()}
+                disabled={cameraStarting}
+                className="flex-1 h-[52px] rounded-2xl bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors disabled:opacity-70"
+              >
+                Включить камеру
+              </button>
+            ) : (
+              <span className="flex-1" />
             )}
+
+            <button
+              type="button"
+              onClick={() => void toggleTorch()}
+              disabled={!cameraActive || !torchSupported}
+              aria-label={torchOn ? 'Выключить фонарик' : 'Включить фонарик'}
+              aria-pressed={torchOn}
+              title={cameraActive && !torchSupported ? 'Фонарик недоступен на этом устройстве' : 'Фонарик'}
+              className={roundButton}
+            >
+              {torchOn ? <Flashlight className="w-5 h-5" /> : <FlashlightOff className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+
+        {/* Нижний лист: результат, счётчик, ручной ввод */}
+        <div className="scanner-sheet relative -mt-7 rounded-t-[28px] bg-card px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+          {result && (
+            <div
+              className={`mb-4 p-3.5 rounded-2xl border ${
+                result.success
+                  ? 'bg-brand-tint border-brand-line text-ink'
+                  : result.status === 'ALREADY_CHECKED_IN'
+                    ? 'bg-warn-tint border-transparent text-warn-ink'
+                    : 'bg-red-50 border-red-200 text-red-900'
+              }`}
+            >
+              <div className="flex items-start gap-3">
+                {result.success ? (
+                  <CheckCircle2 className="w-6 h-6 text-brand-ink shrink-0" />
+                ) : result.status === 'ALREADY_CHECKED_IN' ? (
+                  <AlertTriangle className="w-6 h-6 shrink-0" />
+                ) : (
+                  <ShieldAlert className="w-6 h-6 text-red-600 shrink-0" />
+                )}
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-extrabold leading-snug">
+                    {result.success
+                      ? 'Вход разрешён!'
+                      : result.status === 'ALREADY_CHECKED_IN'
+                        ? 'Билет уже использован!'
+                        : 'Вход отклонён!'}
+                  </h3>
+                  <p className="text-xs mt-0.5">{result.message}</p>
+                  {result.participant && (
+                    <div className="mt-2 flex items-center justify-between gap-2 text-xs">
+                      <span className="flex items-center gap-2 min-w-0">
+                        {result.participant.avatarUrl && (
+                          <img src={result.participant.avatarUrl} alt="" className="w-6 h-6 rounded-full object-cover shrink-0" />
+                        )}
+                        <b className="font-semibold truncate">{result.participant.fullName}</b>
+                      </span>
+                      <code className="font-mono text-[11px] shrink-0">{result.ticketCode}</code>
+                    </div>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
+          <div className="flex items-center justify-between gap-4">
+            <span className="flex items-center gap-3 text-[15px] leading-tight text-muted">
+              <Users className="w-7 h-7 shrink-0 text-brand-ink" strokeWidth={1.8} />
+              <span className="max-w-[9rem]">Отмечено на мероприятии</span>
+            </span>
+            <span className="text-[26px] font-extrabold tracking-[-0.01em] text-ink whitespace-nowrap" aria-live="polite">
+              {counts ? `${counts.checked} / ${counts.total}` : '…'} чел.
+            </span>
           </div>
 
-          {/* Ручной ввод кода */}
-          <div className="pt-2 border-t border-slate-100">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
+          <div className="my-5 border-t border-line" />
+
+          <form onSubmit={handleManualSubmit}>
+            <label htmlFor="checkin-code" className="block text-[17px] font-bold text-ink mb-3">
               Или введите код билета вручную
-            </span>
-            <form onSubmit={handleManualSubmit} className="flex gap-2">
+            </label>
+            <div className="flex gap-3">
               <input
+                id="checkin-code"
                 type="text"
-                placeholder="Например: SPT-A1B2C3D4"
+                inputMode="text"
+                autoCapitalize="characters"
+                autoComplete="off"
+                placeholder="SPT-A1B2C3D4"
                 value={code}
                 onChange={(e) => setCode(e.target.value.toUpperCase())}
-                className="flex-1 text-sm p-3 border border-slate-300 rounded-xl font-mono uppercase outline-none focus:border-brand focus:ring-2 focus:ring-brand/20"
+                className="flex-1 min-w-0 h-14 px-4 rounded-2xl border border-brand-line bg-card text-base font-mono uppercase text-ink placeholder:text-muted outline-none focus:border-brand focus:ring-2 focus:ring-brand/25"
               />
               <button
                 type="submit"
                 disabled={busy || !code.trim()}
-                className="bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs px-4 rounded-xl disabled:opacity-50 transition flex items-center gap-1.5"
+                className="shrink-0 h-14 px-6 rounded-2xl bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors disabled:bg-surface-2 disabled:text-muted flex items-center gap-2"
               >
-                {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Проверить'}
+                {busy && code.trim() ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                Проверить
               </button>
-            </form>
-          </div>
-
-          {/* Быстрый выбор подтверждённых участников */}
-          {confirmedParticipants.length > 0 && (
-            <div className="pt-2 border-t border-slate-100">
-              <span className="text-xs font-bold uppercase tracking-wider text-slate-500 block mb-2">
-                Список подтверждённых участников ({confirmedParticipants.length})
-              </span>
-              <div className="max-h-40 overflow-y-auto space-y-2 pr-1">
-                {confirmedParticipants.map((p) => (
-                  <div
-                    key={p.id}
-                    className={`flex items-center justify-between p-2.5 rounded-xl border text-xs transition ${
-                      p.checkedIn
-                        ? 'bg-brand-tint border-brand-line text-ink'
-                        : 'bg-card border-slate-200 hover:border-brand/40'
-                    }`}
-                  >
-                    <div className="flex items-center gap-2 min-w-0">
-                      {p.user?.avatarUrl ? (
-                        <img
-                          src={p.user.avatarUrl}
-                          alt=""
-                          className="w-6 h-6 rounded-full object-cover shrink-0"
-                        />
-                      ) : (
-                        <div className="w-6 h-6 rounded-full bg-slate-200 text-slate-700 flex items-center justify-center font-bold text-[10px] shrink-0">
-                          {p.user?.fullName?.charAt(0) ?? '?'}
-                        </div>
-                      )}
-                      <span className="font-semibold truncate">{p.user?.fullName}</span>
-                      {p.ticketCode && (
-                        <code className="text-[10px] text-slate-400 font-mono hidden sm:inline">
-                          {p.ticketCode}
-                        </code>
-                      )}
-                    </div>
-
-                    {p.checkedIn ? (
-                      <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-brand-tint-2 px-2 py-0.5 rounded-full shrink-0">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён
-                      </span>
-                    ) : (
-                      <button
-                        onClick={() => p.ticketCode && processTicketCode(p.ticketCode)}
-                        disabled={busy}
-                        className="text-xs bg-brand/10 hover:bg-brand text-brand hover:text-on-brand font-semibold px-2.5 py-1 rounded-lg transition shrink-0"
-                      >
-                        Отметить вход
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
-          )}
+          </form>
         </div>
       </div>
     </div>

@@ -321,7 +321,6 @@ export const ManageEventPage: React.FC = () => {
       {scannerOpen && (
         <CheckInScannerModal
           event={event}
-          confirmedParticipants={groups.confirmed}
           onCheckInSuccess={() => void load()}
           onClose={() => setScannerOpen(false)}
         />
