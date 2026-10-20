@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, CalendarPlus, CheckCircle2, Hourglass, UserCheck, UserPlus, XCircle } from 'lucide-react';
+import { AlarmClock, Bell, CalendarPlus, CheckCircle2, Hourglass, UserCheck, UserPlus, XCircle } from 'lucide-react';
 import type { AppNotification } from '../types';
 
 export function formatRelativeTime(dateStr: string): string {
@@ -24,6 +24,8 @@ export function notificationIcon(n: AppNotification): React.ReactNode {
       return <XCircle className={`${cls} text-red-700`} />;
     case 'EVENT_INVITE':
       return <CalendarPlus className={`${cls} text-brand-ink`} />;
+    case 'EVENT_REMINDER':
+      return <AlarmClock className={`${cls} text-brand-ink`} />;
     case 'WAITLIST_SPOT_AVAILABLE':
       return <Hourglass className={`${cls} text-brand-ink`} />;
     case 'WAITLIST_SPOT_TAKEN':

@@ -8,6 +8,7 @@ import org.springframework.data.repository.query.Param;
 import ru.sportikus.notification.model.Notification;
 import ru.sportikus.notification.model.NotificationType;
 
+import java.time.Instant;
 import java.util.Collection;
 import java.util.List;
 
@@ -39,4 +40,29 @@ public interface NotificationRepository extends JpaRepository<Notification, Long
     @Modifying
     @Query("update Notification n set n.read = true where n.id = :id and n.user.id = :userId")
     int markAsRead(@Param("id") Long id, @Param("userId") Long userId);
+
+    @Modifying
+    @Query(value = """
+            INSERT INTO notifications
+                (user_id, type, title, message, link_url, event_id, is_read, created_at)
+            SELECT p.user_id,
+                   'EVENT_REMINDER',
+                   'Мероприятие уже завтра',
+                   concat('До начала «', e.title,
+                          '» осталось меньше суток. Проверьте время, адрес и QR-билет.'),
+                   concat('/events/', e.id),
+                   e.id,
+                   FALSE,
+                   :now
+            FROM participations p
+            JOIN events e ON e.id = p.event_id
+            WHERE p.status = 'CONFIRMED'
+              AND e.status = 'PUBLISHED'
+              AND e.start_time > :now
+              AND e.start_time <= :deadline
+            ON CONFLICT (user_id, event_id, type)
+                WHERE type = 'EVENT_REMINDER'
+            DO NOTHING
+            """, nativeQuery = true)
+    int insertDueEventReminders(@Param("now") Instant now, @Param("deadline") Instant deadline);
 }

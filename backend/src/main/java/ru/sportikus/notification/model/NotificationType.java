@@ -2,6 +2,7 @@ package ru.sportikus.notification.model;
 
 public enum NotificationType {
     EVENT_INVITE,
+    EVENT_REMINDER,
     PARTICIPATION_CONFIRMED,
     PARTICIPATION_REJECTED,
     FRIEND_REQUEST,

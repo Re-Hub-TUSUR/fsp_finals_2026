@@ -72,6 +72,7 @@ export interface OrganizationSubscription {
 
 export type NotificationType =
   | 'EVENT_INVITE'
+  | 'EVENT_REMINDER'
   | 'PARTICIPATION_CONFIRMED'
   | 'PARTICIPATION_REJECTED'
   | 'FRIEND_REQUEST'
