@@ -515,7 +515,7 @@ export const FiltersSheet: React.FC<{
   resultCount: number;
   /** На десктопе «Когда» и «Радиус» живут в баре — в шите их не дублируем */
   compact: boolean;
-}> = ({ filters, onChange, onReset, onClose, eventDays, resultCount, compact }) => {
+}> = ({ filters, onChange, onReset, onClose, sports, eventDays, resultCount, compact }) => {
   return (
     <Modal
       title="Фильтры"
