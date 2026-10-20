@@ -159,8 +159,9 @@ public class EventService {
 
         Sport sport = sportService.resolve(req.sportId(), req.customSportName(), author);
         RecurrenceRule recurrenceRule = req.recurrenceRule() == null ? RecurrenceRule.NONE : req.recurrenceRule();
+        // Integer.valueOf: иначе тернарник распаковывает результат в int и null даёт NPE
         Integer recurrenceIntervalDays = recurrenceRule == RecurrenceRule.WEEKLY
-                ? 7 : recurrenceRule == RecurrenceRule.CUSTOM ? req.recurrenceIntervalDays() : null;
+                ? Integer.valueOf(7) : recurrenceRule == RecurrenceRule.CUSTOM ? req.recurrenceIntervalDays() : null;
         if (recurrenceRule == RecurrenceRule.CUSTOM && recurrenceIntervalDays == null) {
             throw ApiException.badRequest("Укажите интервал повторения в днях");
         }
