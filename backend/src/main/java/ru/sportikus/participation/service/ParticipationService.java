@@ -12,6 +12,9 @@ import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventAccess;
 import ru.sportikus.event.service.EventMapper;
+import ru.sportikus.form.FieldDef;
+import java.nio.charset.StandardCharsets;
+import java.time.format.DateTimeFormatter;
 import ru.sportikus.form.FieldValidator;
 import ru.sportikus.participation.ParticipationChangedEvent;
 import ru.sportikus.participation.dto.CheckInResponse;
@@ -231,6 +234,84 @@ public class ParticipationService {
         return participationRepository.findByEventIdOrderByCreatedAtAsc(eventId).stream()
                 .map(ParticipationResponse::withUser)
                 .toList();
+    }
+
+    /** Экспорт участников мероприятия в формате CSV (Excel-совместимый UTF-8 с BOM). */
+    @Transactional(readOnly = true)
+    public byte[] exportCsv(AuthUser auth, Long eventId) {
+        Event event = eventRepository.findDetailedById(eventId)
+                .orElseThrow(() -> ApiException.notFound("Мероприятие не найдено"));
+        if (!EventAccess.isManager(event, auth.id())) {
+            throw ApiException.forbidden("Экспорт участников доступен только организатору мероприятия");
+        }
+        List<Participation> list = participationRepository.findByEventIdOrderByCreatedAtAsc(eventId);
+
+        List<FieldDef> questions = event.getRegistrationFields() != null ? event.getRegistrationFields() : List.of();
+
+        StringBuilder sb = new StringBuilder();
+        // UTF-8 BOM для корректного открытия в Excel
+        sb.append('\uFEFF');
+
+        // Шапка таблицы
+        sb.append("№;ФИО;Email;Статус;Дата заявки;Код билета;Отметка о входе;Время входа;Сообщение участника");
+        for (FieldDef q : questions) {
+            sb.append(';').append(escapeCsv(q.label()));
+        }
+        sb.append(";Комментарий организатора\r\n");
+
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
+                .withZone(event.getTimeZone() != null ? ZoneId.of(event.getTimeZone()) : ZoneId.systemDefault());
+
+        int num = 1;
+        for (Participation p : list) {
+            sb.append(num++).append(';');
+            sb.append(escapeCsv(p.getUser() != null ? p.getUser().getFullName() : "")).append(';');
+            sb.append(escapeCsv(p.getUser() != null ? p.getUser().getEmail() : "")).append(';');
+            sb.append(escapeCsv(statusLabel(p.getStatus()))).append(';');
+            sb.append(escapeCsv(p.getCreatedAt() != null ? dtf.format(p.getCreatedAt()) : "")).append(';');
+            sb.append(escapeCsv(p.getTicketCode() != null ? p.getTicketCode() : "")).append(';');
+            sb.append(p.isCheckedIn() ? "Явился" : "Не явился").append(';');
+            sb.append(p.getCheckedInAt() != null ? escapeCsv(dtf.format(p.getCheckedInAt())) : "").append(';');
+            sb.append(escapeCsv(p.getMessage() != null ? p.getMessage() : ""));
+
+            Map<String, Object> answers = p.getAnswers() != null ? p.getAnswers() : Map.of();
+            for (FieldDef q : questions) {
+                Object val = answers.get(q.key());
+                sb.append(';').append(escapeCsv(formatAnswer(val)));
+            }
+            sb.append(';').append(escapeCsv(p.getDecisionComment() != null ? p.getDecisionComment() : ""));
+            sb.append("\r\n");
+        }
+
+        return sb.toString().getBytes(StandardCharsets.UTF_8);
+    }
+
+    private static String statusLabel(ParticipationStatus s) {
+        if (s == null) return "";
+        return switch (s) {
+            case CONFIRMED -> "Подтверждён";
+            case PENDING -> "Ожидает решения";
+            case WAITLISTED -> "В очереди";
+            case REJECTED -> "Отклонён";
+            case CANCELLED -> "Отменён";
+        };
+    }
+
+    private static String escapeCsv(String val) {
+        if (val == null) return "";
+        if (val.contains(";") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
+            return "\"" + val.replace("\"", "\"\"") + "\"";
+        }
+        return val;
+    }
+
+    private static String formatAnswer(Object val) {
+        if (val == null) return "";
+        if (val instanceof Boolean b) return b ? "Да" : "Нет";
+        if (val instanceof List<?> l) {
+            return String.join(", ", l.stream().map(Object::toString).toList());
+        }
+        return val.toString();
     }
 
     @Transactional

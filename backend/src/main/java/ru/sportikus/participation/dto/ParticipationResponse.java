@@ -25,13 +25,16 @@ public record ParticipationResponse(
         Instant checkedInAt
 ) {
 
-    public record Participant(Long id, String fullName, String avatarUrl) {
+    public record Participant(Long id, String fullName, String avatarUrl, String email) {
+        public Participant(Long id, String fullName, String avatarUrl) {
+            this(id, fullName, avatarUrl, null);
+        }
     }
 
     public static ParticipationResponse withUser(Participation p) {
         return new ParticipationResponse(p.getId(), p.getStatus(), p.getMessage(), p.getAnswers(),
                 p.getDecisionComment(), p.getCreatedAt(), p.getDecidedAt(),
-                new Participant(p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl()), null,
+                new Participant(p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl(), p.getUser().getEmail()), null,
                 p.getTicketCode(), p.isCheckedIn(), p.getCheckedInAt());
     }
 
