@@ -44,7 +44,10 @@ public class EventController {
 
     @GetMapping
     @Operation(summary = "Каталог опубликованных мероприятий с фильтрами",
-            description = "sport — slug'и через запятую; lat/lng/radiusKm — поиск рядом; q — поиск по названию, описанию и адресу.")
+            description = "sport — slug'и через запятую; lat/lng/radiusKm — поиск рядом (до 300 км); q — поиск по названию, описанию и адресу. "
+                    + "Список для области карты кэшируется в Redis на 60 секунд (без Redis запрос идёт в БД), "
+                    + "поэтому `confirmedCount` может отставать до минуты. Для авторизованного пользователя в ответ подмешиваются "
+                    + "`friendsAttending`, `myParticipation` и `canManage`.")
     public List<EventResponse> list(
             @RequestParam(required = false) String sport,
             @RequestParam(required = false, name = "q") String query,
@@ -62,7 +65,10 @@ public class EventController {
     }
 
     @GetMapping("/{id}")
-    @Operation(summary = "Карточка мероприятия (доступна и после снятия с публикации — с причиной)")
+    @Operation(summary = "Карточка мероприятия (доступна и после снятия с публикации — с причиной)",
+            description = "Точные счётчики мест, поля шаблона и значения, анкета участника, сведения организации. "
+                    + "Для авторизованного пользователя — его участие, друзья на мероприятии и права управления; "
+                    + "для администратора — результат автопроверки (`moderation`).")
     public EventResponse get(@PathVariable Long id) {
         return eventService.details(id, CurrentUser.get());
     }
@@ -90,7 +96,10 @@ public class EventController {
     }
 
     @PostMapping("/{id}/complete")
-    @Operation(summary = "Завершить мероприятие и перенести его в архив")
+    @Operation(summary = "Завершить мероприятие и перенести его в архив",
+            description = "Только организатор и только после времени окончания: статус `PUBLISHED` → `ARCHIVED`. "
+                    + "Архивное мероприятие пропадает из каталога, карты и рекомендаций, но остаётся в архиве организатора и "
+                    + "подтверждённых участников (`/me/events`, `/me/participations`). Повторное завершение и завершение снятого — `409`.")
     public EventResponse complete(@PathVariable Long id) {
         return eventService.complete(CurrentUser.require(), id);
     }

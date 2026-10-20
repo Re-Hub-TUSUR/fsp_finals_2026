@@ -1,6 +1,7 @@
 package ru.sportikus.friendship.controller;
 
 import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 import ru.sportikus.friendship.dto.FriendRequestResponse;
@@ -15,11 +16,14 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/v1")
 @RequiredArgsConstructor
+@Tag(name = "Friends", description = "Друзья: заявки, принятие, поиск по e-mail. Друзья видны на карточках мероприятий («Идут друзья»)")
 public class FriendshipController {
     private final FriendshipService friendshipService;
 
     @PostMapping("/friends/{userId}")
-    @Operation(summary = "Отправить заявку в друзья")
+    @Operation(summary = "Отправить заявку в друзья",
+            description = "Одна запись на пару пользователей, независимо от того, кто написал первым. Нельзя добавить себя и администратора; "
+                    + "если есть встречная заявка — `409` (её нужно принять или отклонить). Получателю приходит уведомление `FRIEND_REQUEST`.")
     public FriendshipResponse request(@PathVariable Long userId) { return friendshipService.request(CurrentUser.require(), userId); }
 
     @DeleteMapping("/friends/{userId}")
@@ -27,7 +31,8 @@ public class FriendshipController {
     public void remove(@PathVariable Long userId) { friendshipService.remove(CurrentUser.require(), userId); }
 
     @PostMapping("/friends/{userId}/accept")
-    @Operation(summary = "Принять входящую заявку в друзья")
+    @Operation(summary = "Принять входящую заявку в друзья",
+            description = "Отправителю приходит уведомление `FRIEND_ACCEPTED`.")
     public FriendshipResponse accept(@PathVariable Long userId) { return friendshipService.accept(CurrentUser.require(), userId); }
 
     @PostMapping("/friends/{userId}/reject")
@@ -43,7 +48,9 @@ public class FriendshipController {
     public List<FriendResponse> friends() { return friendshipService.friends(CurrentUser.require()); }
 
     @GetMapping("/me/friend-search")
-    @Operation(summary = "Найти пользователя по электронной почте")
+    @Operation(summary = "Найти пользователя по электронной почте",
+            description = "Точное совпадение e-mail без учёта регистра. Не находит себя и администраторов (`404`). "
+                    + "В ответе — состояние дружбы: `NONE`, `OUTGOING_PENDING`, `INCOMING_PENDING`, `FRIENDS`.")
     public FriendSearchResponse search(@RequestParam String email) {
         return friendshipService.search(CurrentUser.require(), email);
     }

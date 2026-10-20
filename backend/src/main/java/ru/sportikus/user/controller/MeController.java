@@ -24,13 +24,16 @@ public class MeController {
     private final ParticipationService participationService;
 
     @GetMapping("/participations")
-    @Operation(summary = "Мои заявки и участия")
+    @Operation(summary = "Мои заявки и участия",
+            description = "Все записи пользователя со статусами (`PENDING`, `CONFIRMED`, `REJECTED`, `CANCELLED`, `WAITLISTED`), "
+                    + "кодом билета (`ticketCode`) и мероприятием, включая завершённые и архивные.")
     public List<ParticipationResponse> participations() {
         return participationService.mine(CurrentUser.require());
     }
 
     @GetMapping("/events")
-    @Operation(summary = "Мероприятия, которыми я управляю (мои и моей организации), с числом заявок в ожидании")
+    @Operation(summary = "Мероприятия, которыми я управляю (мои и моей организации), с числом заявок в ожидании",
+            description = "В том числе снятые, отклонённые автопроверкой и архивные (`status = ARCHIVED`).")
     public List<EventResponse> events() {
         return eventService.managedBy(CurrentUser.require());
     }
