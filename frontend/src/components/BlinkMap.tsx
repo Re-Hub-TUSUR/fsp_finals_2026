@@ -8,6 +8,7 @@ import { MapFallback } from './MapFallback';
 import { MapEventCard } from './MapEventCard';
 import { Minus, Plus } from 'lucide-react';
 import { Spinner } from './ui';
+import { currentPosition } from '../utils/geolocation';
 
 export interface MapViewport extends LatLng {
   radiusKm: number;
@@ -318,25 +319,15 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   };
 
   const locate = () => {
-    if (!navigator.geolocation) {
-      setNotice('Браузер не поддерживает геолокацию');
-      return;
-    }
     setLocating(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        const coords = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+    currentPosition({ enableHighAccuracy: true, timeout: 10_000 })
+      .then((coords) => {
         onLocate(coords);
-        setLocating(false);
         instance?.map.setCenter(toLngLat(coords.lat, coords.lng), { duration: 700 });
         instance?.map.setZoom(15, { duration: 700 });
-      },
-      () => {
-        setLocating(false);
-        setNotice('Не удалось определить местоположение');
-      },
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+      })
+      .catch((e: Error) => setNotice(e.message))
+      .finally(() => setLocating(false));
   };
 
   const locateRef = useRef(locate);

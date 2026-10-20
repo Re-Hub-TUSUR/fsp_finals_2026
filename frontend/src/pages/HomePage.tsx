@@ -41,6 +41,7 @@ import {
   plural,
   type LatLng,
 } from '../utils/eventView';
+import { currentPosition, positionIfGranted } from '../utils/geolocation';
 
 type Item = { e: SportEvent; km: number | null };
 type Section = { key: string; title: string; sub?: string; live?: boolean; items: Item[] };
@@ -114,15 +115,13 @@ export const HomePage: React.FC = () => {
 
   // Если геолокация уже разрешена — сразу показываем расстояния, без лишнего запроса разрешения
   useEffect(() => {
-    if (!navigator.geolocation || !navigator.permissions) return;
-    navigator.permissions
-      .query({ name: 'geolocation' })
-      .then((p) => {
-        if (p.state === 'granted') {
-          navigator.geolocation.getCurrentPosition((pos) => setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }));
-        }
-      })
-      .catch(() => {});
+    let cancelled = false;
+    void positionIfGranted().then((pos) => {
+      if (pos && !cancelled) setMe(pos);
+    });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Как в макете: когда известна точка отсчёта, по умолчанию ищем в радиусе 5 км
@@ -284,12 +283,9 @@ export const HomePage: React.FC = () => {
 
   const pickOnMap = (event: SportEvent | null) => setSelectedId(event?.id ?? null);
 
+  // Без доступа к геопозиции фильтр по радиусу просто остаётся без точки отсчёта
   const locate = () =>
-    navigator.geolocation?.getCurrentPosition(
-      (pos) => setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
-      () => {},
-      { enableHighAccuracy: true, timeout: 10000 },
-    );
+    currentPosition({ enableHighAccuracy: true, timeout: 10_000 }).then(setMe, () => undefined);
 
   const changeFilters = (patch: Partial<HomeFilterState>) => {
     // Радиус без точки отсчёта — сначала спрашиваем геопозицию

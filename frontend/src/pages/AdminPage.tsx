@@ -1,7 +1,8 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Ban, Building2, CheckCircle, EyeOff, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { AdminOrganization, EventComment, SportEvent } from '../types';
@@ -41,11 +42,6 @@ const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: stri
 export const AdminPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
   const [tab, setTab] = useState<'orgs' | 'events' | 'comments'>('orgs');
-  const [orgs, setOrgs] = useState<AdminOrganization[]>([]);
-  const [events, setEvents] = useState<SportEvent[]>([]);
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,28 +50,17 @@ export const AdminPage: React.FC = () => {
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
-  const load = useCallback(async () => {
-    try {
-      const [o, e, c] = await Promise.all([
+  const { data, loading, error, reload, setError } = useApi(
+    () =>
+      Promise.all([
         adminApi.organizations(),
         adminApi.events(),
-        commentsApi.adminList().catch(() => []),
-      ]);
-      setOrgs(o);
-      setEvents(e);
-      setComments(c);
-      setError(null);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (ready && isAdmin) void load();
-    else if (ready) setLoading(false);
-  }, [ready, isAdmin, load]);
+        commentsApi.adminList().catch((): EventComment[] => []),
+      ]),
+    [currentUser?.id],
+    { enabled: ready && isAdmin },
+  );
+  const [orgs, events, comments] = data ?? [[] as AdminOrganization[], [] as SportEvent[], [] as EventComment[]];
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -84,7 +69,7 @@ export const AdminPage: React.FC = () => {
       await action();
       setTarget(null);
       setReason('');
-      await load();
+      reload();
     } catch (err) {
       setError(errorMessage(err));
     } finally {

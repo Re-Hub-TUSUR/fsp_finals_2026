@@ -1,4 +1,4 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
 import { AxiosError } from 'axios';
 import type { Preferences, User } from '../types';
 import { authApi, preferencesApi } from '../api';
@@ -149,11 +149,13 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
   }, []);
 
-  return (
-    <AuthContext.Provider value={{ currentUser, activeRoleKey, ready, authError, switchRole, login, acceptAuth, logout, refreshUser, preferences, refreshPreferences }}>
-      {children}
-    </AuthContext.Provider>
+  // Стабильное значение контекста: иначе каждый рендер провайдера перерисовывает всех потребителей useAuth()
+  const value = useMemo(
+    () => ({ currentUser, activeRoleKey, ready, authError, switchRole, login, acceptAuth, logout, refreshUser, preferences, refreshPreferences }),
+    [currentUser, activeRoleKey, ready, authError, switchRole, login, acceptAuth, logout, refreshUser, preferences, refreshPreferences],
   );
+
+  return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };
 
 export const useAuth = () => {

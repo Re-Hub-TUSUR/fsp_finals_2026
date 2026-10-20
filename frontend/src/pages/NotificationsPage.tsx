@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React from 'react';
 import { ErrorNotice, LoadingBlock } from '../components/ui';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCheck, Inbox } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import type { AppNotification } from '../types';
 import { NotificationItem } from '../components/NotificationItem';
 
@@ -12,24 +13,18 @@ import { NotificationItem } from '../components/NotificationItem';
 export const NotificationsPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
   const navigate = useNavigate();
-  const [items, setItems] = useState<AppNotification[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const load = useCallback(() => {
-    setLoading(true);
-    setError(null);
-    notificationsApi
-      .list()
-      .then((res) => setItems(res.items))
-      .catch((e) => setError(errorMessage(e, 'Не удалось загрузить уведомления')))
-      .finally(() => setLoading(false));
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !currentUser) return;
-    load();
-  }, [ready, currentUser, load]);
+  const {
+    data: items = [],
+    loading,
+    error,
+    reload,
+    mutate,
+    setError,
+  } = useApi(() => notificationsApi.list().then((res) => res.items), [currentUser?.id], {
+    enabled: ready && !!currentUser,
+    errorFallback: 'Не удалось загрузить уведомления',
+  });
+  const setItems = (update: (prev: AppNotification[]) => AppNotification[]) => mutate((prev) => update(prev ?? []));
 
   if (!ready) return null;
   if (!currentUser) {
@@ -81,7 +76,7 @@ export const NotificationsPage: React.FC = () => {
           </button>
         )}
       </div>
-      {error && <ErrorNotice message={error} onRetry={load} className="mb-3" />}
+      {error && <ErrorNotice message={error} onRetry={reload} className="mb-3" />}
       <div className="bg-card border border-line rounded-box overflow-hidden divide-y divide-line">
         {loading ? (
           <LoadingBlock className="py-12" />

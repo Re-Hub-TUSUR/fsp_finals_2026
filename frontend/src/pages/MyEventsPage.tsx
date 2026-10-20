@@ -1,9 +1,10 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Archive, Calendar, CheckCircle2, MapPin, PlusCircle, QrCode } from 'lucide-react';
 import { meApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { TicketModal } from '../components/TicketModal';
@@ -17,10 +18,6 @@ type TabKey = 'participating' | 'organizing' | 'archive';
 export const MyEventsPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
   const [tab, setTab] = useState<TabKey>('participating');
-  const [participations, setParticipations] = useState<Participation[]>([]);
-  const [managed, setManaged] = useState<SportEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [cancelTarget, setCancelTarget] = useState<Participation | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -28,24 +25,12 @@ export const MyEventsPage: React.FC = () => {
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
-  const load = useCallback(async () => {
-    try {
-      const [mine, own] = await Promise.all([meApi.participations(), meApi.events()]);
-      setParticipations(mine);
-      setManaged(own);
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !currentUser) return;
-    setLoading(true);
-    void load();
-  }, [load, ready, currentUser]);
+  const { data, loading, error, reload } = useApi(
+    () => Promise.all([meApi.participations(), meApi.events()]),
+    [currentUser?.id],
+    { enabled: ready && !!currentUser },
+  );
+  const [participations, managed] = data ?? [[] as Participation[], [] as SportEvent[]];
 
   const cancel = async () => {
     if (!cancelTarget?.event) return;
@@ -54,17 +39,12 @@ export const MyEventsPage: React.FC = () => {
     try {
       await participationApi.cancel(cancelTarget.event.id);
       setCancelTarget(null);
-      await load();
+      reload();
     } catch (e) {
       setCancelError(errorMessage(e));
     } finally {
       setCancelBusy(false);
     }
-  };
-
-  const reload = () => {
-    setLoading(true);
-    void load();
   };
 
   if (!ready) return null;

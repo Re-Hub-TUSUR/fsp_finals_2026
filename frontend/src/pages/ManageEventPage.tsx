@@ -1,10 +1,11 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
 import { ArrowLeft, Camera, Check, CheckCircle2, Download, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
 import { downloadParticipantsCsv } from '../utils/exportCsv';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import type { FieldDef, FieldValue, Participation, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
 import { CheckInScannerModal } from '../components/CheckInScannerModal';
@@ -34,10 +35,13 @@ export const ManageEventPage: React.FC = () => {
   const { id } = useParams();
   const [searchParams] = useSearchParams();
   const { currentUser, ready } = useAuth();
-  const [event, setEvent] = useState<SportEvent | null>(null);
-  const [items, setItems] = useState<Participation[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
+  const { data, loading, error, reload } = useApi(
+    () => Promise.all([eventsApi.get(id!), participationApi.forEvent(id!)]),
+    [id, currentUser?.id],
+    { enabled: ready && !!id, errorFallback: 'Не удалось загрузить заявки' },
+  );
+  const event: SportEvent | null = data?.[0] ?? null;
+  const items: Participation[] = useMemo(() => data?.[1] ?? [], [data]);
   const [busyId, setBusyId] = useState<number | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
   const [rejecting, setRejecting] = useState<Participation | null>(null);
@@ -49,36 +53,18 @@ export const ManageEventPage: React.FC = () => {
     downloadParticipantsCsv(event, items);
   };
 
-  const load = useCallback(async () => {
-    if (!id) return;
-    try {
-      const [ev, list] = await Promise.all([eventsApi.get(id), participationApi.forEvent(id)]);
-      setEvent(ev);
-      setItems(list);
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e, 'Не удалось загрузить заявки'));
-    } finally {
-      setLoading(false);
-    }
-  }, [id]);
 
   const checkInDirect = async (ticketCode: string) => {
     if (!event) return;
     setActionError(null);
     try {
       await participationApi.checkIn(event.id, ticketCode);
-      await load();
+      reload();
     } catch (e) {
       setActionError(errorMessage(e));
     }
   };
 
-  useEffect(() => {
-    if (!ready) return;
-    setLoading(true);
-    void load();
-  }, [load, ready, currentUser?.id]);
 
   const groups = useMemo(
     () => ({
@@ -98,7 +84,7 @@ export const ManageEventPage: React.FC = () => {
       await participationApi.decide(event.id, p.id, decision, comment);
       setRejecting(null);
       setReason('');
-      await load();
+      reload();
     } catch (e) {
       setActionError(errorMessage(e));
     } finally {
@@ -106,11 +92,7 @@ export const ManageEventPage: React.FC = () => {
     }
   };
 
-  if (loading) {
-    return (
-      <LoadingBlock />
-    );
-  }
+  if (!ready || loading) return <LoadingBlock />;
   if (error || !event) {
     return (
       <div className="max-w-md mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
@@ -320,7 +302,7 @@ export const ManageEventPage: React.FC = () => {
       {scannerOpen && (
         <CheckInScannerModal
           event={event}
-          onCheckInSuccess={() => void load()}
+          onCheckInSuccess={reload}
           onClose={() => setScannerOpen(false)}
         />
       )}

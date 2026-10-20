@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
@@ -19,6 +19,8 @@ import {
 import { recommendationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
+import { currentPosition, type GeolocationError } from '../utils/geolocation';
 import type { RecommendationItem, Recommendations } from '../types';
 import { Modal } from '../components/Modal';
 import { ErrorNotice, LoadingBlock, Spinner } from '../components/ui';
@@ -52,9 +54,6 @@ type GeoState = { lat: number; lng: number } | null;
 
 export const RecommendedPage: React.FC = () => {
   const { currentUser, ready, preferences, refreshPreferences } = useAuth();
-  const [data, setData] = useState<Recommendations | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [geo, setGeo] = useState<GeoState>(null);
   const [geoBusy, setGeoBusy] = useState(false);
   const [prefsOpen, setPrefsOpen] = useState(false);
@@ -64,40 +63,30 @@ export const RecommendedPage: React.FC = () => {
   // Рекомендации строятся по интересам и участию — у администратора и организации их нет
   const isAdmin = currentUser?.role === 'ROLE_ADMIN' || currentUser?.role === 'ROLE_ORGANIZER';
 
-  const load = useCallback(async (point: GeoState) => {
-    setLoading(true);
-    try {
-      setData(await recommendationsApi.get({ lat: point?.lat, lng: point?.lng, limit: 20 }));
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e, 'Не удалось загрузить рекомендации'));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !currentUser || isAdmin) {
-      setLoading(false);
-      return;
-    }
-    void load(geo);
-  }, [ready, currentUser, isAdmin, geo, load]);
+  const {
+    data,
+    loading,
+    error,
+    reload,
+    mutate: setData,
+    setError,
+  } = useApi<Recommendations>(() => recommendationsApi.get({ lat: geo?.lat, lng: geo?.lng, limit: 20 }), [currentUser?.id, geo], {
+    enabled: ready && !!currentUser && !isAdmin,
+    errorFallback: 'Не удалось загрузить рекомендации',
+  });
 
   const locateMe = () => {
-    if (!navigator.geolocation) return setError('Геолокация недоступна в этом браузере');
     setGeoBusy(true);
-    navigator.geolocation.getCurrentPosition(
-      (pos) => {
-        setGeoBusy(false);
-        setGeo({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-      },
-      () => {
-        setGeoBusy(false);
-        setError('Не удалось определить местоположение — разрешите доступ к геолокации или укажите город в интересах');
-      },
-      { timeout: 10000, maximumAge: 300000 },
-    );
+    currentPosition({ timeout: 10_000, maximumAge: 300_000 })
+      .then(setGeo)
+      .catch((e: GeolocationError) =>
+        setError(
+          e.reason === 'unsupported'
+            ? 'Геолокация недоступна в этом браузере'
+            : 'Не удалось определить местоположение — разрешите доступ к геолокации или укажите город в интересах',
+        ),
+      )
+      .finally(() => setGeoBusy(false));
   };
 
   const dismiss = async (item: RecommendationItem, position: number) => {
@@ -116,7 +105,7 @@ export const RecommendedPage: React.FC = () => {
     setHidden(null);
     try {
       await recommendationsApi.undoDismiss(item.event.id);
-      await load(geo);
+      reload();
     } catch (e) {
       setError(errorMessage(e));
     }
@@ -187,7 +176,7 @@ export const RecommendedPage: React.FC = () => {
         </div>
       </div>
 
-      {error && <ErrorNotice message={error} onRetry={() => void load(geo)} className="mb-4" />}
+      {error && <ErrorNotice message={error} onRetry={reload} className="mb-4" />}
 
       {data?.coldStart && !data.needsLocation && (
         <div className="mb-5 p-4 rounded-panel bg-brand-tint border border-brand-line text-brand-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
@@ -271,7 +260,7 @@ export const RecommendedPage: React.FC = () => {
           onClose={() => setQuizOpen(false)}
           onSaved={async () => {
             await refreshPreferences();
-            await load(geo);
+            reload();
           }}
         />
       )}
@@ -284,7 +273,7 @@ export const RecommendedPage: React.FC = () => {
             onSaved={async () => {
               setPrefsOpen(false);
               await refreshPreferences();
-              await load(geo);
+              reload();
             }}
           />
         </Modal>
