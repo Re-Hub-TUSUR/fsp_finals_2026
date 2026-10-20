@@ -36,7 +36,15 @@ describe('SportIcon', () => {
 
 describe('StatusChip', () => {
   it('renders nothing for a comfortably open event', () => {
-    const { container } = render(<StatusChip event={baseEvent({ capacity: 10, confirmedCount: 2 })} />);
+    // Дата фикстуры — сегодня; без явного «завтра» тест падал бы, пока событие «идёт сейчас»
+    const tomorrow = Date.now() + 86_400_000;
+    const event = baseEvent({
+      capacity: 10,
+      confirmedCount: 2,
+      startTime: new Date(tomorrow).toISOString(),
+      endTime: new Date(tomorrow + 7_200_000).toISOString(),
+    });
+    const { container } = render(<StatusChip event={event} />);
     expect(container).toBeEmptyDOMElement();
   });
 

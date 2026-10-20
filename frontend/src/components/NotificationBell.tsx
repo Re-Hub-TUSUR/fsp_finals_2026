@@ -124,7 +124,7 @@ export const NotificationBell: React.FC = () => {
           role="dialog"
           aria-label="Уведомления"
           // fixed, а не absolute: шапка с overflow-hidden обрезала бы панель на десктопе
-          className="fixed inset-x-2 top-16 sm:inset-x-auto sm:right-4 sm:top-[68px] w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-popover overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="fixed inset-x-2 top-16 sm:inset-x-auto sm:right-4 sm:top-[68px] w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-popover overflow-hidden anim-drop"
         >
           {/* Заголовок */}
           <div className="p-4 border-b border-line-2 flex items-center justify-between bg-surface/50">

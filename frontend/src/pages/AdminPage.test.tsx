@@ -75,7 +75,7 @@ describe('AdminPage: поиск и переходы', () => {
 
   it('ищет мероприятия по названию, виду спорта и городу и ведёт к организатору', async () => {
     renderPage();
-    await userEvent.click(await screen.findByRole('button', { name: /Мероприятия/ }));
+    await userEvent.click(await screen.findByRole('tab', { name: /Мероприятия/ }));
     const search = screen.getByRole('searchbox');
 
     await userEvent.type(search, 'москва');
@@ -94,7 +94,7 @@ describe('AdminPage: поиск и переходы', () => {
     await userEvent.type(await screen.findByRole('searchbox'), 'zzz');
     expect(screen.getByText('Ничего не найдено')).toBeInTheDocument();
 
-    await userEvent.click(screen.getByRole('button', { name: /Комментарии/ }));
+    await userEvent.click(screen.getByRole('tab', { name: /Комментарии/ }));
     expect(screen.getByRole('searchbox')).toHaveValue('');
     expect(screen.getByText('Нужны ли бутсы?')).toBeInTheDocument();
     expect(screen.getByText('Во сколько сбор?')).toBeInTheDocument();

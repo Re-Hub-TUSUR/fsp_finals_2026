@@ -594,7 +594,7 @@ export const HomePage: React.FC = () => {
         {detailEvent && (
           <>
             <div
-              className={`fixed inset-0 z-sheet-backdrop lg:z-30 bg-[rgba(4,6,10,0.5)] ${view === 'map' ? 'lg:hidden' : 'lg:absolute'}`}
+              className={`fixed inset-0 z-sheet-backdrop lg:z-30 bg-scrim ${view === 'map' ? 'lg:hidden' : 'lg:absolute'}`}
               onClick={() => setDetailId(null)}
             />
             <div className="anim-sheet lg:anim-drawer fixed inset-x-0 bottom-0 top-[10vh] z-sheet rounded-t-sheet overflow-hidden flex lg:absolute lg:top-0 lg:bottom-0 lg:left-auto lg:right-0 lg:w-[440px] lg:rounded-none lg:z-40">

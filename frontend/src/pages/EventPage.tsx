@@ -51,7 +51,7 @@ import {
   spotsLeft,
 } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, autoRejectReason, isAutoRejected, needsAdminAttention } from '../utils/moderation';
-import { Button, LoadingBlock } from '../components/ui';
+import { Badge, Button, LoadingBlock } from '../components/ui';
 
 const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.ReactNode }> = ({ icon, label, children }) => (
   <div className="flex items-start gap-3">
@@ -643,12 +643,12 @@ export const EventPage: React.FC = () => {
                 <div className="mt-5">
                   <h3 className="text-sm font-semibold text-slate-700 mb-2">Требования к участникам</h3>
                   <div className="flex flex-wrap gap-2">
-                    {org.medicalCertificateRequired && <Chip tone="amber">Медицинская справка</Chip>}
-                    {org.insuranceRequired && <Chip tone="amber">Страховка</Chip>}
+                    {org.medicalCertificateRequired && <Badge tone="warning">Медицинская справка</Badge>}
+                    {org.insuranceRequired && <Badge tone="warning">Страховка</Badge>}
                     {org.requiredDocuments?.map((d) => (
-                      <Chip key={d} tone="amber">
+                      <Badge key={d} tone="warning">
                         {d}
-                      </Chip>
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -674,9 +674,9 @@ export const EventPage: React.FC = () => {
                   <h3 className="text-sm font-semibold text-slate-700 mb-2">На площадке</h3>
                   <div className="flex flex-wrap gap-2">
                     {org.facilities!.map((f) => (
-                      <Chip key={f} tone="slate">
+                      <Badge key={f}>
                         {f}
-                      </Chip>
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -850,13 +850,3 @@ export const EventPage: React.FC = () => {
     </div>
   );
 };
-
-const Chip: React.FC<{ tone: 'amber' | 'slate'; children: React.ReactNode }> = ({ tone, children }) => (
-  <span
-    className={`text-sm px-3 py-1 rounded-full border ${
-      tone === 'amber' ? 'bg-amber-50 border-amber-200 text-amber-900' : 'bg-slate-50 border-slate-200 text-slate-700'
-    }`}
-  >
-    {children}
-  </span>
-);

@@ -23,6 +23,7 @@ import {
   isRepeatScan,
 } from '../utils/camera';
 import { Spinner } from './ui';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 interface CheckInScannerModalProps {
   event: SportEvent;
@@ -209,15 +210,9 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
     onClose();
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (scannerRef.current?.isScanning) void scannerRef.current.stop().catch(() => {});
-      onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // Esc, ловушка фокуса и inert-фон — как у остальных модальных окон
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, close);
 
   // Камеру отпускаем при любом закрытии окна, в том числе при уходе со страницы
   useEffect(
@@ -238,10 +233,12 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
   return createPortal(
     <div className="fixed inset-0 z-modal-raised bg-black/70 flex sm:items-center sm:justify-center sm:p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="checkin-title"
-        className="relative w-full h-dvh sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-[440px] sm:rounded-4xl overflow-hidden bg-[#1c1d20] flex flex-col shadow-2xl"
+        className="outline-none relative w-full h-dvh sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-[440px] sm:rounded-4xl overflow-hidden bg-[#1c1d20] flex flex-col shadow-2xl"
       >
         {/* Камера на весь экран; без неё — тёмная «шахматка» */}
         <div className="relative flex-1 min-h-0 flex flex-col">

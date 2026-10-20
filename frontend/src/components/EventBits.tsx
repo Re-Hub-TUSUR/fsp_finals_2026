@@ -118,19 +118,6 @@ export const CoverBadge: React.FC<{ children: React.ReactNode; className?: strin
   </span>
 );
 
-/** Компактная шкала: полоса + «Свободно N» цветом статуса. */
-export const FreeMeter: React.FC<{ event: SportEvent }> = ({ event }) => {
-  const status = eventStatus(event);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 min-w-0 h-1 rounded-full bg-surface-2 overflow-hidden">
-        <div className={`h-full rounded-full ${status.bar}`} style={{ width: `${status.pct}%` }} />
-      </div>
-      <span className={`shrink-0 text-label font-bold whitespace-nowrap ${status.freeInk}`}>{status.freeShort}</span>
-    </div>
-  );
-};
-
 /** Плоская шкала мест (макет «Карта и Лента»): полоса + статус текстом. width — ширина полосы, иначе растягивается. */
 export const SeatLine: React.FC<{ event: SportEvent; width?: number; thick?: boolean; children?: React.ReactNode }> = ({
   event,

@@ -6,7 +6,7 @@ import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { AdminOrganization, EventComment, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
-import { inputClass, labelClass, LoadingBlock } from '../components/ui';
+import { CountBadge, inputClass, labelClass, LoadingBlock, Tab, Tabs } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, needsAdminAttention } from '../utils/moderation';
 
@@ -131,10 +131,6 @@ export const AdminPage: React.FC = () => {
     setTab(next);
     setSearch('');
   };
-  const tabClass = (active: boolean) =>
-    `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
-      active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
-    }`;
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full min-w-0 overflow-x-hidden">
@@ -148,25 +144,25 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
-        <button onClick={() => switchTab('orgs')} className={`${tabClass(tab === 'orgs')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+      <Tabs label="Разделы модерации">
+        <Tab active={tab === 'orgs'} onClick={() => switchTab('orgs')}>
           <Building2 className="w-4 h-4" />
-          Организации {pending > 0 && <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
-        </button>
-        <button onClick={() => switchTab('events')} className={`${tabClass(tab === 'events')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+          Организации {pending > 0 && <CountBadge>{pending}</CountBadge>}
+        </Tab>
+        <Tab active={tab === 'events'} onClick={() => switchTab('events')}>
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
           {attention > 0 && (
-            <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full" title="Требуют внимания после автопроверки">
+            <CountBadge title="Требуют внимания после автопроверки">
               {ATTENTION_SYMBOL} {attention}
-            </span>
+            </CountBadge>
           )}
-        </button>
-        <button onClick={() => switchTab('comments')} className={`${tabClass(tab === 'comments')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+        </Tab>
+        <Tab active={tab === 'comments'} onClick={() => switchTab('comments')}>
           <MessageSquare className="w-4 h-4" />
           Комментарии ({comments.length})
-        </button>
-      </div>
+        </Tab>
+      </Tabs>
 
       {error && (
         <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">

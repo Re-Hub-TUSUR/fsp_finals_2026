@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** Переключатели дизайн-системы: чип, сегментный переключатель, тумблер, подпись секции. */
+/** Переключатели дизайн-системы: чип, тумблер, подпись секции. */
 
 export const Chip: React.FC<{
   active: boolean;
@@ -23,40 +23,6 @@ export const Chip: React.FC<{
     {children}
   </button>
 );
-
-export function Segmented<T extends string>({
-  value,
-  options,
-  onChange,
-  label,
-}: {
-  value: T;
-  options: { value: T; label: string }[];
-  onChange: (value: T) => void;
-  label: string;
-}) {
-  return (
-    <div role="radiogroup" aria-label={label} className="flex gap-1 p-1 bg-surface rounded-tile">
-      {options.map((o) => {
-        const active = o.value === value;
-        return (
-          <button
-            key={o.value}
-            type="button"
-            role="radio"
-            aria-checked={active}
-            onClick={() => onChange(o.value)}
-            className={`flex-1 min-w-0 h-10 px-1 rounded-control text-label sm:text-sm font-semibold truncate transition-all ${
-              active ? 'bg-white text-ink shadow-[0_1px_4px_rgba(10,20,45,0.16)]' : 'text-muted hover:text-ink'
-            }`}
-          >
-            {o.label}
-          </button>
-        );
-      })}
-    </div>
-  );
-}
 
 export const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void; children: React.ReactNode }> = ({
   checked,
