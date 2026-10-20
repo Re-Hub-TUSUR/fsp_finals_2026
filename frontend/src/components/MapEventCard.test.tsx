@@ -5,7 +5,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import type { SportEvent } from '../types';
 import { MapEventCard } from './MapEventCard';
 import { useAuth } from '../context/AuthContext';
-import { eventsApi } from '../api';
+import { eventsApi, participationApi } from '../api';
+import { buildDemoEvent, tourDemo } from '../utils/tourDemo';
 
 vi.mock('../context/AuthContext', () => ({ useAuth: vi.fn() }));
 vi.mock('../api', () => ({
@@ -112,5 +113,20 @@ describe('MapEventCard', () => {
     renderCard(baseEvent(), { onMore: vi.fn() });
     expect(screen.queryByRole('button', { name: 'Записаться' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'Открыть' })).toHaveAttribute('href', '/events/7');
+  });
+
+  it('учебная встреча тура: «Подать заявку» ведёт тур дальше и ничего не отправляет на сервер', async () => {
+    const user = userEvent.setup();
+    asRole('ROLE_ORGANIZER');
+    const before = tourDemo.getState().joinClicked;
+    renderCard(buildDemoEvent({ lat: 56, lng: 92 }), { onMore: vi.fn() });
+
+    await user.click(screen.getByRole('button', { name: 'Подать заявку' }));
+
+    expect(tourDemo.getState().joinClicked).toBe(before + 1);
+    expect(eventsApi.get).not.toHaveBeenCalled();
+    expect(participationApi.join).not.toHaveBeenCalled();
+    // Ссылка на страницу учебной встречи не уводит со страницы: такой страницы нет
+    expect(screen.getByText('Утренняя пробежка в парке').closest('[data-tour]')).toHaveAttribute('data-tour', 'demo-card');
   });
 });

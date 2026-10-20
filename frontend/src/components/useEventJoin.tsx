@@ -4,6 +4,7 @@ import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { isFull, isWaitlisted } from '../utils/eventView';
 import { JoinDialog } from './JoinDialog';
+import { isDemoEvent, tourDemo } from '../utils/tourDemo';
 
 /**
  * Запись на событие из карточек и панели: анкета организатора (JoinDialog) или, если человек стоит
@@ -15,6 +16,11 @@ export function useEventJoin(event: SportEvent, onChanged: () => void) {
   const [error, setError] = useState<string | null>(null);
 
   const start = async () => {
+    // Демо-событие обучающего тура: запись показывает тур, на сервер ничего не уходит
+    if (isDemoEvent(event)) {
+      tourDemo.reportJoinClicked();
+      return;
+    }
     setBusy(true);
     setError(null);
     try {

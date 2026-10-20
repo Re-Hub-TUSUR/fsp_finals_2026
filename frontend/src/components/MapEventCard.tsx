@@ -6,6 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { distanceKm, eventAction, formatDistance, routeUrl, startLabelLong, type LatLng } from '../utils/eventView';
 import { SeatLine } from './EventBits';
 import { useEventJoin } from './useEventJoin';
+import { isDemoEvent } from '../utils/tourDemo';
 
 interface MapEventCardProps {
   event: SportEvent;
@@ -24,16 +25,26 @@ export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, 
   const join = useEventJoin(event, () => onJoined?.());
   const action = eventAction(event);
   // Записаться может только пользователь; остальным (организация, админ, организатор события) — страница события
-  const canJoin = action.joinable && !!onMore && currentUser?.role === 'ROLE_USER' && !event.canManage;
+  const demo = isDemoEvent(event);
+  // Демо-событие тура записывает любого: запись там только показывается
+  const canJoin = demo || (action.joinable && !!onMore && currentUser?.role === 'ROLE_USER' && !event.canManage);
   const dist = me ? formatDistance(distanceKm(me, event)) : null;
   const secondary =
     'flex-1 h-12 rounded-[10px] border border-line-2 bg-card text-ink font-semibold text-base flex items-center justify-center hover:bg-surface transition-colors';
   const primary = `flex-[1.4] h-12 rounded-[10px] font-bold text-base flex items-center justify-center transition-colors ${action.cls}`;
 
   return (
-    <div className={`bg-card border border-line-2 rounded-xl shadow-[0_4px_16px_rgba(20,30,45,0.14)] p-4 flex flex-col gap-2.5 ${className}`}>
+    <div
+      data-tour={demo ? 'demo-card' : undefined}
+      className={`bg-card border border-line-2 rounded-xl shadow-[0_4px_16px_rgba(20,30,45,0.14)] p-4 flex flex-col gap-2.5 ${className}`}
+    >
       <div className="flex gap-2.5 items-start">
-        <Link to={`/events/${event.id}`} className="flex-1 min-w-0 flex flex-col gap-[3px] group">
+        <Link
+          to={`/events/${event.id}`}
+          // У демо-события нет страницы
+          onClick={demo ? (e) => e.preventDefault() : undefined}
+          className="flex-1 min-w-0 flex flex-col gap-[3px] group"
+        >
           <span className="text-sm font-semibold text-muted">
             {startLabelLong(event)} · {event.sport.name}
           </span>

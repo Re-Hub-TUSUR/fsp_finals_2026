@@ -13,6 +13,7 @@ import {
   type LatLng,
 } from '../utils/eventView';
 import { useEventJoin } from './useEventJoin';
+import { isDemoEvent } from '../utils/tourDemo';
 
 interface MapSheetProps {
   selected: SportEvent | null;
@@ -28,7 +29,10 @@ interface MapSheetProps {
 export const MapSheet: React.FC<MapSheetProps> = ({ selected, me, onClearSelection, onMore, onJoined }) => {
   if (!selected) return null;
   return (
-    <div className="lg:hidden absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-2xl bg-card border-t border-line-2 shadow-[0_-6px_20px_rgba(6,12,30,0.18)] pt-4">
+    <div
+      data-tour={isDemoEvent(selected) ? 'demo-card-mobile' : undefined}
+      className="lg:hidden absolute inset-x-0 bottom-0 z-30 flex flex-col rounded-t-2xl bg-card border-t border-line-2 shadow-[0_-6px_20px_rgba(6,12,30,0.18)] pt-4"
+    >
       <SelectedPeek event={selected} me={me} onClose={onClearSelection} onMore={() => onMore(selected)} onJoined={onJoined} />
     </div>
   );
@@ -44,7 +48,8 @@ const SelectedPeek: React.FC<{
   const { currentUser } = useAuth();
   const join = useEventJoin(event, () => onJoined?.());
   const action = eventAction(event);
-  const canJoin = action.joinable && currentUser?.role === 'ROLE_USER' && !event.canManage;
+  // Демо-событие тура записывает любого: запись там только показывается
+  const canJoin = isDemoEvent(event) || (action.joinable && currentUser?.role === 'ROLE_USER' && !event.canManage);
   return (
     <div className="flex-1 min-h-0 px-4 pb-3.5 flex flex-col gap-3">
       <div className="flex gap-2.5 items-start">

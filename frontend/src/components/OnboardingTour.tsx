@@ -7,6 +7,7 @@ import {
   Compass,
   FileText,
   MapPin,
+  MousePointerClick,
   PartyPopper,
   QrCode,
   SlidersHorizontal,
@@ -17,6 +18,7 @@ import {
 import { useAuth } from '../context/AuthContext';
 import { InterestQuiz } from './InterestQuiz';
 import { TourDemoStand, type TourDemoKind } from './TourDemoStand';
+import { tourDemo, useTourDemo } from '../utils/tourDemo';
 
 export interface TourStep {
   id: string;
@@ -27,6 +29,10 @@ export interface TourStep {
   description: string;
   /** Показательный стенд записи вместо подсветки элемента интерфейса. */
   demo?: TourDemoKind;
+  /** Стенд, если подсвечивать нечего (например, карточку закрыли). */
+  fallbackDemo?: TourDemoKind;
+  /** Подсвеченный элемент можно нажать: клики по нему проходят сквозь затемнение. */
+  interactive?: boolean;
   hint?: string;
   icon: React.ReactNode;
 }
@@ -78,12 +84,23 @@ const TOUR_STEPS: TourStep[] = [
     icon: <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
   },
   {
-    id: 'demo-event',
-    selector: '',
-    demo: 'event',
-    title: 'Как записаться: карточка',
+    id: 'demo-pin',
+    selector: '[data-tour="demo-pin"]',
+    interactive: true,
+    title: 'Найдите встречу на карте',
     description:
-      'Покажем запись на примере — ничего не отправляется. В карточке видно время, место, уровень, цену, что взять с собой и сколько осталось мест. Всё подходит — «Записаться».',
+      'Пройдём запись на примере. Мы поставили на карту учебную встречу «Утренняя пробежка в парке» — нажмите на метку, чтобы открыть её. После обучения метка исчезнет.',
+    hint: '👆 Так же открываются настоящие встречи: метка на карте или строка в списке',
+    icon: <MousePointerClick className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
+  },
+  {
+    id: 'demo-card',
+    selector: '[data-tour="demo-card-mobile"], [data-tour="demo-card"]',
+    interactive: true,
+    fallbackDemo: 'event',
+    title: 'Карточка встречи',
+    description:
+      'Здесь главное: когда, где, сколько свободных мест и цена. Всё подходит — нажмите «Подать заявку». Это пример: на сервер ничего не уйдёт.',
     hint: '👀 Условия видны до записи — сюрпризов на месте не будет',
     icon: <FileText className="w-4 h-4 sm:w-5 sm:h-5 text-brand-ink" />,
   },
@@ -118,6 +135,9 @@ const TOUR_STEPS: TourStep[] = [
     icon: <PartyPopper className="w-5 h-5 sm:w-6 sm:h-6 text-brand-ink" />,
   },
 ];
+
+const DEMO_PIN_STEP = TOUR_STEPS.findIndex((step) => step.id === 'demo-pin');
+const DEMO_CARD_STEP = TOUR_STEPS.findIndex((step) => step.id === 'demo-card');
 
 export const OnboardingTour: React.FC = () => {
   const { currentUser, preferences, refreshPreferences } = useAuth();
@@ -186,9 +206,28 @@ export const OnboardingTour: React.FC = () => {
   }, [isOpen]);
 
   const currentStep = TOUR_STEPS[stepIndex] || TOUR_STEPS[0];
+  const demo = useTourDemo();
   const isFinalStep = stepIndex === TOUR_STEPS.length - 1;
   // Финал не считается шагом: «Шаг N из M» только для обучающих шагов
   const stepBadge = currentStep.badge ?? `Шаг ${stepIndex + 1} из ${TOUR_STEPS.length - 1}`;
+
+  // Учебная встреча на карте живёт с шага с меткой до конца записи; финал и закрытие тура её убирают
+  const demoActive = isOpen && stepIndex >= DEMO_PIN_STEP && stepIndex < TOUR_STEPS.length - 1;
+  useEffect(() => {
+    if (demoActive) tourDemo.activate();
+    else tourDemo.deactivate();
+  }, [demoActive]);
+  useEffect(() => () => tourDemo.deactivate(), []);
+
+  // Пользователь сам открыл метку или нажал «Подать заявку» — тур идёт за ним, как по настоящему пути
+  const seen = useRef({ opened: demo.opened, joinClicked: demo.joinClicked });
+  useEffect(() => {
+    const prev = seen.current;
+    seen.current = { opened: demo.opened, joinClicked: demo.joinClicked };
+    if (!isOpen) return;
+    if (demo.opened > prev.opened && stepIndex === DEMO_PIN_STEP) setStepIndex(DEMO_CARD_STEP);
+    else if (demo.joinClicked > prev.joinClicked && stepIndex === DEMO_CARD_STEP) setStepIndex(DEMO_CARD_STEP + 1);
+  }, [demo.opened, demo.joinClicked, isOpen, stepIndex]);
 
   // Измерение высоты карточки
   useLayoutEffect(() => {
@@ -240,6 +279,13 @@ export const OnboardingTour: React.FC = () => {
     return () => clearTimeout(timer);
   }, [updateRect, stepIndex]);
 
+  // Метка и карточка на карте появляются не сразу и двигаются вместе с картой — перемеряем их положение
+  useEffect(() => {
+    if (!isOpen || !currentStep.interactive) return;
+    const timer = setInterval(updateRect, 250);
+    return () => clearInterval(timer);
+  }, [isOpen, currentStep.interactive, updateRect]);
+
   useEffect(() => {
     if (!isOpen) return;
     window.addEventListener('resize', updateRect);
@@ -267,6 +313,8 @@ export const OnboardingTour: React.FC = () => {
   }, [markTourCompleted]);
 
   const handleNext = useCallback(() => {
+    // «Далее» на шаге с меткой открывает карточку учебной встречи — как если бы нажали на метку
+    if (stepIndex === DEMO_PIN_STEP) tourDemo.requestOpen();
     if (stepIndex < TOUR_STEPS.length - 1) {
       setStepIndex((i) => i + 1);
     } else {
@@ -314,6 +362,8 @@ export const OnboardingTour: React.FC = () => {
   const isMobile = viewportW < 640;
   const pad = isMobile ? 5 : 8;
 
+  // Стенд записи: на своих шагах всегда, на интерактивных — только если подсвечивать нечего
+  const standKind = currentStep.demo ?? (targetRect ? undefined : currentStep.fallbackDemo);
   let tooltipStyle: React.CSSProperties = {};
   let showArrow = false;
   let arrowPlaceBelow = true;
@@ -327,8 +377,8 @@ export const OnboardingTour: React.FC = () => {
       left: '50%',
       transform: 'translate(-50%, -50%)',
       // На десктопе стенд записи стоит справа от текста, поэтому карточка шире, но не выше экрана
-      width: isMobile ? 'calc(100vw - 24px)' : currentStep.demo ? `${Math.min(760, viewportW - 32)}px` : '400px',
-      maxWidth: currentStep.demo ? '760px' : '420px',
+      width: isMobile ? 'calc(100vw - 24px)' : standKind ? `${Math.min(760, viewportW - 32)}px` : '400px',
+      maxWidth: standKind ? '760px' : '420px',
     };
   } else {
     const targetCenterX = targetRect.left + targetRect.width / 2;
@@ -397,8 +447,10 @@ export const OnboardingTour: React.FC = () => {
     }
   }
 
-  const demoStand = currentStep.demo ? (
-    <TourDemoStand key={currentStep.id} kind={currentStep.demo} participantName={currentUser?.fullName} />
+  // Клики по подсвеченной метке или карточке проходят сквозь затемнение; остальной экран по-прежнему ведёт дальше
+  const passThrough = !!currentStep.interactive && !!targetRect && !isFinalStep;
+  const demoStand = standKind ? (
+    <TourDemoStand key={currentStep.id} kind={standKind} participantName={currentUser?.fullName} />
   ) : null;
 
   // Расчёт размеров spotlight выреза
@@ -415,8 +467,8 @@ export const OnboardingTour: React.FC = () => {
           role="dialog"
           aria-modal="true"
           aria-label="Обучение по сайту"
-          onClick={handleNext}
-          className="fixed inset-0 z-[9990] select-none cursor-pointer"
+          onClick={passThrough ? undefined : handleNext}
+          className={`fixed inset-0 z-[9990] select-none cursor-pointer ${passThrough ? 'pointer-events-none' : ''}`}
         >
           {/* Полупрозрачная маска с вырезом подсвечиваемого элемента (без блюра) */}
           {targetRect && !isFinalStep ? (
@@ -451,6 +503,17 @@ export const OnboardingTour: React.FC = () => {
             <div className="absolute inset-0 bg-black/65 transition-all duration-300 pointer-events-none" />
           )}
 
+          {/* Интерактивный шаг: вокруг выреза — четыре «заслонки», клик по ним ведёт дальше, а сам вырез кликается насквозь */}
+          {passThrough &&
+            [
+              { top: 0, left: 0, right: 0, height: spotY },
+              { top: spotY + spotH, left: 0, right: 0, bottom: 0 },
+              { top: spotY, left: 0, width: spotX, height: spotH },
+              { top: spotY, left: spotX + spotW, right: 0, height: spotH },
+            ].map((box, i) => (
+              <div key={i} onClick={handleNext} className="fixed pointer-events-auto" style={box} />
+            ))}
+
           {/* Светящаяся рамка вокруг целевого элемента */}
           {targetRect && !isFinalStep && (
             <div
@@ -479,7 +542,7 @@ export const OnboardingTour: React.FC = () => {
               e.stopPropagation();
               handleSkip();
             }}
-            className="fixed top-3 sm:top-4 right-3 sm:right-4 z-[9999] flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-card hover:bg-surface text-ink border border-line-2 shadow-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
+            className="pointer-events-auto fixed top-3 sm:top-4 right-3 sm:right-4 z-[9999] flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-card hover:bg-surface text-ink border border-line-2 shadow-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
           >
             <span>{isMobile ? 'Пропустить' : 'Пропустить обучение'}</span>
             <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
@@ -490,7 +553,7 @@ export const OnboardingTour: React.FC = () => {
             ref={cardRef}
             onClick={(e) => e.stopPropagation()}
             style={tooltipStyle}
-            className="z-[9996] bg-card text-ink border border-line-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] rounded-2xl p-4 sm:p-5 transition-all duration-300 anim-fade cursor-default max-h-[82vh] overflow-y-auto"
+            className="pointer-events-auto z-[9996] bg-card text-ink border border-line-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] rounded-2xl p-4 sm:p-5 transition-all duration-300 anim-fade cursor-default max-h-[82vh] overflow-y-auto"
           >
             {/* Стрелочка-указатель к элементу */}
             {showArrow && (
@@ -513,7 +576,7 @@ export const OnboardingTour: React.FC = () => {
 
             <div
               className={
-                currentStep.demo && !isMobile
+                standKind && !isMobile
                   ? 'grid grid-cols-[minmax(0,1fr)_minmax(0,330px)] items-center gap-5'
                   : undefined
               }
@@ -536,10 +599,10 @@ export const OnboardingTour: React.FC = () => {
             </p>
 
             {/* На телефоне стенд идёт сразу под текстом, на десктопе — отдельной колонкой справа */}
-            {currentStep.demo && isMobile && demoStand}
+            {standKind && isMobile && demoStand}
 
             {/* На телефоне у шагов стенда подсказку убираем: иначе карточка не помещается в экран */}
-            {currentStep.hint && !(currentStep.demo && isMobile) && (
+            {currentStep.hint && !(standKind && isMobile) && (
               <div className="flex items-start gap-1.5 p-2 sm:p-2.5 rounded-xl bg-surface border border-line-2 text-[11px] sm:text-xs text-ink mb-3 sm:mb-4">
                 <span className="shrink-0 text-sm sm:text-base leading-none">💡</span>
                 <span className="leading-snug">{currentStep.hint}</span>
@@ -611,7 +674,7 @@ export const OnboardingTour: React.FC = () => {
               </p>
             )}
             </div>
-            {currentStep.demo && !isMobile && demoStand}
+            {standKind && !isMobile && demoStand}
             </div>
           </div>
         </div>

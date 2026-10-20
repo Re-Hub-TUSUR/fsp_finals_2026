@@ -129,7 +129,8 @@ describe('eventStatus', () => {
   });
 
   it('is not "special" for a comfortably open event', () => {
-    const status = eventStatus(baseEvent({ capacity: 10, confirmedCount: 2 }));
+    // Дата в будущем: иначе в день фикстуры событие становится «идёт сейчас»
+    const status = eventStatus(baseEvent({ startTime: '2099-06-01T10:00:00Z', endTime: '2099-06-01T12:00:00Z', capacity: 10, confirmedCount: 2 }));
     expect(status.special).toBe(false);
     expect(status.label).toBe('2 из 10');
   });

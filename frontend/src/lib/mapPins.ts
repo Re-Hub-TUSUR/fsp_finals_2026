@@ -1,6 +1,7 @@
 import type { SportEvent } from '../types';
 import { sportIconPath } from '../utils/sportIcons';
 import { isFull, isHot, isLive, isMine, startLabel } from '../utils/eventView';
+import { isDemoEvent } from '../utils/tourDemo';
 
 /**
  * HTML-метки поверх карты 2GIS (стили — .sp-pin* в index.css), по макету «Карта и Лента».
@@ -43,7 +44,7 @@ export function pinElement(event: SportEvent, selected: boolean, hovered = false
 
   return element(`
     <div class="sp-pin${selected ? ' is-selected' : ''}${hovered ? ' is-hovered' : ''}${isFull(event) ? ' is-full' : ''}" style="width:${size}px;height:${size}px"
-         role="button" aria-label="${escapeHtml(event.title)}">
+         role="button" aria-label="${escapeHtml(event.title)}"${isDemoEvent(event) ? ' data-tour="demo-pin"' : ''}>
       <span class="sp-pin-face">${sportSvg(event.sport.name, Math.round(size * 0.46))}</span>
       ${badge}
       ${isMine(event) ? `<span class="sp-pin-badge sp-pin-badge--mine">${CHECK}</span>` : ''}

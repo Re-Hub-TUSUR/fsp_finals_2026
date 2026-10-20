@@ -29,6 +29,7 @@ import { errorMessage } from '../api/client';
 import { ErrorNotice } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { spotsLeft } from '../utils/format';
+import { DEMO_EVENT_ID, buildDemoEvent, isDemoEvent, tourDemo, useTourDemo } from '../utils/tourDemo';
 import {
   DISTANCE_BANDS,
   dayDiff,
@@ -79,6 +80,9 @@ export const HomePage: React.FC = () => {
   const [viewport, setViewport] = useState<MapViewport>({ ...KRASNOYARSK, radiusKm: 50 });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Демо-событие обучающего тура: ставим его туда, куда сейчас смотрит карта, и убираем после тура
+  const demo = useTourDemo();
+  const [demoAt, setDemoAt] = useState<LatLng | null>(null);
 
   const listColRef = useRef<HTMLDivElement>(null);
 
@@ -242,7 +246,13 @@ export const HomePage: React.FC = () => {
 
   const eventDays = useMemo(() => new Set(events.map((e) => dayKeyIn(new Date(e.startTime), e.timeZone))), [events]);
 
-  const visibleEvents = useMemo(() => visible.map((v) => v.e), [visible]);
+  const demoEvent = useMemo(() => (demo.active && demoAt ? buildDemoEvent(demoAt) : null), [demo.active, demoAt]);
+  // Демо-событие не проходит фильтры: тур должен найти его на карте при любых настройках
+  const shownItems = useMemo<Item[]>(
+    () => (demoEvent ? [{ e: demoEvent, km: origin ? distanceKm(origin, demoEvent) : null }, ...visible] : visible),
+    [demoEvent, visible, origin],
+  );
+  const visibleEvents = useMemo(() => shownItems.map((v) => v.e), [shownItems]);
   const selectedEvent = visibleEvents.find((e) => e.id === selectedId) ?? null;
   const detailEvent = events.find((e) => e.id === detailId) ?? null;
 
@@ -282,6 +292,38 @@ export const HomePage: React.FC = () => {
 
   const pickOnMap = (event: SportEvent | null) => setSelectedId(event?.id ?? null);
 
+  // Тур включил демо-событие: запоминаем текущий центр карты и показываем карту, а не Ленту
+  useEffect(() => {
+    if (demo.active) {
+      // Чуть южнее и восточнее центра: в самом центре города обычно уже стоит кластер настоящих событий
+      const shiftKm = viewport.radiusKm * 0.12;
+      setDemoAt(
+        (at) =>
+          at ?? {
+            lat: viewport.lat - shiftKm / 110.57,
+            lng: viewport.lng + shiftKm / (111.32 * Math.cos((viewport.lat * Math.PI) / 180)),
+          },
+      );
+      if (view === 'list') setParam('view', null);
+    } else {
+      setDemoAt(null);
+      setSelectedId((id) => (id === DEMO_EVENT_ID ? null : id));
+      setDetailId((id) => (id === DEMO_EVENT_ID ? null : id));
+    }
+    // viewport и view читаем в момент включения, перезапуск при их смене не нужен
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [demo.active]);
+
+  // Тур просит открыть карточку демо-события (пользователь нажал «Далее», а не на метку)
+  useEffect(() => {
+    if (demo.openRequest > 0 && demo.active) setSelectedId(DEMO_EVENT_ID);
+  }, [demo.openRequest, demo.active]);
+
+  // Карточка демо-события открыта любым способом — тур переходит к следующему шагу
+  useEffect(() => {
+    if (selectedId === DEMO_EVENT_ID) tourDemo.reportOpened();
+  }, [selectedId]);
+
   const locate = () =>
     navigator.geolocation?.getCurrentPosition(
       (pos) => setMe({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
@@ -309,6 +351,11 @@ export const HomePage: React.FC = () => {
   changed.any = changed.radius || changed.when || changed.sport || extraFilterCount(filters) > 0;
 
   const openDetail = (event: SportEvent) => {
+    // У демо-события нет страницы: «Подробнее» ведёт тур дальше, к заявке
+    if (isDemoEvent(event)) {
+      tourDemo.reportJoinClicked();
+      return;
+    }
     setSelectedId(event.id);
     setDetailId(event.id);
   };
@@ -551,7 +598,7 @@ export const HomePage: React.FC = () => {
           ) : (
             <div ref={listColRef} className="flex-1 min-h-0 overflow-y-auto flex flex-col bg-card">
               {errorBox && <div className="p-4">{errorBox}</div>}
-              {visible.map(({ e }) => (
+              {shownItems.map(({ e }) => (
                 <EventRow
                   key={e.id}
                   event={e}
