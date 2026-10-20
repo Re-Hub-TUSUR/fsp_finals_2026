@@ -285,7 +285,7 @@ export interface Participation {
   decisionComment?: string;
   createdAt: string;
   decidedAt?: string;
-  user?: { id: number; fullName: string; avatarUrl?: string };
+  user?: { id: number; fullName: string; email?: string; avatarUrl?: string };
   event?: SportEvent;
   ticketCode?: string;
   checkedIn?: boolean;

@@ -119,6 +119,14 @@ export const participationApi = {
       .then((r) => r.data),
   checkIn: (eventId: number | string, ticketCode: string) =>
     api.post<CheckInResult>(`/events/${eventId}/checkin`, { ticketCode }).then((r) => r.data),
+  exportCsvUrl: (eventId: number | string) =>
+    `${api.defaults.baseURL}/events/${eventId}/participations/export`,
+  downloadCsv: async (eventId: number | string) => {
+    const res = await api.get(`/events/${eventId}/participations/export`, {
+      responseType: 'blob',
+    });
+    return res.data as Blob;
+  },
 };
 
 export const meApi = {

@@ -6,6 +6,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -59,6 +61,17 @@ public class ParticipationController {
             description = "Все записи со статусами, ответами анкеты, кодом билета и отметкой о входе (`checkedIn`).")
     public List<ParticipationResponse> list(@PathVariable Long eventId) {
         return participationService.listForManager(CurrentUser.require(), eventId);
+    }
+
+    @GetMapping(value = "/participations/export", produces = "text/csv; charset=UTF-8")
+    @Operation(summary = "Экспорт списка участников мероприятия в CSV (только организатор)",
+            description = "Формирует файл CSV со списком всех участников, их статусами, билетами, отметками явки и ответами на вопросы.")
+    public ResponseEntity<byte[]> exportCsv(@PathVariable Long eventId) {
+        byte[] csvBytes = participationService.exportCsv(CurrentUser.require(), eventId);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"event_" + eventId + "_participants.csv\"")
+                .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
+                .body(csvBytes);
     }
 
     @PatchMapping("/participations/{participationId}")

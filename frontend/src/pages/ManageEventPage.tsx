@@ -1,6 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Check, CheckCircle2, Loader2, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, CheckCircle2, Download, Loader2, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
+import { downloadParticipantsCsv } from '../utils/exportCsv';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -41,6 +42,11 @@ export const ManageEventPage: React.FC = () => {
   const [rejecting, setRejecting] = useState<Participation | null>(null);
   const [reason, setReason] = useState('');
   const [scannerOpen, setScannerOpen] = useState(searchParams.get('scanner') === '1');
+
+  const handleExportCsv = () => {
+    if (!event) return;
+    downloadParticipantsCsv(event, items);
+  };
 
   const load = useCallback(async () => {
     if (!id) return;
@@ -228,13 +234,25 @@ export const ManageEventPage: React.FC = () => {
             </p>
           </div>
         </div>
-        <button
-          onClick={() => setScannerOpen(true)}
-          className="w-full sm:w-auto justify-center flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98 shrink-0"
-        >
-          <Camera className="w-4 h-4" />
-          Сканировать QR / Ввести код
-        </button>
+        <div className="flex flex-wrap sm:flex-nowrap items-center gap-2 shrink-0 w-full sm:w-auto">
+          <button
+            type="button"
+            onClick={handleExportCsv}
+            disabled={items.length === 0}
+            className="w-full sm:w-auto justify-center flex items-center gap-1.5 border border-line bg-card hover:bg-surface text-ink font-semibold text-xs sm:text-sm px-3.5 py-2.5 rounded-xl shadow-sm transition active:scale-98 disabled:opacity-50"
+            title="Экспорт списка участников в CSV / Excel"
+          >
+            <Download className="w-4 h-4 text-brand-ink" />
+            Экспорт в CSV
+          </button>
+          <button
+            onClick={() => setScannerOpen(true)}
+            className="w-full sm:w-auto justify-center flex items-center gap-2 bg-brand hover:bg-brand-hover text-on-brand font-semibold text-xs sm:text-sm px-4 py-2.5 rounded-xl shadow-sm transition active:scale-98"
+          >
+            <Camera className="w-4 h-4" />
+            Сканировать QR / Ввести код
+          </button>
+        </div>
       </div>
 
       <div className="bg-card rounded-2xl border border-slate-200 p-4 mb-6 flex items-center justify-between shadow-sm">
