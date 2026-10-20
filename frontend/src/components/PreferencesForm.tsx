@@ -1,10 +1,9 @@
 import React, { useEffect, useState } from 'react';
-import { Loader2 } from 'lucide-react';
 import { catalogApi, citiesApi, preferencesApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { City, Preferences, PreferredTime, SkillLevel, Sport, UpdatePreferencesPayload } from '../types';
 import { PREFERRED_TIME_LABELS, SKILL_LABELS } from '../utils/format';
-import { inputClass, labelClass } from './FieldInput';
+import { Button, inputClass, labelClass } from './ui';
 
 interface PreferencesFormProps {
   /** Текущие значения (если уже сохранены). */
@@ -197,14 +196,9 @@ export const PreferencesForm: React.FC<PreferencesFormProps> = ({ initial, submi
             Отмена
           </button>
         )}
-        <button
-          type="submit"
-          disabled={saving}
-          className="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-        >
-          {saving && <Loader2 className="w-5 h-5 animate-spin" />}
+        <Button type="submit" size="lg" loading={saving}>
           {submitLabel}
-        </button>
+        </Button>
       </div>
     </form>
   );

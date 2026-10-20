@@ -1,12 +1,12 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, Building2, CheckCircle, EyeOff, Loader2, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
+import { Ban, Building2, CheckCircle, EyeOff, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { AdminOrganization, EventComment, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
-import { inputClass, labelClass } from '../components/FieldInput';
+import { inputClass, labelClass, LoadingBlock } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, needsAdminAttention } from '../utils/moderation';
 
@@ -187,9 +187,7 @@ export const AdminPage: React.FC = () => {
       </label>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
+        <LoadingBlock className="py-16" />
       ) : tab === 'orgs' ? (
         <div className="space-y-4">
           {shownOrgs.length === 0 && (
@@ -209,7 +207,7 @@ export const AdminPage: React.FC = () => {
                       {org.name}
                     </Link>
                   </h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
+                  <span className={`text-caption font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
                     {ORG_STATUS[org.status].label}
                   </span>
                 </div>
@@ -375,12 +373,12 @@ export const AdminPage: React.FC = () => {
                     </Link>
                     <span className="text-xs font-semibold text-slate-800 break-words">{cm.authorName}</span>
                     {cm.organizer && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                      <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                         Организатор
                       </span>
                     )}
                     {cm.hidden && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+                      <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
                         Скрыто
                       </span>
                     )}

@@ -14,7 +14,7 @@ export const GuestHeader: React.FC = () => {
     <header className="bg-card border-b border-line relative z-40">
       <div className="mx-auto max-w-6xl px-4 sm:px-6 h-16 flex items-center gap-3">
         <Link to="/welcome" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — о сервисе">
-          <span className="w-[38px] h-[38px] rounded-[10px] bg-brand text-on-brand flex items-center justify-center">
+          <span className="w-[38px] h-[38px] rounded-control bg-brand text-on-brand flex items-center justify-center">
             <img src="/logo-s.png" alt="" className="h-[22px] w-auto" />
           </span>
           <span className="text-[22px] sm:text-2xl font-extrabold tracking-[-0.03em] text-ink">Sportikus</span>
@@ -26,7 +26,7 @@ export const GuestHeader: React.FC = () => {
           type="button"
           onClick={toggleTheme}
           aria-label={theme === 'dark' ? 'Включить светлую тему' : 'Включить тёмную тему'}
-          className="w-11 h-11 rounded-[10px] text-ink flex items-center justify-center hover:bg-surface"
+          className="w-11 h-11 rounded-control text-ink flex items-center justify-center hover:bg-surface"
         >
           {theme === 'dark' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
         </button>

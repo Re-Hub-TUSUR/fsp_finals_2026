@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { AlertTriangle, Building2, Loader2, ShieldAlert } from 'lucide-react';
+import { AlertTriangle, Building2, ShieldAlert } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { catalogApi, citiesApi, eventsApi } from '../api';
 import { errorMessage } from '../api/client';
@@ -16,7 +16,8 @@ import type {
   SkillLevel,
   Sport,
 } from '../types';
-import { FieldInput, firstNumberError, inputClass, labelClass, pruneValues } from '../components/FieldInput';
+import { FieldInput, firstNumberError, pruneValues } from '../components/FieldInput';
+import { Button, inputClass, labelClass } from '../components/ui';
 import { LocationPicker } from '../components/LocationPicker';
 import { geocodeAddress } from '../lib/mapgl';
 import { QuestionsEditor } from '../components/constructor/QuestionsEditor';
@@ -343,7 +344,7 @@ export const CreateEventPage: React.FC = () => {
                       <span className="text-xl">{t.icon}</span>
                       {t.name}
                       {t.organizationOnly && (
-                        <span className="text-[10px] uppercase tracking-wide bg-slate-900 text-white px-1.5 py-0.5 rounded">
+                        <span className="text-micro uppercase tracking-wide bg-slate-900 text-white px-1.5 py-0.5 rounded">
                           для организаций
                         </span>
                       )}
@@ -737,18 +738,15 @@ export const CreateEventPage: React.FC = () => {
           >
             Отмена
           </Link>
-          <button
+          <Button
             type="submit"
-            disabled={blocked || submitting || !template}
-            className={`px-6 py-3 rounded-xl font-semibold text-base shadow-sm flex items-center justify-center gap-2 ${
-              blocked || submitting
-                ? 'bg-slate-200 text-slate-400 cursor-not-allowed'
-                : 'bg-brand hover:bg-brand-hover text-on-brand'
-            }`}
+            size="lg"
+            disabled={blocked || !template}
+            loading={submitting}
+            className="disabled:opacity-100 disabled:bg-slate-200 disabled:text-slate-400"
           >
-            {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
             {submitting ? 'Публикуем и проверяем…' : 'Опубликовать мероприятие'}
-          </button>
+          </Button>
         </div>
         {submitting && (
           <p className="text-sm text-slate-500 text-right" aria-live="polite">

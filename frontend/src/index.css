@@ -15,15 +15,6 @@ body,
   overflow-x: hidden;
 }
 
-/* Утилита для плавной горизонтальной прокрутки без полосы прокрутки */
-.no-scrollbar::-webkit-scrollbar {
-  display: none;
-}
-.no-scrollbar {
-  -ms-overflow-style: none;
-  scrollbar-width: none;
-}
-
 /*
  * Дизайн-система Sportikus (редизайн): чистые нейтрали + один акцент.
  * Светлая тема — мятный акцент, тёмная — лаймовый. Тема — атрибут data-theme на <html>.
@@ -82,7 +73,30 @@ body,
   --color-slate-800: #1f242b;
   --color-slate-900: #0e1116;
 
+  --color-brand-glow: rgb(4 215 147 / 0.35);
+
+  /* Радиусы сверх стандартной шкалы Tailwind (xl = 12px, 2xl = 16px, 3xl = 24px, 4xl = 32px) */
+  --radius-control: 10px; /* кнопки и поля в шапках, сегменты фильтров */
+  --radius-tile: 14px; /* иконки-кнопки в панелях */
+  --radius-panel: 18px; /* вложенные блоки внутри панелей */
+  --radius-box: 20px; /* пустые состояния и списки на страницах */
+  --radius-card: 22px; /* карточки мероприятий */
+  --radius-sheet: 28px; /* нижние шиты на мобильных */
+
+  /* Промежуточные размеры шрифта между ступенями Tailwind; межстрочный интервал наследуется */
+  --text-micro: 10px;
+  --text-caption: 11px;
+  --text-label: 13px;
+  --text-body: 15px;
+  --text-lead: 17px;
+  --text-title: 19px;
+
   --shadow-card: 0 6px 20px rgba(20, 30, 45, 0.1);
+  --shadow-pop: 0 4px 16px rgba(20, 30, 45, 0.14);
+  --shadow-glow-sm: 0 1px 6px var(--color-brand-glow);
+  --shadow-glow: 0 2px 10px var(--color-brand-glow);
+  --shadow-glow-ring: 0 0 12px var(--color-brand-glow);
+  --shadow-glow-lg: 0 4px 24px var(--color-brand-glow);
 }
 
 :root[data-theme="dark"] {
@@ -115,6 +129,7 @@ body,
   --color-avatar-bg: #2a2e32;
   --color-avatar-ink: #e6e8ea;
   --color-pin-ring: #1c1f22;
+  --color-brand-glow: rgb(213 244 91 / 0.25);
 
   --color-white: #1c1f22;
   --color-slate-50: #232629;
@@ -276,6 +291,41 @@ body {
       animation: sp-float 6s ease-in-out infinite;
     }
   }
+}
+
+/* Слои наложения: всё, что перекрывает страницу, берёт z-index отсюда, а не из произвольных чисел */
+@utility z-overlay {
+  z-index: 100;
+}
+@utility z-sheet-backdrop {
+  z-index: 1400;
+}
+@utility z-sheet {
+  z-index: 1500;
+}
+@utility z-modal {
+  z-index: 2000;
+}
+@utility z-modal-raised {
+  z-index: 2100;
+}
+@utility z-popover {
+  z-index: 2200;
+}
+@utility z-toast {
+  z-index: 3000;
+}
+@utility z-tour {
+  z-index: 9990;
+}
+@utility z-tour-spotlight {
+  z-index: 9995;
+}
+@utility z-tour-card {
+  z-index: 9996;
+}
+@utility z-tour-controls {
+  z-index: 9999;
 }
 
 @layer base {

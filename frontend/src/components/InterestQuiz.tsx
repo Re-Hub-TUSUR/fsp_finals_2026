@@ -1,9 +1,10 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { ArrowLeft, ArrowRight, Check, Loader2, Sparkles, X } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Check, Sparkles, X } from 'lucide-react';
 import { catalogApi, citiesApi, preferencesApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { City, Preferences, PreferredTime, SkillLevel, Sport } from '../types';
 import { sportIconPath } from '../utils/sportIcons';
+import { Spinner } from './ui';
 
 interface Props {
   initial?: Preferences | null;
@@ -112,7 +113,7 @@ export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved, onFin
     finally { setSaving(false); }
   };
 
-  return <div className="fixed inset-0 z-[100] overflow-y-auto bg-page/95 backdrop-blur-xl">
+  return <div className="fixed inset-0 z-overlay overflow-y-auto bg-page/95 backdrop-blur-xl">
     <div className="mx-auto flex min-h-full max-w-5xl flex-col px-4 py-5 sm:px-8 sm:py-8">
       <div className="flex items-center justify-between"><div className="flex items-center gap-2 font-extrabold text-ink"><span className="flex h-9 w-9 items-center justify-center rounded-xl bg-brand text-on-brand"><Sparkles className="h-5 w-5" /></span>Компас интересов</div><button onClick={onClose} aria-label="Закрыть" className="flex h-10 w-10 items-center justify-center rounded-full border border-line bg-white text-ink hover:bg-surface"><X className="h-5 w-5" /></button></div>
       {step < DONE_STEP && <div className="mt-6 flex gap-2">{[0, 1, 2, 3, 4, 5].map((n) => <div key={n} className={`h-1.5 flex-1 rounded-full ${n <= step ? 'bg-brand' : 'bg-surface-2'}`} />)}</div>}
@@ -134,14 +135,14 @@ export const InterestQuiz: React.FC<Props> = ({ initial, onClose, onSaved, onFin
         {step === DONE_STEP && <div className="mx-auto max-w-xl text-center"><div className="mx-auto flex h-24 w-24 items-center justify-center rounded-full bg-brand text-on-brand shadow-card"><Sparkles className="h-11 w-11" /></div><p className="mt-8 text-sm font-extrabold uppercase tracking-[.2em] text-brand-ink">Ваш профиль готов</p><h2 className="mt-3 text-4xl font-black text-ink sm:text-5xl">Мы поймали ваш ритм</h2><p className="mt-4 text-lg text-muted">Теперь лента «Для вас» учитывает ваш возраст, интересы, уровень, удобное время и расстояние.</p><button onClick={onFinish ?? onClose} className="mt-8 rounded-2xl bg-brand px-7 py-3.5 font-bold text-on-brand hover:bg-brand-hover">Смотреть рекомендации</button></div>}
       </div>
 
-      {step < DONE_STEP && <div className="flex items-center justify-between border-t border-line pt-5"><button disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className="flex items-center gap-2 rounded-xl px-4 py-3 font-semibold text-muted disabled:invisible"><ArrowLeft className="h-4 w-4" />Назад</button><div className="text-sm font-semibold text-muted">{step + 1} / {LAST_STEP + 1}</div><button disabled={!canNext || saving || (needsCatalog && (loading || !!loadError))} onClick={() => step === LAST_STEP ? void finish() : setStep((value) => value + 1)} className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 font-bold text-on-brand disabled:opacity-40">{saving ? <Loader2 className="h-5 w-5 animate-spin" /> : step === LAST_STEP ? 'Собрать профиль' : <>Дальше<ArrowRight className="h-4 w-4" /></>}</button></div>}
+      {step < DONE_STEP && <div className="flex items-center justify-between border-t border-line pt-5"><button disabled={step === 0 || saving} onClick={() => setStep((value) => value - 1)} className="flex items-center gap-2 rounded-xl px-4 py-3 font-semibold text-muted disabled:invisible"><ArrowLeft className="h-4 w-4" />Назад</button><div className="text-sm font-semibold text-muted">{step + 1} / {LAST_STEP + 1}</div><button disabled={!canNext || saving || (needsCatalog && (loading || !!loadError))} onClick={() => step === LAST_STEP ? void finish() : setStep((value) => value + 1)} className="flex items-center gap-2 rounded-xl bg-brand px-5 py-3 font-bold text-on-brand disabled:opacity-40">{saving ? <Spinner size="md" /> : step === LAST_STEP ? 'Собрать профиль' : <>Дальше<ArrowRight className="h-4 w-4" /></>}</button></div>}
       {error && <p role="alert" className="mb-4 rounded-xl bg-red-50 p-3 text-center text-sm text-red-700">{error}</p>}
     </div>
   </div>;
 };
 
 const LoadState: React.FC<{ loading: boolean; error: string; onRetry: () => void }> = ({ loading, error, onRetry }) => loading
-  ? <div className="flex flex-col items-center gap-3 text-muted" role="status"><Loader2 className="h-8 w-8 animate-spin" /><span>Загружаем виды спорта и города…</span></div>
+  ? <div className="flex flex-col items-center gap-3 text-muted" role="status"><Spinner size="xl" /><span>Загружаем виды спорта и города…</span></div>
   : <div role="alert" className="mx-auto max-w-md rounded-2xl border border-line bg-white p-6 text-center"><p className="font-bold text-ink">Не удалось загрузить данные</p><p className="mt-1 text-sm text-muted">{error}</p><button onClick={onRetry} className="mt-4 rounded-xl bg-brand px-5 py-2.5 font-bold text-on-brand hover:bg-brand-hover">Повторить</button></div>;
 const SportGroup: React.FC<{ title: string; sports: Sport[]; selected: number[]; onToggle: (id: number) => void; highlighted?: boolean }> = ({ title, sports, selected, onToggle, highlighted }) => sports.length > 0 && <section className={highlighted ? 'mb-8 rounded-2xl border border-brand-line bg-brand-tint/40 p-4 sm:p-5' : ''}><h3 className="mb-4 text-lg font-extrabold text-ink">{title}</h3><div className="flex flex-wrap gap-2.5">{sports.map((sport) => { const active = selected.includes(sport.id); return <button key={sport.id} onClick={() => onToggle(sport.id)} className={`flex min-h-11 items-center gap-2 rounded-xl border px-3.5 py-2.5 font-bold ${active ? 'border-brand bg-brand text-on-brand' : 'border-line bg-white text-ink hover:border-brand-line'}`}><SportGlyph name={sport.name} /><span>{sport.name}</span>{active && <Check className="h-4 w-4" />}</button>; })}</div></section>;
 const QuizStep: React.FC<{ eyebrow: string; title: string; subtitle: string; children: React.ReactNode }> = ({ eyebrow, title, subtitle, children }) => <div><div className="mx-auto mb-8 max-w-2xl text-center"><p className="text-xs font-extrabold uppercase tracking-[.2em] text-brand-ink">{eyebrow}</p><h2 className="mt-3 text-3xl font-black text-ink sm:text-5xl">{title}</h2><p className="mt-3 text-base text-muted sm:text-lg">{subtitle}</p></div>{children}</div>;

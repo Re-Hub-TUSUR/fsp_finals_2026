@@ -1,6 +1,6 @@
 import React from 'react';
 
-/** Базовые элементы дизайн-системы: чип, сегментный переключатель, тумблер. */
+/** Переключатели дизайн-системы: чип, сегментный переключатель, тумблер, подпись секции. */
 
 export const Chip: React.FC<{
   active: boolean;
@@ -14,7 +14,7 @@ export const Chip: React.FC<{
     onClick={onClick}
     aria-pressed={active}
     className={`shrink-0 rounded-full border font-semibold whitespace-nowrap transition-colors ${
-      size === 'sm' ? 'h-[34px] px-3 text-[13px]' : 'h-9 px-3.5 text-sm'
+      size === 'sm' ? 'h-[34px] px-3 text-label' : 'h-9 px-3.5 text-sm'
     } ${floating ? 'shadow-[0_2px_8px_rgba(10,20,45,0.10)]' : ''} ${
       // В Sportikus Home активные чипы «чернильные»: акцент остаётся только за действиями
       active ? 'bg-ink border-ink text-white' : 'bg-card border-line text-ink hover:bg-surface'
@@ -36,7 +36,7 @@ export function Segmented<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-1 p-1 bg-surface rounded-[14px]">
+    <div role="radiogroup" aria-label={label} className="flex gap-1 p-1 bg-surface rounded-tile">
       {options.map((o) => {
         const active = o.value === value;
         return (
@@ -46,7 +46,7 @@ export function Segmented<T extends string>({
             role="radio"
             aria-checked={active}
             onClick={() => onChange(o.value)}
-            className={`flex-1 min-w-0 h-10 px-1 rounded-[10px] text-[13px] sm:text-sm font-semibold truncate transition-all ${
+            className={`flex-1 min-w-0 h-10 px-1 rounded-control text-label sm:text-sm font-semibold truncate transition-all ${
               active ? 'bg-white text-ink shadow-[0_1px_4px_rgba(10,20,45,0.16)]' : 'text-muted hover:text-ink'
             }`}
           >
@@ -82,28 +82,5 @@ export const Toggle: React.FC<{ checked: boolean; onChange: (v: boolean) => void
 );
 
 export const SectionLabel: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="text-[13px] font-semibold text-muted uppercase tracking-[0.08em]">{children}</span>
-);
-
-/** Сообщение об ошибке с кнопкой «Повторить» — чтобы сбой сети не был тупиком. */
-export const ErrorNotice: React.FC<{
-  message: string;
-  onRetry?: () => void;
-  className?: string;
-}> = ({ message, onRetry, className = '' }) => (
-  <div
-    role="alert"
-    className={`flex flex-wrap items-center justify-between gap-x-3 gap-y-2 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm ${className}`}
-  >
-    <span className="min-w-0">{message}</span>
-    {onRetry && (
-      <button
-        type="button"
-        onClick={onRetry}
-        className="shrink-0 h-8 px-3 rounded-lg bg-white border border-red-200 font-semibold text-red-800 hover:bg-red-100"
-      >
-        Повторить
-      </button>
-    )}
-  </div>
+  <span className="text-label font-semibold text-muted uppercase tracking-[0.08em]">{children}</span>
 );

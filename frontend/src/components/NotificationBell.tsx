@@ -1,10 +1,11 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Bell, CheckCheck, Inbox, Loader2, X } from 'lucide-react';
+import { Bell, CheckCheck, Inbox, X } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import type { AppNotification } from '../types';
 import { NotificationItem } from './NotificationItem';
+import { LoadingBlock } from './ui';
 
 export const NotificationBell: React.FC = () => {
   const { currentUser } = useAuth();
@@ -106,7 +107,7 @@ export const NotificationBell: React.FC = () => {
         aria-expanded={open}
         aria-controls="notifications-panel"
         title={unreadCount > 0 ? `${unreadCount} новых уведомлений` : 'Уведомления'}
-        className="relative w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
+        className="relative w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-control border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
       >
         <Bell className="w-4 h-4 sm:w-5 sm:h-5" />
         {unreadCount > 0 && (
@@ -123,7 +124,7 @@ export const NotificationBell: React.FC = () => {
           role="dialog"
           aria-label="Уведомления"
           // fixed, а не absolute: шапка с overflow-hidden обрезала бы панель на десктопе
-          className="fixed inset-x-2 top-16 sm:inset-x-auto sm:right-4 sm:top-[68px] w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-[2200] overflow-hidden animate-in fade-in zoom-in-95 duration-150"
+          className="fixed inset-x-2 top-16 sm:inset-x-auto sm:right-4 sm:top-[68px] w-auto sm:w-[380px] max-w-[calc(100vw-16px)] max-h-[500px] bg-card border border-line-2 rounded-2xl shadow-2xl flex flex-col z-popover overflow-hidden animate-in fade-in zoom-in-95 duration-150"
         >
           {/* Заголовок */}
           <div className="p-4 border-b border-line-2 flex items-center justify-between bg-surface/50">
@@ -161,9 +162,7 @@ export const NotificationBell: React.FC = () => {
           {/* Список уведомлений */}
           <div className="flex-1 overflow-y-auto divide-y divide-line-2">
             {loading && items.length === 0 ? (
-              <div className="py-12 flex justify-center text-muted">
-                <Loader2 className="w-6 h-6 animate-spin" />
-              </div>
+              <LoadingBlock className="py-12" />
             ) : items.length === 0 ? (
               <div className="py-12 px-4 text-center text-muted">
                 <Inbox className="w-10 h-10 mx-auto mb-2 opacity-40" />

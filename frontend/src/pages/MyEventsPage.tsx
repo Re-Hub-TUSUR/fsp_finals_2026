@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, Calendar, CheckCircle2, Loader2, MapPin, PlusCircle, QrCode } from 'lucide-react';
+import { Archive, Calendar, CheckCircle2, MapPin, PlusCircle, QrCode } from 'lucide-react';
 import { meApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -8,7 +8,7 @@ import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { TicketModal } from '../components/TicketModal';
 import { CancelParticipationDialog } from '../components/CancelParticipationDialog';
-import { ErrorNotice } from '../components/ui';
+import { ErrorNotice, LoadingBlock } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
@@ -113,9 +113,7 @@ export const MyEventsPage: React.FC = () => {
       {error && <ErrorNotice message={error} onRetry={reload} className="mb-4" />}
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
+        <LoadingBlock className="py-16" />
       ) : tab === 'participating' ? (
         activeParticipations.length === 0 ? (
           <Empty text="Вы пока никуда не записались." linkTo="/" linkText="Найти мероприятие" />

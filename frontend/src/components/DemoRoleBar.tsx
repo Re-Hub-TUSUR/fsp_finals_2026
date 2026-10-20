@@ -10,7 +10,7 @@ export const DemoRoleBar: React.FC = () => {
     <header className="bg-white dark:bg-[#0e1116] text-slate-900 dark:text-snow px-3 sm:px-4 py-1.5 sm:py-2 border-b border-slate-200 dark:border-[#1f242b] shadow-md relative z-50 max-w-full overflow-hidden">
       <div className="max-w-7xl mx-auto flex items-center justify-between gap-2 min-w-0">
         <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
-          <span className="text-[11px] sm:text-xs uppercase tracking-wider font-bold bg-[#f59e0b33] text-[#fcd34d] px-1.5 sm:px-2 py-0.5 rounded border border-[#f59e0b66]">
+          <span className="text-caption sm:text-xs uppercase tracking-wider font-bold bg-[#f59e0b33] text-[#fcd34d] px-1.5 sm:px-2 py-0.5 rounded border border-[#f59e0b66]">
             <span className="hidden sm:inline">Демо-режим</span>
             <span className="sm:hidden inline">Демо</span>
           </span>
@@ -46,7 +46,7 @@ export const DemoRoleBar: React.FC = () => {
               <span>
                 Текущий: <b>{currentUser?.fullName ?? '—'}</b>
               </span>
-              <span className="text-[10px] bg-slate-100 dark:bg-[#1f242b] px-1.5 py-0.5 rounded text-slate-500 dark:text-[#98a0a9] font-mono">{currentUser?.role}</span>
+              <span className="text-micro bg-slate-100 dark:bg-[#1f242b] px-1.5 py-0.5 rounded text-slate-500 dark:text-[#98a0a9] font-mono">{currentUser?.role}</span>
             </>
           )}
         </div>

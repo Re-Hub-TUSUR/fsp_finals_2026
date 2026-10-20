@@ -68,7 +68,7 @@ export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide, he
 
   return createPortal(
     <div
-      className="fixed inset-0 z-[2000] bg-[rgba(4,6,10,0.5)] flex items-end sm:items-center justify-center p-0 sm:p-4"
+      className="fixed inset-0 z-modal bg-[rgba(4,6,10,0.5)] flex items-end sm:items-center justify-center p-0 sm:p-4"
       onMouseDown={(e) => e.target === e.currentTarget && onClose()}
       role="dialog"
       aria-modal="true"
@@ -77,7 +77,7 @@ export const Modal: React.FC<ModalProps> = ({ title, onClose, children, wide, he
       <div
         ref={dialogRef}
         tabIndex={-1}
-        className={`outline-none bg-card w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-[28px] sm:rounded-3xl shadow-card`}
+        className={`outline-none bg-card w-full ${wide ? 'sm:max-w-2xl' : 'sm:max-w-lg'} max-h-[92vh] overflow-y-auto rounded-t-sheet sm:rounded-3xl shadow-card`}
       >
         <div className="sticky top-0 bg-card z-10 px-5 pt-2.5 pb-3">
           <div className="w-10 h-[5px] rounded-full bg-surface-2 mx-auto mb-3 sm:hidden" />

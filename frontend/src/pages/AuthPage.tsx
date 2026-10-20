@@ -59,7 +59,7 @@ export function AuthPage() {
             type={isPassword && showPassword ? 'text' : type}
             value={form[key] ?? ''}
             onChange={(e) => change(key, e.target.value)}
-            className={`w-full rounded-xl border border-line-2 bg-surface py-2.5 text-ink outline-none transition focus:border-[#04D793] focus:ring-1 focus:ring-[#04D793] dark:focus:border-[#D5F45B] dark:focus:ring-[#D5F45B] ${isPassword ? 'pl-3.5 pr-11' : 'px-3.5'}`}
+            className={`w-full rounded-xl border border-line-2 bg-surface py-2.5 text-ink outline-none transition focus:border-brand focus:ring-1 focus:ring-brand ${isPassword ? 'pl-3.5 pr-11' : 'px-3.5'}`}
           />
           {isPassword && (
             <button
@@ -104,7 +104,7 @@ export function AuthPage() {
               onClick={() => { setMode(key); setError(''); }}
               className={`py-3 text-sm font-bold transition-colors ${
                 mode === key
-                  ? 'border-b-2 border-[#04D793] text-[#04D793] dark:border-[#D5F45B] dark:text-[#D5F45B]'
+                  ? 'border-b-2 border-brand text-brand'
                   : 'text-muted hover:text-ink'
               }`}
             >
@@ -116,9 +116,9 @@ export function AuthPage() {
         {mode !== 'login' && (
           <div className="mt-5 flex items-start gap-3 rounded-xl bg-surface border border-line-2 p-4 text-sm text-ink">
             {mode === 'user' ? (
-              <UserRound className="shrink-0 text-[#04D793] dark:text-[#D5F45B] mt-0.5" />
+              <UserRound className="shrink-0 text-brand mt-0.5" />
             ) : (
-              <Building2 className="shrink-0 text-[#04D793] dark:text-[#D5F45B] mt-0.5" />
+              <Building2 className="shrink-0 text-brand mt-0.5" />
             )}
             <p className="leading-relaxed">
               {mode === 'user'
@@ -157,7 +157,7 @@ export function AuthPage() {
           <button
             disabled={busy}
             type="submit"
-            className="w-full rounded-xl bg-[#04D793] hover:bg-[#03c485] dark:bg-[#D5F45B] dark:hover:bg-[#c4e447] text-white dark:text-[#111315] font-bold text-base py-3.5 shadow-sm active:scale-[0.99] transition disabled:opacity-50"
+            className="w-full rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-bold text-base py-3.5 shadow-sm active:scale-[0.99] transition disabled:opacity-50"
           >
             {busy ? 'Подождите...' : mode === 'login' ? 'Войти' : 'Зарегистрироваться'}
           </button>

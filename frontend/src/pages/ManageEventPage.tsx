@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
-import { ArrowLeft, Camera, Check, CheckCircle2, Download, Loader2, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
+import { ArrowLeft, Camera, Check, CheckCircle2, Download, MessageSquare, QrCode, ShieldAlert, UserCheck, X } from 'lucide-react';
 import { downloadParticipantsCsv } from '../utils/exportCsv';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
@@ -9,7 +9,8 @@ import type { FieldDef, FieldValue, Participation, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
 import { CheckInScannerModal } from '../components/CheckInScannerModal';
 import { ParticipationBadge } from '../components/ParticipationBadge';
-import { displayValue, inputClass, labelClass } from '../components/FieldInput';
+import { displayValue } from '../components/FieldInput';
+import { inputClass, labelClass, LoadingBlock } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 
 const Answers: React.FC<{ fields: FieldDef[]; answers?: Record<string, FieldValue> }> = ({ fields, answers }) => {
@@ -107,9 +108,7 @@ export const ManageEventPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
+      <LoadingBlock />
     );
   }
   if (error || !event) {
@@ -147,11 +146,11 @@ export const ManageEventPage: React.FC = () => {
           {p.decisionComment && <p className="mt-2 text-sm text-slate-500">Ваш комментарий: «{p.decisionComment}»</p>}
           {p.status === 'CONFIRMED' && p.ticketCode && (
             <div className="mt-2.5 flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200">
+              <span className="text-caption font-mono font-bold bg-slate-100 text-slate-800 px-2 py-0.5 rounded-lg border border-slate-200">
                 Билет: {p.ticketCode}
               </span>
               {p.checkedIn ? (
-                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-ink bg-brand-tint-2 px-2.5 py-0.5 rounded-full">
+                <span className="inline-flex items-center gap-1 text-caption font-bold text-ink bg-brand-tint-2 px-2.5 py-0.5 rounded-full">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Вход подтверждён {p.checkedInAt ? `(${p.checkedInAt.slice(11, 16)})` : ''}
                 </span>
               ) : (

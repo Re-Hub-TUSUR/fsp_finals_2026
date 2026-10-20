@@ -6,7 +6,8 @@ import { distanceKm, type LatLng } from '../utils/eventView';
 import { useTheme } from '../context/ThemeContext';
 import { MapFallback } from './MapFallback';
 import { MapEventCard } from './MapEventCard';
-import { Loader2, Minus, Plus } from 'lucide-react';
+import { Minus, Plus } from 'lucide-react';
+import { Spinner } from './ui';
 
 export interface MapViewport extends LatLng {
   radiusKm: number;
@@ -64,7 +65,7 @@ interface Group {
 }
 
 const groupClass =
-  'flex flex-col bg-card border border-line-2 rounded-[10px] shadow-[0_4px_16px_rgba(20,30,45,0.14)] overflow-hidden';
+  'flex flex-col bg-card border border-line-2 rounded-control shadow-pop overflow-hidden';
 const ctrlButton =
   'w-[46px] h-[46px] flex items-center justify-center text-ink hover:bg-surface transition-colors disabled:opacity-60 [&+&]:border-t [&+&]:border-line-2';
 
@@ -378,7 +379,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
               aria-label="Моё местоположение"
               className={`${ctrlButton} text-brand-ink`}
             >
-              {locating ? <Loader2 className="w-5 h-5 animate-spin" /> : <LocateIcon />}
+              {locating ? <Spinner size="md" /> : <LocateIcon />}
             </button>
           </div>
         </div>

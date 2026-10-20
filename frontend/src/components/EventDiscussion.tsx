@@ -4,7 +4,6 @@ import {
   Send,
   ShieldCheck,
   EyeOff,
-  Loader2,
   AlertCircle,
   Clock,
 } from 'lucide-react';
@@ -13,6 +12,7 @@ import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { EventComment } from '../types';
 import { formatDateTime } from '../utils/format';
+import { Button, LoadingBlock } from './ui';
 
 interface EventDiscussionProps {
   eventId: number;
@@ -144,9 +144,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
 
       {/* Список сообщений */}
       {loading ? (
-        <div className="flex justify-center py-12 text-slate-400">
-          <Loader2 className="w-7 h-7 animate-spin" />
-        </div>
+        <LoadingBlock className="py-12" />
       ) : error ? (
         <div className="py-8 text-center text-sm text-red-600 bg-red-50 rounded-xl p-4">
           {error}
@@ -199,26 +197,26 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
 
                         {/* Яркий бейдж Организатора по ТЗ */}
                         {c.organizer && (
-                          <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wide bg-brand text-on-brand px-2 py-0.5 rounded-full shadow-sm">
+                          <span className="inline-flex items-center gap-1 text-caption font-extrabold uppercase tracking-wide bg-brand text-on-brand px-2 py-0.5 rounded-full shadow-sm">
                             <ShieldCheck className="w-3.5 h-3.5" />
                             Организатор
                           </span>
                         )}
 
                         {c.authorRole === 'ROLE_ADMIN' && !c.organizer && (
-                          <span className="text-[10px] font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
+                          <span className="text-micro font-bold uppercase tracking-wide bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">
                             Администратор
                           </span>
                         )}
 
                         {isMine && (
-                          <span className="text-[10px] font-semibold text-slate-400">
+                          <span className="text-micro font-semibold text-slate-400">
                             (Вы)
                           </span>
                         )}
                       </div>
 
-                      <div className="flex items-center gap-1 text-[11px] text-slate-400 mt-0.5">
+                      <div className="flex items-center gap-1 text-caption text-slate-400 mt-0.5">
                         <Clock className="w-3 h-3" />
                         <span>{formatDateTime(c.createdAt)}</span>
                       </div>
@@ -263,7 +261,7 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
               <span>Вы пишете как:</span>
               <b className="text-slate-800">{currentUser.fullName}</b>
               {isEventOrganizer && (
-                <span className="text-ink font-bold bg-brand-tint-2 px-1.5 py-0.2 rounded text-[10px]">
+                <span className="text-ink font-bold bg-brand-tint-2 px-1.5 py-0.2 rounded text-micro">
                   ✓ Организатор
                 </span>
               )}
@@ -288,23 +286,10 @@ export const EventDiscussion: React.FC<EventDiscussionProps> = ({
               Enter — отправить, Shift+Enter — новая строка
             </span>
 
-            <button
-              type="submit"
-              disabled={submitting || !text.trim()}
-              className="ml-auto inline-flex items-center gap-2 bg-brand hover:bg-brand-dark text-on-brand px-5 py-2.5 rounded-xl font-semibold text-sm transition-all shadow-sm disabled:opacity-50 disabled:cursor-not-allowed active:scale-98"
-            >
-              {submitting ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                  <span>Отправка...</span>
-                </>
-              ) : (
-                <>
-                  <Send className="w-4 h-4" />
-                  <span>Отправить</span>
-                </>
-              )}
-            </button>
+            <Button type="submit" disabled={!text.trim()} loading={submitting} className="ml-auto">
+              {!submitting && <Send className="w-4 h-4" />}
+              <span>{submitting ? 'Отправка...' : 'Отправить'}</span>
+            </Button>
           </div>
         </form>
       ) : (

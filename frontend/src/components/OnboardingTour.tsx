@@ -377,7 +377,7 @@ export const OnboardingTour: React.FC = () => {
           aria-modal="true"
           aria-label="Обучение по сайту"
           onClick={handleNext}
-          className="fixed inset-0 z-[9990] select-none cursor-pointer"
+          className="fixed inset-0 z-tour select-none cursor-pointer"
         >
           {/* Полупрозрачная маска с вырезом подсвечиваемого элемента (без блюра) */}
           {targetRect && !isFinalStep ? (
@@ -415,14 +415,14 @@ export const OnboardingTour: React.FC = () => {
           {/* Светящаяся рамка вокруг целевого элемента */}
           {targetRect && !isFinalStep && (
             <div
-              className="fixed pointer-events-none z-[9995] rounded-xl sm:rounded-2xl transition-all duration-300 ease-out"
+              className="fixed pointer-events-none z-tour-spotlight rounded-xl sm:rounded-2xl transition-all duration-300 ease-out"
               style={{
                 top: `${spotY}px`,
                 left: `${spotX}px`,
                 width: `${spotW}px`,
                 height: `${spotH}px`,
                 boxShadow:
-                  '0 0 0 2.5px var(--brand, #04D793), 0 0 20px 4px rgba(4, 215, 147, 0.55), inset 0 0 10px rgba(4, 215, 147, 0.2)',
+                  '0 0 0 2.5px var(--color-brand), 0 0 20px 4px var(--color-brand-glow), inset 0 0 10px var(--color-brand-glow)',
               }}
             >
               {/* Пульсирующий маркер внимания */}
@@ -440,7 +440,7 @@ export const OnboardingTour: React.FC = () => {
               e.stopPropagation();
               handleSkip();
             }}
-            className="fixed top-3 sm:top-4 right-3 sm:right-4 z-[9999] flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-card hover:bg-surface text-ink border border-line-2 shadow-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
+            className="fixed top-3 sm:top-4 right-3 sm:right-4 z-tour-controls flex items-center gap-1.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-card hover:bg-surface text-ink border border-line-2 shadow-xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
           >
             <span>{isMobile ? 'Пропустить' : 'Пропустить обучение'}</span>
             <X className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-muted" />
@@ -451,7 +451,7 @@ export const OnboardingTour: React.FC = () => {
             ref={cardRef}
             onClick={(e) => e.stopPropagation()}
             style={tooltipStyle}
-            className="z-[9996] bg-card text-ink border border-line-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] rounded-2xl p-4 sm:p-5 transition-all duration-300 anim-fade cursor-default max-h-[82vh] overflow-y-auto"
+            className="z-tour-card bg-card text-ink border border-line-2 shadow-[0_16px_40px_rgba(0,0,0,0.45)] rounded-2xl p-4 sm:p-5 transition-all duration-300 anim-fade cursor-default max-h-[82vh] overflow-y-auto"
           >
             {/* Стрелочка-указатель к элементу */}
             {showArrow && (
@@ -474,7 +474,7 @@ export const OnboardingTour: React.FC = () => {
 
             {/* Заголовок и бейдж шага */}
             <div className="flex items-center justify-between gap-2 mb-2">
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-extrabold bg-brand-tint text-brand-ink border border-brand-line">
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-caption sm:text-xs font-extrabold bg-brand-tint text-brand-ink border border-brand-line">
                 {currentStep.icon}
                 {currentStep.badge}
               </span>
@@ -489,7 +489,7 @@ export const OnboardingTour: React.FC = () => {
             </p>
 
             {currentStep.hint && (
-              <div className="flex items-start gap-1.5 p-2 sm:p-2.5 rounded-xl bg-surface border border-line-2 text-[11px] sm:text-xs text-ink mb-3 sm:mb-4">
+              <div className="flex items-start gap-1.5 p-2 sm:p-2.5 rounded-xl bg-surface border border-line-2 text-caption sm:text-xs text-ink mb-3 sm:mb-4">
                 <span className="shrink-0 text-sm sm:text-base leading-none">💡</span>
                 <span className="leading-snug">{currentStep.hint}</span>
               </div>
@@ -525,7 +525,7 @@ export const OnboardingTour: React.FC = () => {
                       aria-label={`Шаг ${idx + 1}`}
                       className={`h-1.5 rounded-full transition-all ${
                         idx === stepIndex
-                          ? 'w-5 bg-brand shadow-[0_0_8px_rgba(4,215,147,0.8)]'
+                          ? 'w-5 bg-brand shadow-glow-ring'
                           : 'w-1.5 bg-line-2 hover:bg-muted'
                       }`}
                     />
@@ -555,7 +555,7 @@ export const OnboardingTour: React.FC = () => {
 
             {/* Подсказка о клике в любое место экрана */}
             {!isFinalStep && (
-              <p className="mt-2 text-center text-[10px] sm:text-[11px] text-muted font-medium">
+              <p className="mt-2 text-center text-micro sm:text-caption text-muted font-medium">
                 Щёлкните в любое место экрана для перехода
               </p>
             )}

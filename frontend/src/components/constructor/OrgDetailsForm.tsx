@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { OrgDetails, ProgramItem } from '../../types';
-import { inputClass, labelClass } from '../FieldInput';
+import { inputClass, labelClass } from '../ui';
 import { TagInput } from './TagInput';
 
 interface OrgDetailsFormProps {

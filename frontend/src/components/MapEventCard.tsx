@@ -1,11 +1,12 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import type { SportEvent } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { distanceKm, eventAction, formatDistance, routeUrl, startLabelLong, type LatLng } from '../utils/eventView';
 import { SeatLine } from './EventBits';
 import { useEventJoin } from './useEventJoin';
+import { Spinner } from './ui';
 
 interface MapEventCardProps {
   event: SportEvent;
@@ -27,17 +28,17 @@ export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, 
   const canJoin = action.joinable && !!onMore && currentUser?.role === 'ROLE_USER' && !event.canManage;
   const dist = me ? formatDistance(distanceKm(me, event)) : null;
   const secondary =
-    'flex-1 h-12 rounded-[10px] border border-line-2 bg-card text-ink font-semibold text-base flex items-center justify-center hover:bg-surface transition-colors';
-  const primary = `flex-[1.4] h-12 rounded-[10px] font-bold text-base flex items-center justify-center transition-colors ${action.cls}`;
+    'flex-1 h-12 rounded-control border border-line-2 bg-card text-ink font-semibold text-base flex items-center justify-center hover:bg-surface transition-colors';
+  const primary = `flex-[1.4] h-12 rounded-control font-bold text-base flex items-center justify-center transition-colors ${action.cls}`;
 
   return (
-    <div className={`bg-card border border-line-2 rounded-xl shadow-[0_4px_16px_rgba(20,30,45,0.14)] p-4 flex flex-col gap-2.5 ${className}`}>
+    <div className={`bg-card border border-line-2 rounded-xl shadow-pop p-4 flex flex-col gap-2.5 ${className}`}>
       <div className="flex gap-2.5 items-start">
         <Link to={`/events/${event.id}`} className="flex-1 min-w-0 flex flex-col gap-[3px] group">
           <span className="text-sm font-semibold text-muted">
             {startLabelLong(event)} · {event.sport.name}
           </span>
-          <span className="text-[19px] font-bold leading-tight text-ink group-hover:underline decoration-2 underline-offset-2">
+          <span className="text-title font-bold leading-tight text-ink group-hover:underline decoration-2 underline-offset-2">
             {event.title}
           </span>
           <span className="text-sm font-medium text-muted truncate">
@@ -69,7 +70,7 @@ export const MapEventCard: React.FC<MapEventCardProps> = ({ event, me, onClose, 
         )}
         {canJoin ? (
           <button type="button" onClick={() => void join.start()} disabled={join.busy} className={`${primary} gap-2 disabled:opacity-70`}>
-            {join.busy && <Loader2 className="w-4 h-4 animate-spin" />}
+            {join.busy && <Spinner size="sm" />}
             {action.label}
           </button>
         ) : (

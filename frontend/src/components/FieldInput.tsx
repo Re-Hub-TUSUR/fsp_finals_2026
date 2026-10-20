@@ -1,5 +1,6 @@
 import React from 'react';
 import type { FieldDef, FieldValue } from '../types';
+import { inputClass, labelClass } from './ui';
 
 interface FieldInputProps {
   field: FieldDef;
@@ -7,11 +8,6 @@ interface FieldInputProps {
   onChange: (value: FieldValue) => void;
   disabled?: boolean;
 }
-
-export const inputClass =
-  'w-full px-3.5 py-2.5 text-base border border-slate-300 rounded-xl outline-none bg-card focus:border-brand focus:ring-2 focus:ring-brand/20 disabled:bg-slate-100 disabled:text-slate-400';
-
-export const labelClass = 'block text-sm font-semibold text-slate-700 mb-1.5';
 
 /** Нижняя граница числового поля: без явного min числа не бывают отрицательными. */
 export const numberMin = (field: FieldDef) => field.min ?? 0;

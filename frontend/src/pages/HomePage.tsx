@@ -1,9 +1,10 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronLeft, List, LocateFixed, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
+import { ChevronLeft, List, LocateFixed, Maximize2, Search, SearchX, X } from 'lucide-react';
 import type { City, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
-import { CoverCard, EventRow } from '../components/HomeCards';
+import { EventRow } from '../components/HomeCards';
+import { EventCard } from '../components/EventCard';
 import { MapSheet } from '../components/MapSheet';
 import { EventDetailPanel } from '../components/EventDetailPanel';
 import {
@@ -26,7 +27,7 @@ import {
 } from '../utils/eventsSnapshot';
 import { catalogApi, citiesApi, eventsApi } from '../api';
 import { errorMessage } from '../api/client';
-import { ErrorNotice } from '../components/ui';
+import { ErrorNotice, Spinner } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { spotsLeft } from '../utils/format';
 import {
@@ -34,6 +35,7 @@ import {
   dayDiff,
   dayKeyIn,
   distanceKm,
+  formatDistance,
   isLive,
   matchesWhen,
   plural,
@@ -331,12 +333,12 @@ export const HomePage: React.FC = () => {
     <div className="flex flex-col items-center text-center gap-2 py-14 px-6">
       <SearchX className="w-10 h-10 text-muted opacity-60" />
       <span className="text-xl font-bold text-ink">Ничего не нашлось</span>
-      <span className="text-[15px] text-muted max-w-[300px]">
+      <span className="text-body text-muted max-w-[300px]">
         {radiusOn
           ? `В радиусе ${filters.radius} км нет подходящих событий. Попробуйте расширить радиус или сбросить фильтры.`
           : 'Попробуйте изменить запрос или сбросить фильтры.'}
       </span>
-      <button type="button" onClick={widen} className="mt-2 h-[46px] px-5 rounded-[10px] bg-ink text-page text-base font-bold">
+      <button type="button" onClick={widen} className="mt-2 h-[46px] px-5 rounded-control bg-ink text-page text-base font-bold">
         {radiusOn && nextRadius ? (nextRadius === 'all' ? 'Искать без ограничения' : `Искать в ${nextRadius} км`) : 'Сбросить фильтры'}
       </button>
     </div>
@@ -349,7 +351,7 @@ export const HomePage: React.FC = () => {
         <label
           data-tour="search-bar-mobile"
           className={`flex-1 min-w-0 h-[50px] flex items-center gap-2.5 pl-3.5 pr-1.5 rounded-xl bg-card border border-line-2 text-muted focus-within:border-ink ${
-            floating ? 'shadow-[0_4px_16px_rgba(20,30,45,0.14)]' : ''
+            floating ? 'shadow-pop' : ''
           }`}
         >
           <Search className="w-5 h-5 shrink-0" />
@@ -377,7 +379,7 @@ export const HomePage: React.FC = () => {
             type="button"
             onClick={() => setLocateSignal((n) => n + 1)}
             aria-label="Моё местоположение"
-            className="w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-brand-ink shadow-[0_4px_16px_rgba(20,30,45,0.14)]"
+            className="w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-brand-ink shadow-pop"
           >
             <LocateFixed className="w-[22px] h-[22px]" />
           </button>
@@ -388,7 +390,7 @@ export const HomePage: React.FC = () => {
           onClick={() => setFiltersOpen(true)}
           aria-label="Фильтры"
           className={`relative w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-ink ${
-            floating ? 'shadow-[0_4px_16px_rgba(20,30,45,0.14)]' : ''
+            floating ? 'shadow-pop' : ''
           }`}
         >
           <FilterIcon size={22} />
@@ -408,7 +410,7 @@ export const HomePage: React.FC = () => {
     <div className="flex items-baseline gap-2.5 pb-1.5 lg:pb-2">
       {live && <span className="self-center w-2.5 h-2.5 rounded-full bg-brand" />}
       <span className="text-xl lg:text-[22px] font-bold text-ink">{title}</span>
-      <span className="text-[15px] lg:text-base font-semibold text-muted">{n}</span>
+      <span className="text-body lg:text-base font-semibold text-muted">{n}</span>
       {sub && <span className="hidden lg:inline text-sm text-muted ml-1">{sub}</span>}
     </div>
   );
@@ -425,8 +427,14 @@ export const HomePage: React.FC = () => {
         <div key={sec.key} className="flex flex-col gap-2.5 lg:gap-3">
           {sectionHead(sec.title, sec.items.length, sec.live, sec.sub)}
           <div className={grid}>
-            {sec.items.map(({ e }) => (
-              <CoverCard key={e.id} event={e} me={origin} active={e.id === detailId} onOpen={() => openDetail(e)} />
+            {sec.items.map(({ e, km }) => (
+              <EventCard
+                key={e.id}
+                event={e}
+                meta={km != null ? <span>{formatDistance(km)} от вас</span> : undefined}
+                active={e.id === detailId}
+                onSelect={() => openDetail(e)}
+              />
             ))}
           </div>
         </div>
@@ -493,7 +501,7 @@ export const HomePage: React.FC = () => {
           )}
           {loading && view === 'map' && (
             <div className="absolute top-16 left-1/2 -translate-x-1/2 z-20 hidden lg:flex bg-card border border-line-2 rounded-lg px-3 py-1.5 text-sm text-muted items-center gap-2">
-              <Loader2 className="w-4 h-4 animate-spin" /> Загружаем…
+              <Spinner size="sm" /> Загружаем…
             </div>
           )}
         </section>
@@ -503,7 +511,7 @@ export const HomePage: React.FC = () => {
           <button
             type="button"
             onClick={() => setPanelClosed(false)}
-            className="hidden lg:flex absolute left-4 top-4 z-[21] h-12 pl-3.5 pr-[18px] items-center gap-2.5 rounded-[10px] border border-line-2 bg-card shadow-[0_4px_16px_rgba(20,30,45,0.14)] text-ink text-base font-bold"
+            className="hidden lg:flex absolute left-4 top-4 z-21 h-12 pl-3.5 pr-[18px] items-center gap-2.5 rounded-control border border-line-2 bg-card shadow-pop text-ink text-base font-bold"
           >
             <List className="w-5 h-5" strokeWidth={2.2} />
             Список · {visible.length}
@@ -524,13 +532,13 @@ export const HomePage: React.FC = () => {
                 <span className="text-xl font-bold text-ink">{panelTitle}</span>
                 <span className="text-sm font-medium text-muted flex items-center gap-2">
                   {resultLine}
-                  {loading && <Loader2 className="w-4 h-4 animate-spin" />}
+                  {loading && <Spinner size="sm" />}
                 </span>
               </div>
               <button
                 type="button"
                 onClick={() => setParam('view', 'list')}
-                className="shrink-0 h-10 px-3 flex items-center gap-2 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold hover:bg-surface"
+                className="shrink-0 h-10 px-3 flex items-center gap-2 rounded-control border border-line-2 bg-card text-ink text-body font-semibold hover:bg-surface"
               >
                 <Maximize2 className="w-[17px] h-[17px]" />
                 Лента
@@ -539,7 +547,7 @@ export const HomePage: React.FC = () => {
                 type="button"
                 onClick={() => setPanelClosed(true)}
                 aria-label="Скрыть список"
-                className="shrink-0 w-10 h-10 rounded-[10px] bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
+                className="shrink-0 w-10 h-10 rounded-control bg-surface text-ink flex items-center justify-center hover:bg-surface-2"
               >
                 <ChevronLeft className="w-5 h-5" strokeWidth={2.4} />
               </button>
@@ -586,10 +594,10 @@ export const HomePage: React.FC = () => {
         {detailEvent && (
           <>
             <div
-              className={`fixed inset-0 z-[1400] lg:z-30 bg-[rgba(4,6,10,0.5)] ${view === 'map' ? 'lg:hidden' : 'lg:absolute'}`}
+              className={`fixed inset-0 z-sheet-backdrop lg:z-30 bg-[rgba(4,6,10,0.5)] ${view === 'map' ? 'lg:hidden' : 'lg:absolute'}`}
               onClick={() => setDetailId(null)}
             />
-            <div className="anim-sheet lg:anim-drawer fixed inset-x-0 bottom-0 top-[10vh] z-[1500] rounded-t-[28px] overflow-hidden flex lg:absolute lg:top-0 lg:bottom-0 lg:left-auto lg:right-0 lg:w-[440px] lg:rounded-none lg:z-40">
+            <div className="anim-sheet lg:anim-drawer fixed inset-x-0 bottom-0 top-[10vh] z-sheet rounded-t-sheet overflow-hidden flex lg:absolute lg:top-0 lg:bottom-0 lg:left-auto lg:right-0 lg:w-[440px] lg:rounded-none lg:z-40">
               <div className="flex-1 flex flex-col [&>div]:flex-1 [&>div]:min-h-0">
                 <EventDetailPanel
                   key={detailEvent.id}

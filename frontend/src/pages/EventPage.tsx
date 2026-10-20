@@ -11,7 +11,6 @@ import {
   FileText,
   Globe,
   Hourglass,
-  Loader2,
   Mail,
   MapPin,
   Phone,
@@ -52,6 +51,7 @@ import {
   spotsLeft,
 } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, autoRejectReason, isAutoRejected, needsAdminAttention } from '../utils/moderation';
+import { Button, LoadingBlock } from '../components/ui';
 
 const Fact: React.FC<{ icon: React.ReactNode; label: string; children: React.ReactNode }> = ({ icon, label, children }) => (
   <div className="flex items-start gap-3">
@@ -154,9 +154,7 @@ export const EventPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center py-20 text-slate-400">
-        <Loader2 className="w-8 h-8 animate-spin" />
-      </div>
+      <LoadingBlock />
     );
   }
   if (error || !event) {
@@ -352,14 +350,9 @@ export const EventPage: React.FC = () => {
                 <CheckCircle2 className="w-5 h-5 text-brand" /> Освободилось место!
               </div>
               <p className="text-sm mt-1">Займите его, пока не опередили.</p>
-              <button
-                onClick={() => void claimSpot()}
-                disabled={busy}
-                className="mt-3 w-full bg-brand hover:bg-brand-hover text-on-brand font-bold py-3 rounded-xl shadow-sm disabled:opacity-60 flex items-center justify-center gap-2"
-              >
-                {busy && <Loader2 className="w-5 h-5 animate-spin" />}
+              <Button onClick={() => void claimSpot()} loading={busy} size="lg" block className="mt-3 font-bold">
                 {event.joinMode === 'APPROVAL' ? 'Подать заявку на место' : 'Занять место'}
-              </button>
+              </Button>
             </div>
           )}
           <button onClick={() => setCancelOpen(true)} className="w-full text-sm font-semibold text-red-700 hover:bg-red-50 py-2.5 rounded-xl">

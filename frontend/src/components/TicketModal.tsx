@@ -72,15 +72,15 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-on-brand/15 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-caption font-extrabold uppercase tracking-wider bg-on-brand/15 px-2.5 py-0.5 rounded-full">
               <Ticket className="w-3.5 h-3.5" /> Электронный билет
             </span>
             {isPaid ? (
-              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Оплачено: {event.price} ₽
               </span>
             ) : (
-              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Бесплатный вход
               </span>
             )}
@@ -116,10 +116,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           {/* QR код */}
           <div className="flex flex-col items-center justify-center p-4 bg-surface rounded-2xl border border-line">
             {qrUrl ? (
-              <div className="relative p-2 bg-[#ffffff] rounded-2xl shadow-sm border border-line">
+              <div className="relative p-2 bg-snow rounded-2xl shadow-sm border border-line">
                 <img src={qrUrl} alt={`QR код билета ${ticketCode}`} className="w-56 h-56 object-contain" />
                 {checkedIn && (
-                  <div className="absolute inset-0 bg-[#ffffff]/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
+                  <div className="absolute inset-0 bg-snow/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
                     <CheckCircle2 className="w-14 h-14 text-[#059669] animate-in zoom-in" />
                     <span className="text-xs font-bold text-[#065f46] mt-2 uppercase tracking-wide">
                       Использован

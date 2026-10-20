@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Plus, X } from 'lucide-react';
-import { inputClass } from '../FieldInput';
+import { inputClass } from '../ui';
 
 interface TagInputProps {
   values: string[];

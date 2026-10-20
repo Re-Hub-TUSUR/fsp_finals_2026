@@ -1,10 +1,11 @@
 import React, { useState } from 'react';
-import { Calendar, Loader2, MapPin, ShieldCheck } from 'lucide-react';
+import { Calendar, MapPin, ShieldCheck } from 'lucide-react';
 import type { FieldValues, SportEvent } from '../types';
 import { participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { Modal } from './Modal';
-import { FieldInput, firstNumberError, inputClass, labelClass, pruneValues } from './FieldInput';
+import { FieldInput, firstNumberError, pruneValues } from './FieldInput';
+import { Button, inputClass, labelClass } from './ui';
 import { formatPrice, formatShortDateTime } from '../utils/format';
 
 interface JoinDialogProps {
@@ -161,14 +162,9 @@ export const JoinDialog: React.FC<JoinDialogProps> = ({ event, onClose, onDone, 
           >
             Отмена
           </button>
-          <button
-            type="submit"
-            disabled={submitting}
-            className="px-6 py-3 rounded-xl bg-brand hover:bg-brand-hover text-on-brand font-semibold flex items-center justify-center gap-2 disabled:opacity-60"
-          >
-            {submitting && <Loader2 className="w-5 h-5 animate-spin" />}
+          <Button type="submit" size="lg" loading={submitting}>
             {waitlist ? 'Встать в очередь' : needsApproval ? 'Отправить заявку' : 'Подтвердить запись'}
-          </button>
+          </Button>
         </div>
       </form>
     </Modal>

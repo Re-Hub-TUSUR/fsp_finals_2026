@@ -2,14 +2,12 @@ import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import {
   BadgeCheck,
-  Calendar,
   CalendarClock,
   Clock,
   EyeOff,
   Flame,
   Heart,
   History,
-  Loader2,
   LocateFixed,
   MapPin,
   Settings2,
@@ -23,11 +21,10 @@ import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { RecommendationItem, Recommendations } from '../types';
 import { Modal } from '../components/Modal';
-import { ErrorNotice } from '../components/ui';
+import { ErrorNotice, LoadingBlock, Spinner } from '../components/ui';
 import { PreferencesForm } from '../components/PreferencesForm';
 import { InterestQuiz } from '../components/InterestQuiz';
-import { capacityText, formatCardDate, freeSpotsText, splitAddress } from '../utils/eventView';
-import { getEventCoverImage } from '../utils/eventCoverImages';
+import { EventCard } from '../components/EventCard';
 
 const REASON_ICONS: Record<string, React.ReactNode> = {
   INTEREST: <Heart className="w-3.5 h-3.5" />,
@@ -133,7 +130,7 @@ export const RecommendedPage: React.FC = () => {
   if (!ready) return null;
   if (!currentUser || isAdmin) {
     return (
-      <div className="max-w-md mx-auto my-16 p-6 bg-surface border border-line rounded-[20px] text-center text-ink">
+      <div className="max-w-md mx-auto my-16 p-6 bg-surface border border-line rounded-box text-center text-ink">
         Персональные рекомендации доступны только пользователям.
       </div>
     );
@@ -170,7 +167,7 @@ export const RecommendedPage: React.FC = () => {
               loc?.source === 'GEO' ? 'bg-brand-tint border-brand-line text-brand-ink' : 'bg-card border-line text-ink hover:bg-surface'
             }`}
           >
-            {geoBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <LocateFixed className="w-4 h-4" />}
+            {geoBusy ? <Spinner size="sm" /> : <LocateFixed className="w-4 h-4" />}
             Рядом со мной
           </button>
           {geo && (
@@ -193,7 +190,7 @@ export const RecommendedPage: React.FC = () => {
       {error && <ErrorNotice message={error} onRetry={() => void load(geo)} className="mb-4" />}
 
       {data?.coldStart && !data.needsLocation && (
-        <div className="mb-5 p-4 rounded-[18px] bg-brand-tint border border-brand-line text-brand-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+        <div className="mb-5 p-4 rounded-panel bg-brand-tint border border-brand-line text-brand-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <span>Пока мы мало о вас знаем, поэтому показываем популярное рядом. Отметьте интересы — подборка станет точнее.</span>
           <div className="flex shrink-0 flex-wrap gap-2">
             <button onClick={() => setQuizOpen(true)} className="px-4 h-10 rounded-xl border border-brand-line bg-card text-brand-ink hover:bg-brand-tint-2 font-semibold text-sm transition-colors">
@@ -207,9 +204,7 @@ export const RecommendedPage: React.FC = () => {
       )}
 
       {loading ? (
-        <div className="flex justify-center py-20 text-muted">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
+        <LoadingBlock />
       ) : data?.needsLocation ? (
         <div className="max-w-lg mx-auto text-center py-12">
           <MapPin className="w-10 h-10 text-muted mx-auto mb-3" />
@@ -248,7 +243,7 @@ export const RecommendedPage: React.FC = () => {
         </div>
       )}
 
-      <details className="mt-10 bg-card border border-line rounded-[20px] p-5 text-sm text-muted">
+      <details className="mt-10 bg-card border border-line rounded-box p-5 text-sm text-muted">
         <summary className="font-semibold text-ink cursor-pointer">Как мы подбираем мероприятия</summary>
         <ul className="mt-3 space-y-1.5 list-disc ml-5">
           <li>Берём только актуальные события рядом: опубликованные, с открытой регистрацией и свободными местами.</li>
@@ -259,7 +254,7 @@ export const RecommendedPage: React.FC = () => {
       </details>
 
       {hidden && (
-        <div className="anim-rise fixed bottom-4 left-1/2 -translate-x-1/2 z-[1500] bg-ink text-white rounded-xl shadow-card px-4 py-3 flex items-center gap-4 text-sm">
+        <div className="anim-rise fixed bottom-4 left-1/2 -translate-x-1/2 z-sheet bg-ink text-white rounded-xl shadow-card px-4 py-3 flex items-center gap-4 text-sm">
           <span>Скрыли «{hidden.event.title}»</span>
           <button onClick={undo} className="font-semibold underline underline-offset-2 hover:opacity-80">
             Вернуть
@@ -302,158 +297,41 @@ const RecommendationCard: React.FC<{ item: RecommendationItem; onOpen: () => voi
   item,
   onOpen,
   onDismiss,
-}) => {
-  const e = item.event;
-  const place = splitAddress(e.address, e.cityName);
-  const freeSpots = Math.max(0, e.capacity - e.confirmedCount);
-  const spotsPct = e.capacity > 0 ? Math.min(100, Math.max(0, (freeSpots / e.capacity) * 100)) : 0;
-  const friends = e.friendsAttending ?? [];
-  const friendsCount = friends.length;
-  const friendsVisible = friends.slice(0, 3);
-
-  return (
-    <article className="anim-rise group flex flex-col justify-between rounded-[22px] bg-card border border-line-2 overflow-hidden shadow-sm hover:shadow-md transition-[box-shadow,border-color] hover:border-brand/40">
-      {/* Фото обложка */}
-      <div className="relative h-[180px] sm:h-[190px] w-full bg-slate-800 overflow-hidden shrink-0">
-        <img
-          src={getEventCoverImage(e)}
-          onError={(ev) => (ev.currentTarget.style.visibility = 'hidden')}
-          alt={e.title}
-          className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
-          loading="lazy"
-        />
-        <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent pointer-events-none" />
-
-        {/* Бейдж слева: Бесплатно / Цена */}
-        <span className="absolute top-3.5 left-3.5 bg-[#04D793] dark:bg-[#D5F45B] text-white dark:text-[#111315] font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-1.5 rounded-full shadow-sm select-none">
-          {e.price ? `${e.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно'}
-        </span>
-
-        {/* Справа: вид спорта + кнопка «Не интересно» */}
-        <div className="absolute top-3.5 right-3.5 flex items-center gap-2">
-          <span className="bg-white/95 dark:bg-card/95 text-slate-900 dark:text-ink font-bold text-xs sm:text-sm px-3.5 sm:px-4 py-1.5 rounded-full shadow-sm select-none">
-            {e.sport.name}
-          </span>
-          <button
-            onClick={(ev) => {
-              ev.stopPropagation();
-              onDismiss();
-            }}
-            title="Не интересно"
-            aria-label={`Не интересно: ${e.title}`}
-            className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-sm transition-colors shadow-sm"
+}) => (
+  <EventCard
+    as="article"
+    event={item.event}
+    onOpen={onOpen}
+    coverAction={
+      <button
+        type="button"
+        onClick={(ev) => {
+          ev.stopPropagation();
+          onDismiss();
+        }}
+        title="Не интересно"
+        aria-label={`Не интересно: ${item.event.title}`}
+        className="w-8 h-8 rounded-full bg-black/40 hover:bg-black/70 text-white flex items-center justify-center backdrop-blur-sm transition-colors shadow-sm"
+      >
+        <EyeOff className="w-4 h-4" />
+      </button>
+    }
+  >
+    {/* Плашечки рекомендаций (почему подходит) */}
+    {item.reasons && item.reasons.length > 0 && (
+      <ul className="mt-1 flex flex-wrap gap-1.5" aria-label="Почему мы это рекомендуем">
+        {item.reasons.map((r) => (
+          <li
+            key={r.code + r.text}
+            className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${
+              REASON_STYLES[r.code] ?? 'bg-surface text-ink border-line'
+            }`}
           >
-            <EyeOff className="w-4 h-4" />
-          </button>
-        </div>
-
-        {/* Идут / Идет + кружочки аватаров */}
-        {friendsCount > 0 && (
-          <div className="absolute right-3.5 bottom-3 flex flex-col items-end gap-1 select-none pointer-events-none">
-            <span className="text-xs sm:text-sm font-semibold text-white drop-shadow-[0_1px_2px_rgba(0,0,0,0.8)]">
-              {friendsCount === 1 ? 'Идет' : 'Идут'}
-            </span>
-            <div className="flex -space-x-2" aria-hidden="true">
-              {friendsVisible.map((f) => (
-                <span
-                  key={f.id}
-                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full overflow-hidden bg-slate-700 border-2 border-white flex items-center justify-center text-[10px] sm:text-xs font-bold text-white shadow-sm"
-                  title={f.fullName}
-                >
-                  {f.avatarUrl ? (
-                    <img src={f.avatarUrl} alt={f.fullName} className="w-full h-full object-cover" />
-                  ) : (
-                    f.fullName.slice(0, 1).toUpperCase()
-                  )}
-                </span>
-              ))}
-            </div>
-          </div>
-        )}
-      </div>
-
-      {/* Тело карточки */}
-      <div className="p-4 sm:p-5 flex flex-col gap-3 flex-1 justify-between">
-        <div className="flex flex-col gap-2">
-          {/* Спорт и город */}
-          <div className="flex items-center justify-between text-xs sm:text-sm font-medium text-slate-400 dark:text-muted">
-            <span>{e.sport.name}</span>
-            {e.cityName && <span>{e.cityName}</span>}
-          </div>
-
-          {/* Название со ссылкой */}
-          <h3 className="text-lg sm:text-[19px] font-bold text-ink leading-snug line-clamp-2">
-            <Link to={`/events/${e.id}`} onClick={onOpen} className="hover:text-brand-ink transition-colors">
-              {e.title}
-            </Link>
-          </h3>
-
-          {/* Дата и время */}
-          <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
-            <Calendar className="w-4 h-4 text-ink shrink-0" />
-            <span>{formatCardDate(e.startTime, e.timeZone)}</span>
-          </div>
-
-          {/* Место */}
-          <div className="flex items-start gap-2 text-ink">
-            <MapPin className="w-4 h-4 text-ink shrink-0 mt-0.5" />
-            <div className="flex flex-col min-w-0">
-              <span className="text-xs sm:text-sm font-bold text-ink leading-tight truncate">
-                {place.main}
-              </span>
-              {place.sub ? (
-                <span className="text-[11px] sm:text-xs text-slate-400 dark:text-muted leading-tight mt-0.5 truncate">
-                  {place.sub}
-                </span>
-              ) : null}
-            </div>
-          </div>
-
-          {/* Плашечки рекомендаций (почему подходит) */}
-          {item.reasons && item.reasons.length > 0 && (
-            <ul className="mt-1 flex flex-wrap gap-1.5" aria-label="Почему мы это рекомендуем">
-              {item.reasons.map((r) => (
-                <li
-                  key={r.code + r.text}
-                  className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${
-                    REASON_STYLES[r.code] ?? 'bg-surface text-ink border-line'
-                  }`}
-                >
-                  {REASON_ICONS[r.code]}
-                  {r.text}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        {/* Шкала мест */}
-        <div className="pt-2 flex flex-col gap-1.5">
-          <div className="flex items-center justify-between text-xs sm:text-sm">
-            <span className="font-bold text-[#04D793] dark:text-[#D5F45B]">
-              {freeSpotsText(freeSpots)}
-            </span>
-            <span className="font-medium text-slate-400 dark:text-muted">
-              {capacityText(e.capacity)}
-            </span>
-          </div>
-          <div className="w-full h-1.5 sm:h-2 bg-slate-100 dark:bg-surface-2 rounded-full overflow-hidden">
-            <div
-              className="h-full rounded-full bg-[#04D793] dark:bg-[#D5F45B] transition-all"
-              style={{ width: `${spotsPct}%` }}
-            />
-          </div>
-        </div>
-
-        {/* Кнопка Подробнее */}
-        <Link
-          to={`/events/${e.id}`}
-          onClick={onOpen}
-          className="w-full py-3 sm:py-3.5 rounded-xl bg-[#04D793] hover:bg-[#03c485] dark:bg-[#D5F45B] dark:hover:bg-[#c4e447] text-white dark:text-[#111315] font-bold text-sm sm:text-base flex items-center justify-center transition-colors shadow-sm text-center"
-        >
-          Подробнее
-        </Link>
-      </div>
-    </article>
-  );
-};
+            {REASON_ICONS[r.code]}
+            {r.text}
+          </li>
+        ))}
+      </ul>
+    )}
+  </EventCard>
+);

@@ -52,7 +52,7 @@ export const NotificationItem: React.FC<{ n: AppNotification; onClick: (n: AppNo
     <div className="flex-1 min-w-0">
       <div className="flex items-start justify-between gap-2">
         <p className={`text-sm leading-snug text-ink ${n.read ? 'font-semibold' : 'font-bold'}`}>{n.title}</p>
-        <span className="text-[11px] text-muted shrink-0">{formatRelativeTime(n.createdAt)}</span>
+        <span className="text-caption text-muted shrink-0">{formatRelativeTime(n.createdAt)}</span>
       </div>
       <p className="text-xs text-muted mt-1 line-clamp-2 leading-relaxed">{n.message}</p>
     </div>

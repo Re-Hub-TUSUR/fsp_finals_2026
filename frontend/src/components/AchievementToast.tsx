@@ -20,5 +20,5 @@ export function AchievementToast() {
   }, [currentUser?.id]);
   useEffect(() => { if (!toast) return; const timer=setTimeout(() => setToast(undefined),5000); return () => clearTimeout(timer); }, [toast]);
   if (!toast) return null;
-  return <div className="fixed bottom-5 right-5 z-[3000] w-[320px] rounded-2xl border border-brand-line bg-white p-4 shadow-2xl"><div className="flex gap-3"><span className="text-3xl">{toast.icon}</span><div><p className="text-xs font-bold uppercase tracking-wide text-brand-ink">Достижение получено</p><p className="mt-1 font-bold text-ink">{toast.title}</p><p className="text-sm text-muted">{toast.description}</p></div></div></div>;
+  return <div className="fixed bottom-5 right-5 z-toast w-[320px] rounded-2xl border border-brand-line bg-white p-4 shadow-2xl"><div className="flex gap-3"><span className="text-3xl">{toast.icon}</span><div><p className="text-xs font-bold uppercase tracking-wide text-brand-ink">Достижение получено</p><p className="mt-1 font-bold text-ink">{toast.title}</p><p className="text-sm text-muted">{toast.description}</p></div></div></div>;
 }

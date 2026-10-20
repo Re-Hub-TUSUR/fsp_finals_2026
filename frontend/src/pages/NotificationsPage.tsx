@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useState } from 'react';
-import { ErrorNotice } from '../components/ui';
+import { ErrorNotice, LoadingBlock } from '../components/ui';
 import { Link, useNavigate } from 'react-router-dom';
-import { CheckCheck, Inbox, Loader2 } from 'lucide-react';
+import { CheckCheck, Inbox } from 'lucide-react';
 import { notificationsApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -34,7 +34,7 @@ export const NotificationsPage: React.FC = () => {
   if (!ready) return null;
   if (!currentUser) {
     return (
-      <div className="max-w-md mx-auto my-16 p-6 bg-surface border border-line rounded-[20px] text-center text-ink">
+      <div className="max-w-md mx-auto my-16 p-6 bg-surface border border-line rounded-box text-center text-ink">
         <p>Войдите, чтобы увидеть уведомления.</p>
         <Link to="/auth" className="inline-block mt-3 font-semibold text-brand-ink hover:underline">
           Войти
@@ -82,11 +82,9 @@ export const NotificationsPage: React.FC = () => {
         )}
       </div>
       {error && <ErrorNotice message={error} onRetry={load} className="mb-3" />}
-      <div className="bg-card border border-line rounded-[20px] overflow-hidden divide-y divide-line">
+      <div className="bg-card border border-line rounded-box overflow-hidden divide-y divide-line">
         {loading ? (
-          <div className="py-12 flex justify-center text-muted">
-            <Loader2 className="w-6 h-6 animate-spin" />
-          </div>
+          <LoadingBlock className="py-12" />
         ) : items.length === 0 ? (
           <div className="py-12 px-4 text-center text-muted">
             <Inbox className="w-10 h-10 mx-auto mb-2 opacity-40" />
