@@ -36,6 +36,8 @@ interface BlinkMapProps {
   radius?: { center: LatLng; km: number } | null;
   /** Центр, выбранный вне карты (например, через выбор города). */
   center?: LatLng | null;
+  /** Внешний запрос «Моё местоположение» (кнопка в шапке): каждое увеличение — новый запрос */
+  locateSignal?: number;
 }
 
 /** Круг радиуса в цвет акцента темы (MapGL принимает только hex) */
@@ -89,6 +91,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
   onJoined,
   radius = null,
   center = null,
+  locateSignal = 0,
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const onSelectRef = useRef(onSelectEvent);
@@ -335,6 +338,12 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
     );
   };
 
+  const locateRef = useRef(locate);
+  locateRef.current = locate;
+  useEffect(() => {
+    if (locateSignal > 0 && instance) locateRef.current();
+  }, [locateSignal]);
+
   return (
     <div className="relative w-full h-full overflow-hidden bg-[#EDEFF3] dark:bg-[#23272B]">
       <div ref={containerRef} className="absolute inset-0" />
@@ -361,7 +370,7 @@ export const BlinkMap: React.FC<BlinkMapProps> = ({
               <Minus className="w-5 h-5" />
             </button>
           </div>
-          <div className={groupClass}>
+          <div className={`${groupClass} max-lg:hidden`}>
             <button
               type="button"
               onClick={locate}
