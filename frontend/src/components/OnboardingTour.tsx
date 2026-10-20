@@ -323,11 +323,8 @@ export const OnboardingTour: React.FC = () => {
           onClick={handleNext}
           className="fixed inset-0 z-[9990] select-none cursor-pointer"
         >
-          {/* Полупрозрачная маска с вырезом подсвечиваемого элемента и размытием фона */}
-          <div className="absolute inset-0 bg-black/65 backdrop-blur-[2.5px] transition-all duration-300 pointer-events-none" />
-
-          {/* SVG вырез (spotlight cut-out) */}
-          {targetRect && !isFinalStep && (
+          {/* Полупрозрачная маска с вырезом подсвечиваемого элемента (без размытия) */}
+          {targetRect && !isFinalStep ? (
             <svg
               className="absolute inset-0 w-full h-full pointer-events-none transition-all duration-300"
               style={{ width: '100vw', height: '100vh' }}
@@ -355,6 +352,8 @@ export const OnboardingTour: React.FC = () => {
                 mask="url(#tour-spotlight-mask)"
               />
             </svg>
+          ) : (
+            <div className="absolute inset-0 bg-black/65 transition-all duration-300 pointer-events-none" />
           )}
 
           {/* Светящаяся рамка вокруг целевого элемента */}
@@ -385,7 +384,7 @@ export const OnboardingTour: React.FC = () => {
               e.stopPropagation();
               handleSkip();
             }}
-            className="fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-card/90 hover:bg-card text-ink border border-line-2 shadow-2xl backdrop-blur-md text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
+            className="fixed top-4 right-4 z-[9999] flex items-center gap-2 px-4 py-2.5 rounded-full bg-card hover:bg-surface text-ink border border-line-2 shadow-2xl text-xs sm:text-sm font-bold transition-all active:scale-95 cursor-pointer"
           >
             <span>Пропустить обучение</span>
             <X className="w-4 h-4 text-muted" />
