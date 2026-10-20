@@ -46,7 +46,7 @@ stateDiagram-v2
 | Параметр | Значение |
 |----------|----------|
 | Запрос | `POST https://routerai.ru/api/v1/chat/completions` |
-| Модель по умолчанию | `google/gemini-2.5-flash-lite` — быстрая, недорогая, хорошо понимает русский |
+| Модель по умолчанию | `yandex/aliceai-llm-flash` — быстрая, недорогая, хорошо понимает русский |
 | Параметры | `temperature 0`, `response_format: json_object`, `max-tokens 200` |
 | Таймаут | 8 секунд |
 | Вход | До 4000 символов текста мероприятия плюс находки фильтра как подсказка |
@@ -77,7 +77,7 @@ stateDiagram-v2
 | `stuck-after` | — | `PT1M` |
 | `llm.base-url` | `ROUTERAI_BASE_URL` | `https://routerai.ru/api/v1` |
 | `llm.api-key` | `ROUTERAI_API_KEY` | пусто — второй этап пропускается |
-| `llm.model` | `MODERATION_LLM_MODEL` | `google/gemini-2.5-flash-lite` |
+| `llm.model` | `MODERATION_LLM_MODEL` | `yandex/aliceai-llm-flash` |
 | `llm.timeout` | — | `PT8S` |
 
 Модель можно заменить любой из каталога RouterAI без изменения кода.

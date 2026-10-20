@@ -35,7 +35,7 @@ public class ModerationProperties {
         /** Ключ RouterAI (ROUTERAI_API_KEY). Пусто — второй этап пропускается, сомнительное помечается для администратора. */
         private String apiKey = "";
         /** Быстрая и недорогая модель без «размышлений», хорошо понимает русский. */
-        private String model = "google/gemini-2.5-flash-lite";
+        private String model = "yandex/aliceai-llm-flash";
         /** Пользователь ждёт ответа при создании мероприятия — проверка не дольше нескольких секунд. */
         private Duration timeout = Duration.ofSeconds(8);
         private int maxTokens = 200;

@@ -108,7 +108,7 @@ moderation:
     base-url: ${ROUTERAI_BASE_URL:https://routerai.ru/api/v1}
     # Без ключа второй этап пропускается: сомнительные мероприятия публикуются с пометкой для администратора
     api-key: ${ROUTERAI_API_KEY:}
-    model: ${MODERATION_LLM_MODEL:google/gemini-2.5-flash-lite}
+    model: ${MODERATION_LLM_MODEL:yandex/aliceai-llm-flash}
     timeout: PT8S
     max-tokens: 200
     max-input-chars: 4000

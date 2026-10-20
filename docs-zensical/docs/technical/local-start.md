@@ -80,7 +80,7 @@ Vite проксирует запросы `/api` на `http://localhost:8080`. К
 | `JWT_SECRET` | Backend | значение для разработки — **замените в реальном окружении** |
 | `UPLOAD_DIR` | Backend | `uploads` (в Docker `/app/uploads`) |
 | `ROUTERAI_API_KEY` | Backend (автопроверка) | пусто: работает только фильтр, сомнительное помечается ⚠ |
-| `MODERATION_LLM_MODEL` | Backend (автопроверка) | `google/gemini-2.5-flash-lite` |
+| `MODERATION_LLM_MODEL` | Backend (автопроверка) | `yandex/aliceai-llm-flash` |
 | `MODERATION_ENABLED` | Backend (автопроверка) | `true` |
 
 Файл `.env` не попадает в git. Ключи в репозиторий не коммитятся.

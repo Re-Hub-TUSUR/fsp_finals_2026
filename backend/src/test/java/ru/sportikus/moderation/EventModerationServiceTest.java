@@ -112,14 +112,14 @@ class EventModerationServiceTest {
     void llmRejectionUnpublishesWithReasonForAuthor() {
         Event e = pending("Пивной забег");
         when(llm.review(anyString(), anyList()))
-                .thenReturn(new LlmVerdict(LlmVerdict.Decision.REJECT, "Мероприятие продвигает алкоголь", "google/gemini-2.5-flash-lite"));
+                .thenReturn(new LlmVerdict(LlmVerdict.Decision.REJECT, "Мероприятие продвигает алкоголь", "yandex/aliceai-llm-flash"));
 
         service.review(10L);
 
         assertThat(e.getStatus()).isEqualTo(EventStatus.UNPUBLISHED);
         assertThat(e.getModerationStatus()).isEqualTo(ModerationStatus.REJECTED);
         assertThat(e.getUnpublishReason()).isEqualTo("Не прошло автоматическую проверку: Мероприятие продвигает алкоголь");
-        assertThat(e.getModerationModel()).isEqualTo("google/gemini-2.5-flash-lite");
+        assertThat(e.getModerationModel()).isEqualTo("yandex/aliceai-llm-flash");
     }
 
     @Test

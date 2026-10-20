@@ -49,7 +49,7 @@ services:
       UPLOAD_DIR: /app/uploads
       # Автопроверка мероприятий через RouterAI: ключ берётся из .env рядом с docker-compose.yml
       ROUTERAI_API_KEY: ${ROUTERAI_API_KEY:-}
-      MODERATION_LLM_MODEL: ${MODERATION_LLM_MODEL:-google/gemini-2.5-flash-lite}
+      MODERATION_LLM_MODEL: ${MODERATION_LLM_MODEL:-yandex/aliceai-llm-flash}
     volumes:
       - profile_uploads:/app/uploads
     ports:
