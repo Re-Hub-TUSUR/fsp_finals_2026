@@ -23,6 +23,7 @@ import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { RecommendationItem, Recommendations } from '../types';
 import { Modal } from '../components/Modal';
+import { ErrorNotice } from '../components/ui';
 import { PreferencesForm } from '../components/PreferencesForm';
 import { InterestQuiz } from '../components/InterestQuiz';
 import { capacityText, formatCardDate, freeSpotsText, splitAddress } from '../utils/eventView';
@@ -189,11 +190,7 @@ export const RecommendedPage: React.FC = () => {
         </div>
       </div>
 
-      {error && (
-        <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <ErrorNotice message={error} onRetry={() => void load(geo)} className="mb-4" />}
 
       {data?.coldStart && !data.needsLocation && (
         <div className="mb-5 p-4 rounded-[18px] bg-brand-tint border border-brand-line text-brand-ink flex flex-col sm:flex-row sm:items-center justify-between gap-3">

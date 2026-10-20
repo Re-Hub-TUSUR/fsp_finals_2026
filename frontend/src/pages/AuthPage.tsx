@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
-import { Building2, ShieldCheck, UserRound } from 'lucide-react';
+import { Building2, Eye, EyeOff, ShieldCheck, UserRound } from 'lucide-react';
 import { authApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
@@ -24,6 +24,7 @@ export function AuthPage() {
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState<DemoRoleKey | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
   if (currentUser) {
     const destination = currentUser.role === 'ROLE_ADMIN' ? '/admin' : currentUser.role === 'ROLE_ORGANIZER' ? '/profile' : '/';
     return <Navigate to={safeNext(next, destination)} replace />;
@@ -46,18 +47,35 @@ export function AuthPage() {
       navigate(safeNext(next, mode === 'organization' ? '/profile' : '/'));
     } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
   };
-  const input = (key: string, label: string, type = 'text') => (
-    <label className="block text-sm font-semibold text-ink">
-      {label}
-      <input
-        required
-        type={type}
-        value={form[key] ?? ''}
-        onChange={(e) => change(key, e.target.value)}
-        className="mt-1.5 w-full rounded-xl border border-line-2 bg-surface px-3.5 py-2.5 text-ink outline-none transition focus:border-[#04D793] focus:ring-1 focus:ring-[#04D793] dark:focus:border-[#D5F45B] dark:focus:ring-[#D5F45B]"
-      />
-    </label>
-  );
+  const input = (key: string, label: string, type = 'text') => {
+    const isPassword = type === 'password';
+    return (
+      <div className="block text-sm font-semibold text-ink">
+        <label htmlFor={`auth-${key}`}>{label}</label>
+        <span className="relative mt-1.5 block">
+          <input
+            id={`auth-${key}`}
+            required
+            type={isPassword && showPassword ? 'text' : type}
+            value={form[key] ?? ''}
+            onChange={(e) => change(key, e.target.value)}
+            className={`w-full rounded-xl border border-line-2 bg-surface py-2.5 text-ink outline-none transition focus:border-[#04D793] focus:ring-1 focus:ring-[#04D793] dark:focus:border-[#D5F45B] dark:focus:ring-[#D5F45B] ${isPassword ? 'pl-3.5 pr-11' : 'px-3.5'}`}
+          />
+          {isPassword && (
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              aria-label={showPassword ? 'Скрыть пароль' : 'Показать пароль'}
+              aria-pressed={showPassword}
+              className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-muted hover:text-ink"
+            >
+              {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+            </button>
+          )}
+        </span>
+      </div>
+    );
+  };
 
   const demoLogin = async (role: DemoRoleKey, destination: string) => {
     setDemoBusy(role); setError('');

@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
+import { ErrorNotice } from '../components/ui';
 import { Link, useNavigate } from 'react-router-dom';
 import { CheckCheck, Inbox, Loader2 } from 'lucide-react';
 import { notificationsApi } from '../api';
@@ -15,14 +16,20 @@ export const NotificationsPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (!ready || !currentUser) return;
+  const load = useCallback(() => {
+    setLoading(true);
+    setError(null);
     notificationsApi
       .list()
       .then((res) => setItems(res.items))
       .catch((e) => setError(errorMessage(e, 'Не удалось загрузить уведомления')))
       .finally(() => setLoading(false));
-  }, [ready, currentUser]);
+  }, []);
+
+  useEffect(() => {
+    if (!ready || !currentUser) return;
+    load();
+  }, [ready, currentUser, load]);
 
   if (!ready) return null;
   if (!currentUser) {
@@ -74,11 +81,7 @@ export const NotificationsPage: React.FC = () => {
           </button>
         )}
       </div>
-      {error && (
-        <p role="alert" className="mb-3 text-sm text-red-700 bg-red-50 border border-red-200 rounded-xl p-3">
-          {error}
-        </p>
-      )}
+      {error && <ErrorNotice message={error} onRetry={load} className="mb-3" />}
       <div className="bg-card border border-line rounded-[20px] overflow-hidden divide-y divide-line">
         {loading ? (
           <div className="py-12 flex justify-center text-muted">

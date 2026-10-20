@@ -1,4 +1,4 @@
-import { lazy, Suspense } from 'react';
+import { lazy, Suspense, useEffect, useState } from 'react';
 import type { ReactNode } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -54,6 +54,21 @@ function PageLoader() {
   );
 }
 
+/** Экран старта, пока проверяется сохранённый вход: если сервер отвечает долго — говорим об этом, а не показываем пустоту. */
+function StartupLoader() {
+  const [slow, setSlow] = useState(false);
+  useEffect(() => {
+    const timer = setTimeout(() => setSlow(true), 4000);
+    return () => clearTimeout(timer);
+  }, []);
+  return (
+    <div className="h-dvh bg-page flex flex-col items-center justify-center gap-4 px-6 text-center" role="status" aria-label="Загрузка">
+      <span className="h-9 w-9 animate-spin rounded-full border-[3px] border-line-2 border-t-ink motion-reduce:animate-none" />
+      {slow && <p className="max-w-xs text-sm text-muted">Сервер отвечает дольше обычного. Ещё немного — и откроем приложение.</p>}
+    </div>
+  );
+}
+
 /**
  * Каркас приложения. Гость видит только лендинг и вход: любой другой адрес ведёт на /welcome
  * с ?next=, чтобы после входа вернуться туда, куда человек шёл (например, по ссылке на событие).
@@ -63,7 +78,7 @@ function AppShell() {
   const { pathname, search } = useLocation();
 
   // Пока проверяем сохранённый токен, ничего не решаем — иначе вошедшего на миг перекинет на лендинг
-  if (!ready) return <div className="h-dvh bg-page" />;
+  if (!ready) return <StartupLoader />;
 
   const isGuestPath = GUEST_PATHS.includes(pathname);
   // Токен остался, но сервер недоступен (офлайн-PWA): не выгоняем на лендинг, приложение работает из кэша

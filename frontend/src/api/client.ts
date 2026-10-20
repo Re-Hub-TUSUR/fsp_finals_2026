@@ -19,8 +19,12 @@ export const setToken = (token: string | null) => {
   }
 };
 
+const REQUEST_TIMEOUT_MS = 20_000;
+
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_URL ?? '/api/v1',
+  // Без таймаута зависший сервер оставляет экран в вечной загрузке
+  timeout: REQUEST_TIMEOUT_MS,
 });
 
 api.interceptors.request.use((config) => {
@@ -34,6 +38,7 @@ export function errorMessage(error: unknown, fallback = 'Что-то пошло 
   if (error instanceof AxiosError) {
     const message = error.response?.data?.error?.message;
     if (typeof message === 'string' && message) return message;
+    if (error.code === 'ECONNABORTED' || error.code === 'ETIMEDOUT') return 'Сервер слишком долго не отвечает. Попробуйте ещё раз.';
     if (!error.response) return 'Нет связи с сервером. Проверьте подключение.';
   }
   return fallback;

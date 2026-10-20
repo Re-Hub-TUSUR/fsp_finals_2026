@@ -54,7 +54,8 @@ export interface EventQuery {
 export const authApi = {
   login: (email: string, password: string) =>
     api.post<{ token: string; user: User }>('/auth/login', { email, password }).then((r) => r.data),
-  me: () => api.get<User>('/auth/me').then((r) => r.data),
+  // Короткий таймаут: при старте приложение ждёт этот ответ, а зависший сервер не должен держать экран загрузки
+  me: () => api.get<User>('/auth/me', { timeout: 8_000 }).then((r) => r.data),
   registerUser: (payload: { email: string; firstName: string; lastName: string; password: string }) =>
     api.post<{ token: string; user: User }>('/auth/register/user', payload).then((r) => r.data),
   registerOrganization: (payload: { name: string; inn: string; ogrn: string; kpp: string; email: string; password: string }) =>

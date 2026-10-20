@@ -7,6 +7,8 @@ import { useAuth } from '../context/AuthContext';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { TicketModal } from '../components/TicketModal';
+import { CancelParticipationDialog } from '../components/CancelParticipationDialog';
+import { ErrorNotice } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
@@ -19,6 +21,9 @@ export const MyEventsPage: React.FC = () => {
   const [managed, setManaged] = useState<SportEvent[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [cancelTarget, setCancelTarget] = useState<Participation | null>(null);
+  const [cancelBusy, setCancelBusy] = useState(false);
+  const [cancelError, setCancelError] = useState<string | null>(null);
   const [selectedTicket, setSelectedTicket] = useState<{ event: SportEvent; participation: Participation } | null>(null);
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
@@ -42,14 +47,24 @@ export const MyEventsPage: React.FC = () => {
     void load();
   }, [load, ready, currentUser]);
 
-  const cancel = async (p: Participation) => {
-    if (!p.event) return;
+  const cancel = async () => {
+    if (!cancelTarget?.event) return;
+    setCancelBusy(true);
+    setCancelError(null);
     try {
-      await participationApi.cancel(p.event.id);
+      await participationApi.cancel(cancelTarget.event.id);
+      setCancelTarget(null);
       await load();
     } catch (e) {
-      setError(errorMessage(e));
+      setCancelError(errorMessage(e));
+    } finally {
+      setCancelBusy(false);
     }
+  };
+
+  const reload = () => {
+    setLoading(true);
+    void load();
   };
 
   if (!ready) return null;
@@ -95,11 +110,7 @@ export const MyEventsPage: React.FC = () => {
         </TabButton>
       </div>
 
-      {error && (
-        <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
-          {error}
-        </div>
-      )}
+      {error && <ErrorNotice message={error} onRetry={reload} className="mb-4" />}
 
       {loading ? (
         <div className="flex justify-center py-16 text-slate-400">
@@ -158,7 +169,7 @@ export const MyEventsPage: React.FC = () => {
                   )}
                   {(p.status === 'PENDING' || p.status === 'CONFIRMED' || p.status === 'WAITLISTED') && new Date(p.event.endTime) > new Date() && (
                     <div className="mt-3 text-right">
-                      <button onClick={() => cancel(p)} className="text-sm font-semibold text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg">
+                      <button onClick={() => { setCancelError(null); setCancelTarget(p); }} className="text-sm font-semibold text-red-700 hover:bg-red-50 px-3 py-2 rounded-lg">
                         {p.status === 'PENDING' ? 'Отозвать заявку' : p.status === 'WAITLISTED' ? 'Выйти из очереди' : 'Отменить участие'}
                       </button>
                     </div>
@@ -233,6 +244,17 @@ export const MyEventsPage: React.FC = () => {
           checkedIn={selectedTicket.participation.checkedIn}
           checkedInAt={selectedTicket.participation.checkedInAt}
           onClose={() => setSelectedTicket(null)}
+        />
+      )}
+
+      {cancelTarget?.event && (
+        <CancelParticipationDialog
+          status={cancelTarget.status}
+          eventTitle={cancelTarget.event.title}
+          busy={cancelBusy}
+          error={cancelError}
+          onConfirm={() => void cancel()}
+          onClose={() => setCancelTarget(null)}
         />
       )}
     </div>

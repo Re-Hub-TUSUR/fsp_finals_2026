@@ -81,7 +81,7 @@ const TOUR_STEPS: TourStep[] = [
     title: 'Добро пожаловать в Sportikus!',
     badge: 'Финал',
     description:
-      'Обучение завершено. Давайте настроим ваши рекомендации! Пройдите короткий 1-минутный тест: выберите виды спорта, район и ваш уровень. Мы сразу покажем лучшие события Для вас.',
+      'Обучение завершено. Давайте настроим ваши рекомендации! Пройдите короткий 1-минутный тест: расскажите про возраст, любимые виды спорта, свой уровень и город. Мы сразу покажем лучшие события Для вас.',
     hint: '🎯 Займет всего 1 минуту, а лента станет персональной',
     icon: <PartyPopper className="w-5 h-5 sm:w-6 sm:h-6 text-brand-ink" />,
   },
@@ -477,9 +477,6 @@ export const OnboardingTour: React.FC = () => {
               <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 sm:py-1 rounded-full text-[11px] sm:text-xs font-extrabold bg-brand-tint text-brand-ink border border-brand-line">
                 {currentStep.icon}
                 {currentStep.badge}
-              </span>
-              <span className="text-[11px] sm:text-xs font-semibold text-muted">
-                {stepIndex + 1} из {TOUR_STEPS.length}
               </span>
             </div>
 

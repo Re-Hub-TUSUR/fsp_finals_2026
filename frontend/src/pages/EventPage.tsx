@@ -164,6 +164,14 @@ export const EventPage: React.FC = () => {
       <div className="max-w-md mx-auto my-16 p-6 bg-red-50 border border-red-200 rounded-2xl text-center">
         <AlertTriangle className="w-10 h-10 text-red-600 mx-auto mb-2" />
         <p className="text-red-900 font-semibold">{error ?? 'Мероприятие не найдено'}</p>
+        {error && (
+          <button
+            onClick={() => { setLoading(true); void load(); }}
+            className="mt-4 mr-4 h-9 px-4 rounded-xl bg-white border border-red-200 font-semibold text-red-800 hover:bg-red-100"
+          >
+            Повторить
+          </button>
+        )}
         <Link to="/" className="inline-block mt-4 text-brand-ink font-semibold">
           ← К каталогу
         </Link>

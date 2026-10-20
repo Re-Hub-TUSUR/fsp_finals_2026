@@ -26,6 +26,7 @@ import {
 } from '../utils/eventsSnapshot';
 import { catalogApi, citiesApi, eventsApi } from '../api';
 import { errorMessage } from '../api/client';
+import { ErrorNotice } from '../components/ui';
 import { useAuth } from '../context/AuthContext';
 import { spotsLeft } from '../utils/format';
 import {
@@ -399,9 +400,7 @@ export const HomePage: React.FC = () => {
   );
 
   const errorBox = error && (
-    <div role="alert" className="p-3 bg-red-50 border border-red-200 rounded-[10px] text-red-800 text-sm">
-      {error}
-    </div>
+    <ErrorNotice message={error} onRetry={() => setReloadTick((n) => n + 1)} />
   );
 
   /* ---------- Секции Ленты ---------- */

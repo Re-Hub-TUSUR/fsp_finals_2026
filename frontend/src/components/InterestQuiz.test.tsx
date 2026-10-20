@@ -56,9 +56,9 @@ describe('InterestQuiz', () => {
     vi.mocked(preferencesApi.update).mockResolvedValue({} as never);
   });
 
-  it('начинается с года рождения и содержит пять вопросов', async () => {
+  it('начинается с года рождения и содержит шесть вопросов', async () => {
     await renderQuiz();
-    expect(screen.getByText('1 / 5')).toBeInTheDocument();
+    expect(screen.getByText('1 / 6')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /Дальше/ })).toBeDisabled();
   });
 
@@ -91,9 +91,11 @@ describe('InterestQuiz', () => {
     await goToSports(user, '2000');
     await user.click(screen.getByRole('button', { name: /Бег/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
+    await user.click(screen.getByRole('button', { name: /Любитель/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Город' }), String(KRASNOYARSK.id));
     await user.click(screen.getByRole('button', { name: /Собрать профиль/ }));
-    expect(vi.mocked(preferencesApi.update).mock.calls.at(-1)?.[0]).toMatchObject({ sportIds: [1], birthYear: 2000, preferredTimes: ['EVENING'], homeCityId: 1, maxDistanceKm: 25 });
+    expect(vi.mocked(preferencesApi.update).mock.calls.at(-1)?.[0]).toMatchObject({ sportIds: [1], birthYear: 2000, preferredTimes: ['EVENING'], skillLevel: 'AMATEUR', homeCityId: 1, maxDistanceKm: 25 });
     expect(onSaved).toHaveBeenCalledTimes(1);
   });
 
@@ -101,6 +103,7 @@ describe('InterestQuiz', () => {
     const { user } = await renderQuiz(SAVED);
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Активный/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
@@ -119,6 +122,8 @@ describe('InterestQuiz', () => {
     await goToSports(user, '2000');
     await user.click(screen.getByRole('button', { name: /Бег/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
+    await user.click(screen.getByRole('button', { name: /Любитель/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Город' }), String(KRASNOYARSK.id));
     await user.click(screen.getByRole('button', { name: /Собрать профиль/ }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Не удалось сохранить');
@@ -132,9 +137,34 @@ describe('InterestQuiz', () => {
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.click(screen.getByRole('button', { name: /Дальше/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
     await user.selectOptions(screen.getByRole('combobox', { name: 'Город' }), String(MOSCOW.id));
     await user.click(screen.getByRole('button', { name: /Только бесплатные события/ }));
     await user.click(screen.getByRole('button', { name: /Собрать профиль/ }));
     expect(vi.mocked(preferencesApi.update).mock.calls.at(-1)?.[0]).toMatchObject({ homeCityId: 2, homeLat: undefined, homeLng: undefined, maxDistanceKm: 30, maxPrice: 0 });
+  });
+
+  it('позволяет выбрать «Не важно» для уровня и сохраняет его', async () => {
+    const { user } = await renderQuiz();
+    await goToSports(user, '2000');
+    await user.click(screen.getByRole('button', { name: /Бег/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
+    expect(screen.getByRole('button', { name: /Дальше/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: /Не важно/ }));
+    await user.click(screen.getByRole('button', { name: /Дальше/ }));
+    await user.selectOptions(screen.getByRole('combobox', { name: 'Город' }), String(KRASNOYARSK.id));
+    await user.click(screen.getByRole('button', { name: /Собрать профиль/ }));
+    expect(vi.mocked(preferencesApi.update).mock.calls.at(-1)?.[0]).toMatchObject({ skillLevel: 'ANY' });
+  });
+
+  it('при ошибке загрузки справочников предлагает повторить', async () => {
+    vi.mocked(catalogApi.sports).mockRejectedValueOnce(new Error('network'));
+    const { user } = await renderQuiz();
+    await goToSports(user, '2000');
+    expect(await screen.findByText('Не удалось загрузить данные')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Дальше/ })).toBeDisabled();
+    await user.click(screen.getByRole('button', { name: 'Повторить' }));
+    expect(await screen.findByRole('button', { name: /Бег/ })).toBeInTheDocument();
+    expect(screen.queryByText('Не удалось загрузить данные')).not.toBeInTheDocument();
   });
 });
