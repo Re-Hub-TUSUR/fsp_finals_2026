@@ -27,7 +27,13 @@ import type {
   InviteFriend,
   InviteFriendsPayload,
   InviteFriendsResult,
+  PublicStats,
 } from '../types';
+
+/** Публичные данные для лендинга: доступны гостю. */
+export const publicApi = {
+  stats: () => api.get<PublicStats>('/public/stats').then((r) => r.data),
+};
 
 export const achievementsApi = {
   profile: (id: number) => api.get<Achievement[]>(`/profiles/users/${id}/achievements`).then((r) => r.data),

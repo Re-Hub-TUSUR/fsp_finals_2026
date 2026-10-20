@@ -20,4 +20,6 @@ public interface OrganizationRepository extends JpaRepository<Organization, Long
 
     @EntityGraph(attributePaths = "owner")
     List<Organization> findAllByOrderByCreatedAtDesc();
+
+    long countByStatus(String status);
 }

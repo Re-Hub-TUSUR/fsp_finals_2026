@@ -61,4 +61,7 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
     List<Event> findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(Long organizationId, ru.sportikus.event.model.EventStatus status);
+
+    /** Счётчик для лендинга: опубликованные встречи, которые ещё не начались. */
+    long countByStatusAndStartTimeAfter(ru.sportikus.event.model.EventStatus status, Instant after);
 }

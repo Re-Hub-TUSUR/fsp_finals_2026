@@ -1,25 +1,32 @@
 import { useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
-import { Navigate, useNavigate } from 'react-router-dom';
+import { Navigate, useNavigate, useSearchParams } from 'react-router-dom';
 import { Building2, ShieldCheck, UserRound } from 'lucide-react';
 import { authApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
 import type { DemoRoleKey } from '../context/AuthContext';
+import { safeNext } from '../utils/redirect';
 
 type Mode = 'login' | 'user' | 'organization';
+
+/** ?mode=user|organization — с лендинга открываем сразу нужную вкладку регистрации. */
+const modeFromQuery = (value: string | null): Mode => (value === 'user' || value === 'organization' ? value : 'login');
 
 export function AuthPage() {
   const { currentUser, login, acceptAuth, switchRole } = useAuth();
   const navigate = useNavigate();
-  const [mode, setMode] = useState<Mode>('login');
+  const [params] = useSearchParams();
+  // Куда вернуть после входа (ссылка на событие и т.п.); без ?next= — экран по роли, как раньше
+  const next = params.get('next');
+  const [mode, setMode] = useState<Mode>(() => modeFromQuery(params.get('mode')));
   const [form, setForm] = useState<Record<string, string>>({});
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
   const [demoBusy, setDemoBusy] = useState<DemoRoleKey | null>(null);
   if (currentUser) {
     const destination = currentUser.role === 'ROLE_ADMIN' ? '/admin' : currentUser.role === 'ROLE_ORGANIZER' ? '/profile' : '/';
-    return <Navigate to={destination} replace />;
+    return <Navigate to={safeNext(next, destination)} replace />;
   }
 
   const change = (key: string, value: string) => setForm((old) => ({ ...old, [key]: value }));
@@ -33,7 +40,7 @@ export function AuthPage() {
           : await authApi.registerOrganization({ name: form.name, inn: form.inn, ogrn: form.ogrn, kpp: form.kpp, email: form.email, password: form.password });
         acceptAuth(result.token, result.user);
       }
-      navigate(mode === 'organization' ? '/profile' : '/');
+      navigate(safeNext(next, mode === 'organization' ? '/profile' : '/'));
     } catch (err) { setError(errorMessage(err)); } finally { setBusy(false); }
   };
   const input = (key: string, label: string, type = 'text') => (
@@ -53,7 +60,7 @@ export function AuthPage() {
     setDemoBusy(role); setError('');
     try {
       await switchRole(role);
-      navigate(destination);
+      navigate(safeNext(next, destination));
     } catch (err) {
       setError(errorMessage(err, 'Не удалось выполнить демо-вход'));
     } finally {

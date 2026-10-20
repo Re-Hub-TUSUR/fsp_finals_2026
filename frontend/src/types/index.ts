@@ -441,3 +441,11 @@ export interface EventComment {
   hidden: boolean;
   createdAt: string;
 }
+
+/** Сводка платформы для приветственной страницы (GET /public/stats, без входа). */
+export interface PublicStats {
+  upcomingEvents: number;
+  athletes: number;
+  sports: number;
+  organizations: number;
+}
