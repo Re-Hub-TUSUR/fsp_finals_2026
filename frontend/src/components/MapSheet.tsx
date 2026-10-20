@@ -1,5 +1,5 @@
 import React from 'react';
-import { ChevronRight, Loader2, X } from 'lucide-react';
+import { Loader2, X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { SportEvent } from '../types';
 import {
@@ -31,7 +31,6 @@ interface MapSheetProps {
   onMore: (event: SportEvent) => void;
   /** После записи из шторки — перечитать список */
   onJoined?: () => void;
-  onOpenFeed: () => void;
   empty: React.ReactNode;
   listRef: React.Ref<HTMLDivElement>;
 }
@@ -52,7 +51,6 @@ export const MapSheet: React.FC<MapSheetProps> = ({
   onClearSelection,
   onMore,
   onJoined,
-  onOpenFeed,
   empty,
   listRef,
 }) => {
@@ -99,14 +97,6 @@ export const MapSheet: React.FC<MapSheetProps> = ({
               <span className="text-xl font-bold text-ink">{title}</span>
               <span className="text-sm font-medium text-muted truncate">{sub}</span>
             </div>
-            <button
-              type="button"
-              onClick={onOpenFeed}
-              className="shrink-0 h-[42px] pl-3.5 pr-2.5 flex items-center gap-1.5 rounded-[10px] border border-line-2 bg-card text-ink text-[15px] font-semibold"
-            >
-              Лента
-              <ChevronRight className="w-4 h-4" strokeWidth={2.4} />
-            </button>
           </div>
           <div ref={listRef} className="flex-1 min-h-0 overflow-y-auto border-t border-line">
             {events.map((e) => (

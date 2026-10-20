@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { ChevronDown, ChevronLeft, List, LocateFixed, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
+import { ChevronLeft, List, Loader2, Maximize2, Search, SearchX, X } from 'lucide-react';
 import type { City, Sport, SportEvent } from '../types';
 import { BlinkMap, type MapViewport } from '../components/BlinkMap';
 import { CoverCard, EventRow } from '../components/HomeCards';
@@ -14,15 +14,10 @@ import {
   FiltersSheet,
   extraFilterCount,
   RADIUS_OPTIONS,
-  RadiusList,
-  SportList,
   allFilterCount,
-  radiusValue,
-  sportsLabel,
   type HomeFilterState,
   type Radius,
 } from '../components/HomeFilters';
-import { Modal } from '../components/Modal';
 import {
   readEventsSnapshot,
   snapshotKey,
@@ -41,7 +36,6 @@ import {
   isLive,
   matchesWhen,
   plural,
-  whenLabel,
   type LatLng,
 } from '../utils/eventView';
 
@@ -68,8 +62,6 @@ export const HomePage: React.FC = () => {
   const radiusTouched = useRef(false);
   const [debouncedQuery, setDebouncedQuery] = useState(q.trim());
   const [filtersOpen, setFiltersOpen] = useState(false);
-  const [radiusSheetOpen, setRadiusSheetOpen] = useState(false);
-  const [sportSheetOpen, setSportSheetOpen] = useState(false);
 
   const [events, setEvents] = useState<SportEvent[]>([]);
   const [reloadTick, setReloadTick] = useState(0);
@@ -355,12 +347,6 @@ export const HomePage: React.FC = () => {
   );
 
   /* ---------- Мобильная шапка: поиск, фильтры, чипы Радиус / Спорт / Когда ---------- */
-  const mobChip = (on: boolean) =>
-    `shrink-0 h-[42px] flex items-center rounded-[10px] text-ink text-[15px] font-bold whitespace-nowrap transition-all ${
-      on
-        ? 'border-2 border-brand bg-surface shadow-[0_0_12px_rgba(4,215,147,0.35)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)]'
-        : 'border border-line-2 bg-card'
-    }`;
   const mobileHeader = (floating: boolean) => (
     <div className="lg:hidden flex flex-col pt-2">
       <div className="flex gap-2 px-3">
@@ -400,29 +386,8 @@ export const HomePage: React.FC = () => {
           <FilterIcon size={22} />
           <CountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
         </button>
-        {view === 'list' && (
-          <button
-            type="button"
-            onClick={() => setParam('view', null)}
-            className="shrink-0 h-[50px] px-3.5 rounded-xl bg-brand text-on-brand text-[15px] font-bold flex items-center justify-center shadow-sm"
-          >
-            На карте
-          </button>
-        )}
       </div>
-      <div className="flex gap-2 px-3 py-2.5 overflow-x-auto no-scrollbar">
-        <button type="button" onClick={() => setRadiusSheetOpen(true)} className={`${mobChip(changed.radius)} gap-[7px] pl-3 pr-2.5`}>
-          <LocateFixed className="w-[17px] h-[17px]" />
-          {radiusValue(filters.radius)}
-          <ChevronDown className="w-4 h-4 text-muted" />
-        </button>
-        <button type="button" onClick={() => setSportSheetOpen(true)} className={`${mobChip(changed.sport)} px-3.5`}>
-          {sportsLabel(filters.sports, sports)}
-        </button>
-        <button type="button" onClick={() => setFiltersOpen(true)} className={`${mobChip(changed.when)} px-3.5`}>
-          {whenLabel(filters.when)}
-        </button>
-      </div>
+      <div className="h-2.5" />
     </div>
   );
 
@@ -502,7 +467,7 @@ export const HomePage: React.FC = () => {
             onJoined={() => setReloadTick((t) => t + 1)}
             showCard={view === 'map' && isDesktop()}
             radius={radiusOn && origin ? { center: origin, km: Number(filters.radius) } : null}
-            controlsClassName="top-[128px] right-3 lg:top-4 lg:right-4"
+            controlsClassName="top-[84px] right-3 lg:top-4 lg:right-4"
             cardClassName={`bottom-4 ${desktopMode === 'list' ? 'lg:left-[456px]' : ''}`}
           />
           {/* Правый нижний угол; на мобильном — над свёрнутой шторкой, в раскрытой не нужен */}
@@ -612,7 +577,6 @@ export const HomePage: React.FC = () => {
               onClearSelection={() => setSelectedId(null)}
               onMore={openDetail}
               onJoined={() => setReloadTick((t) => t + 1)}
-              onOpenFeed={() => setParam('view', 'list')}
               empty={empty}
               listRef={sheetListRef}
             />
@@ -654,27 +618,6 @@ export const HomePage: React.FC = () => {
         />
       )}
 
-      {sportSheetOpen && (
-        <Modal title="Вид спорта" onClose={() => setSportSheetOpen(false)}>
-          <SportList selected={filters.sports} sports={sports} onChange={(s) => changeFilters({ sports: s })} />
-        </Modal>
-      )}
-
-      {radiusSheetOpen && (
-        <Modal title="Радиус от вас" onClose={() => setRadiusSheetOpen(false)}>
-          {!origin && (
-            <p className="mb-2 text-sm text-muted">Радиус считается от вашей геопозиции или от домашнего города из профиля.</p>
-          )}
-          <RadiusList
-            value={filters.radius}
-            counts={radiusCounts}
-            onChange={(radius) => {
-              changeFilters({ radius });
-              setRadiusSheetOpen(false);
-            }}
-          />
-        </Modal>
-      )}
     </div>
   );
 };

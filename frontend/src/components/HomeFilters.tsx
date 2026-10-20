@@ -544,6 +544,12 @@ export const FiltersSheet: React.FC<{
             />
           </div>
         )}
+        {!compact && (
+          <div className="flex flex-col gap-2.5">
+            <SectionLabel>Спорт</SectionLabel>
+            <SportList selected={filters.sports} sports={sports} onChange={(s) => onChange({ sports: s })} />
+          </div>
+        )}
         <div className="flex flex-col gap-2.5">
           <SectionLabel>Уровень</SectionLabel>
           <Seg
