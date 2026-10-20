@@ -1,6 +1,6 @@
 import React, { useCallback, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, Building2, CheckCircle, EyeOff, Loader2, MessageSquare, RotateCcw, ShieldAlert, XCircle } from 'lucide-react';
+import { Ban, Building2, CheckCircle, EyeOff, Loader2, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
@@ -11,6 +11,26 @@ import { formatShortDateTime } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, needsAdminAttention } from '../utils/moderation';
 
 type Target = { kind: 'org'; item: AdminOrganization } | { kind: 'event'; item: SportEvent };
+
+/** Поиск без учёта регистра по нескольким полям сразу; пустой запрос ничего не отсеивает. */
+const matches = (query: string, ...fields: Array<string | undefined>) => {
+  const q = query.trim().toLowerCase();
+  return !q || fields.some((f) => f?.toLowerCase().includes(q));
+};
+
+/** Страница организатора мероприятия: организация или обычный пользователь. */
+const organizerLink = (ev: SportEvent) =>
+  ev.byOrganization && ev.organizationId
+    ? `/profiles/organizations/${ev.organizationId}`
+    : ev.organizerUserId
+      ? `/profiles/users/${ev.organizerUserId}`
+      : null;
+
+const SEARCH_PLACEHOLDER = {
+  orgs: 'Поиск по названию, владельцу, e-mail',
+  events: 'Поиск по названию, организатору, виду спорта, городу',
+  comments: 'Поиск по тексту, автору, мероприятию',
+} as const;
 
 const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: string }> = {
   PENDING: { label: 'На рассмотрении', cls: 'bg-amber-100 text-amber-800' },
@@ -29,6 +49,7 @@ export const AdminPage: React.FC = () => {
   const [target, setTarget] = useState<Target | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
+  const [search, setSearch] = useState('');
   const [eventFilter, setEventFilter] = useState<'all' | 'attention' | 'rejected'>('all');
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
@@ -87,9 +108,13 @@ export const AdminPage: React.FC = () => {
   const pending = orgs.filter((o) => o.status === 'PENDING').length;
   const attention = events.filter(needsAdminAttention).length;
   const autoRejected = events.filter((e) => e.moderation?.status === 'REJECTED').length;
-  const shownEvents = events.filter((e) =>
-    eventFilter === 'attention' ? needsAdminAttention(e) : eventFilter === 'rejected' ? e.moderation?.status === 'REJECTED' : true,
-  );
+  const shownOrgs = orgs.filter((o) => matches(search, o.name, o.description, o.ownerName, o.ownerEmail));
+  const shownComments = comments.filter((c) => matches(search, c.text, c.authorName, c.eventTitle));
+  const shownEvents = events
+    .filter((e) =>
+      eventFilter === 'attention' ? needsAdminAttention(e) : eventFilter === 'rejected' ? e.moderation?.status === 'REJECTED' : true,
+    )
+    .filter((e) => matches(search, e.title, e.organizerName, e.sport.name, e.cityName, e.address));
   const filterChip = (key: typeof eventFilter, label: string) => (
     <button
       key={key}
@@ -102,6 +127,10 @@ export const AdminPage: React.FC = () => {
       {label}
     </button>
   );
+  const switchTab = (next: typeof tab) => {
+    setTab(next);
+    setSearch('');
+  };
   const tabClass = (active: boolean) =>
     `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
       active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
@@ -120,11 +149,11 @@ export const AdminPage: React.FC = () => {
       </div>
 
       <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
-        <button onClick={() => setTab('orgs')} className={`${tabClass(tab === 'orgs')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+        <button onClick={() => switchTab('orgs')} className={`${tabClass(tab === 'orgs')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <Building2 className="w-4 h-4" />
           Организации {pending > 0 && <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
         </button>
-        <button onClick={() => setTab('events')} className={`${tabClass(tab === 'events')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+        <button onClick={() => switchTab('events')} className={`${tabClass(tab === 'events')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
           {attention > 0 && (
@@ -133,7 +162,7 @@ export const AdminPage: React.FC = () => {
             </span>
           )}
         </button>
-        <button onClick={() => setTab('comments')} className={`${tabClass(tab === 'comments')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+        <button onClick={() => switchTab('comments')} className={`${tabClass(tab === 'comments')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
           <MessageSquare className="w-4 h-4" />
           Комментарии ({comments.length})
         </button>
@@ -145,20 +174,41 @@ export const AdminPage: React.FC = () => {
         </div>
       )}
 
+      <label className="mb-4 flex items-center gap-2.5 h-11 px-3 rounded-xl border border-slate-200 bg-white text-slate-500 focus-within:border-brand">
+        <Search className="w-4 h-4 shrink-0" aria-hidden="true" />
+        <input
+          type="search"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder={SEARCH_PLACEHOLDER[tab]}
+          aria-label={SEARCH_PLACEHOLDER[tab]}
+          className="min-w-0 flex-1 bg-transparent text-sm text-slate-900 outline-none placeholder:text-slate-400"
+        />
+      </label>
+
       {loading ? (
         <div className="flex justify-center py-16 text-slate-400">
           <Loader2 className="w-8 h-8 animate-spin" />
         </div>
       ) : tab === 'orgs' ? (
         <div className="space-y-4">
-          {orgs.map((org) => (
+          {shownOrgs.length === 0 && (
+            <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
+              {search ? 'Ничего не найдено' : 'Здесь пусто'}
+            </div>
+          )}
+          {shownOrgs.map((org) => (
             <div
               key={org.id}
               className="bg-white p-4 sm:p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4"
             >
               <div className="min-w-0 flex-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="font-bold text-slate-900 break-words">{org.name}</h3>
+                  <h3 className="font-bold text-slate-900 break-words">
+                    <Link to={`/profiles/organizations/${org.id}`} className="hover:text-brand-ink hover:underline">
+                      {org.name}
+                    </Link>
+                  </h3>
                   <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
                     {ORG_STATUS[org.status].label}
                   </span>
@@ -210,7 +260,9 @@ export const AdminPage: React.FC = () => {
             {filterChip('rejected', `Отклонены автопроверкой (${autoRejected})`)}
           </div>
           {shownEvents.length === 0 && (
-            <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">Здесь пусто</div>
+            <div className="text-center py-10 text-slate-400 bg-white rounded-2xl border border-slate-200">
+              {search ? 'Ничего не найдено' : 'Здесь пусто'}
+            </div>
           )}
           {shownEvents.map((ev) => (
             <div
@@ -229,7 +281,14 @@ export const AdminPage: React.FC = () => {
                   {ev.title}
                 </Link>
                 <p className="text-sm text-slate-500 break-words">
-                  {ev.organizerName} · {formatShortDateTime(ev.startTime, ev.timeZone)}
+                  {organizerLink(ev) ? (
+                    <Link to={organizerLink(ev)!} className="hover:text-brand-ink hover:underline">
+                      {ev.organizerName}
+                    </Link>
+                  ) : (
+                    ev.organizerName
+                  )}{' '}
+                  · {formatShortDateTime(ev.startTime, ev.timeZone)}
                 </p>
                 {ev.status === 'MODERATION' ? (
                   <p className="text-sm text-amber-800 mt-1">⏳ Идёт проверка ИИ</p>
@@ -294,12 +353,12 @@ export const AdminPage: React.FC = () => {
           <p className="text-sm text-slate-500">
             Модерация вопросов и сообщений в чатах мероприятий. Скрытые сообщения больше не видны участникам.
           </p>
-          {comments.length === 0 ? (
+          {shownComments.length === 0 ? (
             <div className="text-center py-12 text-slate-400 bg-white rounded-2xl border border-slate-200">
-              Пока нет комментариев
+              {search ? 'Ничего не найдено' : 'Пока нет комментариев'}
             </div>
           ) : (
-            comments.map((cm) => (
+            shownComments.map((cm) => (
               <div
                 key={cm.id}
                 className={`bg-white p-4 rounded-2xl border shadow-sm flex flex-col sm:flex-row sm:items-start justify-between gap-3 ${

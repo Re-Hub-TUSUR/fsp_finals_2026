@@ -237,6 +237,13 @@ public class EventService {
         return mapper.toDetails(event, auth.id());
     }
 
+    /**
+     * Следующее занятие повторяющегося мероприятия — копия завершённого со сдвинутым началом.
+     * Сдвиг считается по местному времени площадки, а не фиксированными сутками в UTC: иначе при переходе на
+     * летнее или зимнее время встреча «в 19:00» уехала бы на час. Если сдвинутое начало всё ещё в прошлом
+     * (завершили с большим опозданием), прибавляем интервал, пока оно не окажется в будущем.
+     * Участники и заявки не копируются — на новое занятие записываются заново.
+     */
     private Event nextOccurrence(Event source) {
         int intervalDays = source.getRecurrenceIntervalDays() == null ? 7 : source.getRecurrenceIntervalDays();
         ZoneId zone = source.getTimeZone() == null ? ZoneOffset.UTC : ZoneId.of(source.getTimeZone());

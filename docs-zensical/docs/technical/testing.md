@@ -34,7 +34,7 @@ JUnit 5, AssertJ и Mockito. На момент написания — 12 кла�
 
 ## Frontend
 
-Vitest, Testing Library и jsdom (`vitest.config.ts`, `src/test/setup.ts`). На момент написания — 27 файлов и 274 теста.
+Vitest, Testing Library и jsdom (`vitest.config.ts`, `src/test/setup.ts`). На момент написания — 28 файлов и 278 тестов.
 
 | Область | Файлы |
 |---------|-------|
@@ -46,6 +46,7 @@ Vitest, Testing Library и jsdom (`vitest.config.ts`, `src/test/setup.ts`). На
 | Обучающий тур | `OnboardingTour`: запуск, пропуск, шаги, приглашение в тест |
 | Сканер билетов | `CheckInScannerModal`: HTTPS, ошибки камеры, один скан — одна отметка, фото, фонарик, ручной ввод |
 | Приглашения и уведомления | `InviteFriendsModal`, `NotificationBell`, `PwaBanners` |
+| Панель администратора | `AdminPage`: поиск по организациям, мероприятиям и комментариям, переходы на страницу организации и организатора |
 | Устойчивость к сбоям | `ErrorNotice` (блок ошибки с «Повторить»), `CancelParticipationDialog` (подтверждение отмены участия) |
 | Регрессия | `CreateEventPage`: выбор режима «свободный вход» не ломает страницу |
 
