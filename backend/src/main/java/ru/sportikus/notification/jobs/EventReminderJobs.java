@@ -27,7 +27,7 @@ public class EventReminderJobs {
                 log.info("Created {} event reminders", created);
             }
         } catch (RuntimeException e) {
-            log.warn("Could not create event reminders: {}", e.getMessage());
+            log.warn("Could not create event reminders", e);
         }
     }
 }

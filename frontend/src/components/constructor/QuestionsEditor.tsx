@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { FieldDef, FieldType } from '../../types';
-import { inputClass } from '../FieldInput';
+import { inputClass } from '../ui';
 
 interface QuestionsEditorProps {
   questions: FieldDef[];

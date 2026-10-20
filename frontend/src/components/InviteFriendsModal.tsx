@@ -1,10 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Check, CheckCircle2, Loader2, Send, Users } from 'lucide-react';
+import { Check, CheckCircle2, Send, Users } from 'lucide-react';
 import { eventsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { InviteFriend, InviteFriendsResult, SportEvent } from '../types';
 import { plural } from '../utils/eventView';
 import { Modal } from './Modal';
+import { Button, LoadingBlock } from './ui';
 
 interface InviteFriendsModalProps {
   event: SportEvent;
@@ -125,9 +126,7 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ event, o
         )}
 
         {loading ? (
-          <div className="py-12 flex justify-center text-muted">
-            <Loader2 className="w-7 h-7 animate-spin" aria-label="Загружаем друзей" />
-          </div>
+          <LoadingBlock className="py-12" label="Загружаем друзей" />
         ) : friends.length === 0 ? (
           <div className="py-8 px-4 text-center rounded-2xl bg-surface border border-line-2">
             <Users className="w-10 h-10 mx-auto mb-2 text-muted opacity-40" />
@@ -218,15 +217,10 @@ export const InviteFriendsModal: React.FC<InviteFriendsModalProps> = ({ event, o
             Отмена
           </button>
           {available.length > 0 && (
-            <button
-              type="button"
-              disabled={selectedIds.length === 0 || sending}
-              onClick={() => void send()}
-              className="px-5 py-2.5 rounded-xl bg-brand text-on-brand text-sm font-bold hover:bg-brand-hover disabled:opacity-50 transition-colors flex items-center gap-2"
-            >
-              {sending ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
+            <Button disabled={selectedIds.length === 0} loading={sending} onClick={() => void send()} className="font-bold">
+              {!sending && <Send className="w-4 h-4" />}
               <span>Пригласить{selectedIds.length > 0 ? ` (${selectedIds.length})` : ''}</span>
-            </button>
+            </Button>
           )}
         </div>
       </div>

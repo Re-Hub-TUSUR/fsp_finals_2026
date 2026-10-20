@@ -26,7 +26,7 @@ export const HeroEventCard: React.FC = () => {
   const full = count >= CAPACITY;
 
   return (
-    <div aria-hidden="true" className="w-[300px] rounded-[22px] border border-snow/20 bg-night/45 p-4 text-snow shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
+    <div aria-hidden="true" className="w-[300px] rounded-card border border-snow/20 bg-night/45 p-4 text-snow shadow-[0_20px_60px_rgba(0,0,0,0.35)] backdrop-blur-xl">
       <div className="flex items-center gap-3">
         <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-brand text-night">
           <SportIcon name="Футбол" size={22} />
@@ -42,7 +42,7 @@ export const HeroEventCard: React.FC = () => {
           {PEOPLE.slice(0, Math.min(PEOPLE.length, count - 3)).map((p) => (
             <span
               key={p}
-              className="anim-rise flex h-9 w-9 items-center justify-center rounded-full border-2 border-night/60 bg-snow text-[11px] font-bold text-night"
+              className="anim-rise flex h-9 w-9 items-center justify-center rounded-full border-2 border-night/60 bg-snow text-caption font-bold text-night"
             >
               {p}
             </span>

@@ -325,3 +325,26 @@ WHERE NOT EXISTS (
 INSERT INTO participations (event_id, user_id, status, decided_at)
 VALUES (1, 3, 'CONFIRMED', NOW()), (19, 1, 'CONFIRMED', NOW())
 ON CONFLICT (event_id, user_id) DO NOTHING;
+
+-- 12. Демо-уведомления для живого показа: колокольчик у Ольги и Ивана не пустой.
+-- Без уникального ключа — проверяем, что такого уведомления ещё нет, чтобы повторный прогон не плодил копии.
+INSERT INTO notifications (user_id, type, title, message, link_url, sender_user_id, event_id, is_read, created_at)
+SELECT v.user_id, v.type, v.title, v.message, v.link_url, v.sender_user_id, v.event_id, v.is_read, NOW() - v.age
+FROM (VALUES
+    (2::bigint, 'PARTICIPATION_CONFIRMED', 'Заявка одобрена!',
+     'Организатор СК Енисей подтвердил ваше участие в «Утренний забег на о. Татышев». Ваш электронный QR-билет готов!',
+     '/events/1', 4::bigint, 1::bigint, FALSE, INTERVAL '12 minutes'),
+    (2::bigint, 'EVENT_INVITE', 'Иван Иванов приглашает вас',
+     'Иван Иванов приглашает вас на мероприятие «Дворовый футбол 5x5». «Привет, Оля! Собираем команду, присоединяйся!»',
+     '/events/2', 1::bigint, 2::bigint, FALSE, INTERVAL '45 minutes'),
+    (1::bigint, 'FRIEND_ACCEPTED', 'Заявка в друзья принята',
+     'Алексей Профи принял вашу заявку в друзья. Теперь вы можете приглашать друг друга на совместные тренировки.',
+     '/profiles/users/3', 3::bigint, NULL::bigint, FALSE, INTERVAL '1 hour 20 minutes'),
+    (3::bigint, 'EVENT_INVITE', 'Иван Иванов приглашает вас',
+     'Иван Иванов приглашает вас на мероприятие «Дворовый футбол 5x5».',
+     '/events/2', 1::bigint, 2::bigint, TRUE, INTERVAL '3 hours')
+) AS v(user_id, type, title, message, link_url, sender_user_id, event_id, is_read, age)
+WHERE NOT EXISTS (
+    SELECT 1 FROM notifications n
+    WHERE n.user_id = v.user_id AND n.type = v.type AND n.message = v.message
+);

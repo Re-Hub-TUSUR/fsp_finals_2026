@@ -40,7 +40,7 @@ public class Organization {
 
     @Column(nullable = false)
     @Builder.Default
-    private String status = "PENDING"; // PENDING, APPROVED, REJECTED
+    private String status = OrganizationStatus.PENDING; // PENDING, APPROVED, REJECTED
 
     @Column(name = "reject_reason", columnDefinition = "TEXT")
     private String rejectReason;

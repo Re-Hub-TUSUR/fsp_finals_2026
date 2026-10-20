@@ -16,21 +16,5 @@ CREATE TABLE notifications (
 
 CREATE INDEX idx_notifications_user_lookup ON notifications (user_id, is_read, created_at DESC);
 
--- Демо-уведомления для реалистичного живого показа жюри
-INSERT INTO notifications (user_id, type, title, message, link_url, sender_user_id, event_id, is_read, created_at)
-VALUES
-(2, 'PARTICIPATION_CONFIRMED', 'Заявка одобрена!',
- 'Организатор СК Енисей подтвердил ваше участие в «Утренний забег на о. Татышев». Ваш электронный QR-билет готов!',
- '/events/1', 4, 1, FALSE, NOW() - INTERVAL '12 minutes'),
-
-(2, 'EVENT_INVITE', 'Иван Иванов приглашает вас',
- 'Иван Иванов приглашает вас на мероприятие «Дворовый футбол 5x5». «Привет, Оля! Собираем команду, присоединяйся!»',
- '/events/2', 1, 2, FALSE, NOW() - INTERVAL '45 minutes'),
-
-(1, 'FRIEND_ACCEPTED', 'Заявка в друзья принята',
- 'Алексей Профи принял вашу заявку в друзья. Теперь вы можете приглашать друг друга на совместные тренировки.',
- '/profiles/users/3', 3, NULL, FALSE, NOW() - INTERVAL '1 hour 20 minutes'),
-
-(3, 'EVENT_INVITE', 'Иван Иванов приглашает вас',
- 'Иван Иванов приглашает вас на мероприятие «Дворовый футбол 5x5».',
- '/events/2', 1, 2, TRUE, NOW() - INTERVAL '3 hours');
+-- Демо-уведомления перенесены в R__demo_data.sql: здесь пользователей и мероприятий ещё нет,
+-- и вставка ломала миграцию чистой базы (нарушение внешнего ключа notifications_user_id_fkey).

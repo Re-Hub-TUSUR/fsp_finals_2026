@@ -3,7 +3,6 @@ package ru.sportikus.event.repository;
 import jakarta.persistence.LockModeType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -11,7 +10,9 @@ import org.springframework.data.jpa.repository.JpaSpecificationExecutor;
 import org.springframework.data.jpa.repository.Lock;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+import ru.sportikus.common.ApiException;
 import ru.sportikus.event.model.Event;
+import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.moderation.ModerationStatus;
 
 import java.time.Instant;
@@ -20,10 +21,6 @@ import java.util.List;
 import java.util.Optional;
 
 public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecificationExecutor<Event> {
-
-    @Override
-    @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template", "city"})
-    List<Event> findAll(Specification<Event> spec, Sort sort);
 
     @Override
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template", "city"})
@@ -41,6 +38,20 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     @Query("select e from Event e where e.id = :id")
     Optional<Event> findForUpdate(@Param("id") Long id);
 
+    /** Мероприятие со связями для ответа API или 404. */
+    default Event requireDetailed(Long id) {
+        return findDetailedById(id).orElseThrow(EventRepository::notFound);
+    }
+
+    /** Мероприятие под блокировкой строки или 404. */
+    default Event requireForUpdate(Long id) {
+        return findForUpdate(id).orElseThrow(EventRepository::notFound);
+    }
+
+    private static ApiException notFound() {
+        return ApiException.notFound("Мероприятие не найдено");
+    }
+
     /** Мероприятия, которыми управляет пользователь: свои и своей организации. */
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template", "city"})
     @Query("""
@@ -57,11 +68,11 @@ public interface EventRepository extends JpaRepository<Event, Long>, JpaSpecific
     List<Event> findTop20ByModerationStatusAndCreatedAtBeforeOrderByCreatedAtAsc(ModerationStatus status, Instant before);
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
-    List<Event> findByOrganizerUserIdAndStatusOrderByStartTimeAsc(Long userId, ru.sportikus.event.model.EventStatus status);
+    List<Event> findByOrganizerUserIdAndStatusOrderByStartTimeAsc(Long userId, EventStatus status);
 
     @EntityGraph(attributePaths = {"sport", "organizerUser", "organizerOrg", "template"})
-    List<Event> findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(Long organizationId, ru.sportikus.event.model.EventStatus status);
+    List<Event> findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(Long organizationId, EventStatus status);
 
     /** Счётчик для лендинга: опубликованные встречи, которые ещё не начались. */
-    long countByStatusAndStartTimeAfter(ru.sportikus.event.model.EventStatus status, Instant after);
+    long countByStatusAndStartTimeAfter(EventStatus status, Instant after);
 }

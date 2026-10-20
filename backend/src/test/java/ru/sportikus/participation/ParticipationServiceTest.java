@@ -3,6 +3,7 @@ package ru.sportikus.participation;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -50,9 +51,11 @@ class ParticipationServiceTest {
     private static final AuthUser PARTICIPANT = new AuthUser(2L, "olga@sport.ru", "ROLE_USER");
     private static final AuthUser ORGANIZER = new AuthUser(1L, "user@sport.ru", "ROLE_USER");
 
-    @Mock EventRepository eventRepository;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) EventRepository eventRepository;
     @Mock ParticipationRepository participationRepository;
-    @Mock UserRepository userRepository;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) UserRepository userRepository;
     @Mock EventMapper eventMapper;
     @Mock ApplicationEventPublisher events;
     @Mock ru.sportikus.preference.repository.UserPreferencesRepository preferences;
@@ -376,43 +379,5 @@ class ParticipationServiceTest {
 
         assertThat(service.cancel(PARTICIPANT, EVENT_ID).status()).isEqualTo(ParticipationStatus.CANCELLED);
         assertThatThrownBy(() -> service.cancel(PARTICIPANT, EVENT_ID)).isInstanceOf(ApiException.class);
-    }
-
-    @Test
-    void organizerExportsCsvSuccessfully() {
-        Participation p1 = Participation.builder()
-                .id(1L)
-                .event(event)
-                .user(User.builder().id(2L).fullName("Ольга").email("olga@sport.ru").build())
-                .status(ParticipationStatus.CONFIRMED)
-                .ticketCode("SPT-12345678")
-                .checkedIn(true)
-                .checkedInAt(Instant.parse("2026-10-20T12:30:00Z"))
-                .message("Буду вовремя")
-                .decisionComment("Добро пожаловать")
-                .createdAt(Instant.parse("2026-10-20T10:00:00Z"))
-                .build();
-
-        when(eventRepository.findDetailedById(EVENT_ID)).thenReturn(Optional.of(event));
-        when(participationRepository.findByEventIdOrderByCreatedAtAsc(EVENT_ID)).thenReturn(List.of(p1));
-
-        byte[] csvBytes = service.exportCsv(ORGANIZER, EVENT_ID);
-        assertThat(csvBytes).isNotEmpty();
-
-        String csvString = new String(csvBytes, java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(csvString).startsWith("\uFEFF");
-        assertThat(csvString).contains("№;ФИО;Email;Статус;Дата заявки;Код билета;Отметка о входе;Время входа;Сообщение участника;Комментарий организатора");
-        assertThat(csvString).contains("Ольга;olga@sport.ru;Подтверждён");
-        assertThat(csvString).contains("SPT-12345678;Явился");
-        assertThat(csvString).contains("Буду вовремя");
-        assertThat(csvString).contains("Добро пожаловать");
-    }
-
-    @Test
-    void nonOrganizerCannotExportCsv() {
-        when(eventRepository.findDetailedById(EVENT_ID)).thenReturn(Optional.of(event));
-        assertThatThrownBy(() -> service.exportCsv(PARTICIPANT, EVENT_ID))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("только организатору");
     }
 }

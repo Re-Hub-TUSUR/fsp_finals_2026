@@ -1,5 +1,5 @@
 import type { SportEvent } from '../types';
-import { isForeignZone, spotsLeft, utcLabel } from './format';
+import { formatPrice, isForeignZone, spotsLeft, utcLabel } from './format';
 
 /** Общая «витрина» мероприятия для списка, карточки на карте и меток (по референсу редизайна). */
 
@@ -105,12 +105,11 @@ export function eventAction(event: SportEvent): { label: string; cls: string; jo
 }
 
 /** Цена коротко: «Бесплатно» / «500 ₽». */
-export const priceLabel = (event: Pick<SportEvent, 'price'>) =>
-  event.price ? `${event.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно';
+export const priceLabel = (event: Pick<SportEvent, 'price'>) => formatPrice(event.price);
 
 /** «Бесплатно» / «Платно · 500 ₽». */
 export const accessLabel = (event: Pick<SportEvent, 'price'>) =>
-  event.price ? `Платно · ${event.price.toLocaleString('ru-RU')} ₽` : 'Бесплатно';
+  event.price ? `Платно · ${formatPrice(event.price)}` : formatPrice(event.price);
 
 /** «12 мин пешком» / «28 мин на транспорте». */
 export function travelLabel(km: number): string {

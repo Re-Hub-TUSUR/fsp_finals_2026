@@ -33,7 +33,7 @@ export const EventMeter: React.FC<{ event: SportEvent; compact?: boolean }> = ({
       </div>
       <span
         className={`inline-flex items-center gap-1 font-semibold whitespace-nowrap rounded-lg ${status.chip} ${
-          compact ? 'text-[11px] px-[7px] py-[3px]' : 'text-xs px-2 py-1'
+          compact ? 'text-caption px-[7px] py-[3px]' : 'text-xs px-2 py-1'
         }`}
       >
         {status.live && status.label === 'Идёт сейчас' && <span className="w-1.5 h-1.5 rounded-full bg-current" />}
@@ -118,19 +118,6 @@ export const CoverBadge: React.FC<{ children: React.ReactNode; className?: strin
   </span>
 );
 
-/** Компактная шкала: полоса + «Свободно N» цветом статуса. */
-export const FreeMeter: React.FC<{ event: SportEvent }> = ({ event }) => {
-  const status = eventStatus(event);
-  return (
-    <div className="flex items-center gap-2">
-      <div className="flex-1 min-w-0 h-1 rounded-full bg-surface-2 overflow-hidden">
-        <div className={`h-full rounded-full ${status.bar}`} style={{ width: `${status.pct}%` }} />
-      </div>
-      <span className={`shrink-0 text-[13px] font-bold whitespace-nowrap ${status.freeInk}`}>{status.freeShort}</span>
-    </div>
-  );
-};
-
 /** Плоская шкала мест (макет «Карта и Лента»): полоса + статус текстом. width — ширина полосы, иначе растягивается. */
 export const SeatLine: React.FC<{ event: SportEvent; width?: number; thick?: boolean; children?: React.ReactNode }> = ({
   event,
@@ -142,7 +129,7 @@ export const SeatLine: React.FC<{ event: SportEvent; width?: number; thick?: boo
   return (
     <div className="flex items-center gap-2.5">
       <div
-        className={`${width ? 'shrink-0' : 'flex-1'} ${thick ? 'h-1.5' : 'h-1'} rounded-[2px] bg-surface-2 overflow-hidden`}
+        className={`${width ? 'shrink-0' : 'flex-1'} ${thick ? 'h-1.5' : 'h-1'} rounded-xs bg-surface-2 overflow-hidden`}
         style={width ? { width } : undefined}
         aria-hidden="true"
       >
@@ -159,7 +146,7 @@ export const StatusChip: React.FC<{ event: SportEvent; className?: string }> = (
   const status = eventStatus(event);
   if (!status.special) return null;
   return (
-    <span className={`inline-flex items-center text-[11px] font-semibold px-2 py-[3px] rounded-lg whitespace-nowrap ${status.chip} ${className}`}>
+    <span className={`inline-flex items-center text-caption font-semibold px-2 py-[3px] rounded-lg whitespace-nowrap ${status.chip} ${className}`}>
       {status.label}
     </span>
   );
@@ -176,7 +163,7 @@ export const SeatMeter: React.FC<{ event: SportEvent }> = ({ event }) => {
         <span className={`text-base font-bold ${status.freeInk}`}>
           {left === 0 ? 'Мест нет' : `${left} ${plural(left, 'место свободно', 'места свободно', 'мест свободно')}`}
         </span>
-        <span className="text-[13px] font-medium text-muted">
+        <span className="text-label font-medium text-muted">
           занято {taken} из {event.capacity}
         </span>
       </div>

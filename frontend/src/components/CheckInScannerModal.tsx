@@ -8,7 +8,6 @@ import {
   Flashlight,
   FlashlightOff,
   Image as ImageIcon,
-  Loader2,
   ShieldAlert,
   Users,
   X,
@@ -23,6 +22,8 @@ import {
   extractTicketCode,
   isRepeatScan,
 } from '../utils/camera';
+import { Spinner } from './ui';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 interface CheckInScannerModalProps {
   event: SportEvent;
@@ -33,15 +34,15 @@ interface CheckInScannerModalProps {
 /** Уголки рамки сканирования (как в системной камере). */
 const FrameCorners: React.FC = () => (
   <>
-    <span className="absolute left-0 top-0 w-11 h-11 border-l-[3px] border-t-[3px] border-[#fff] rounded-tl-[22px]" />
-    <span className="absolute right-0 top-0 w-11 h-11 border-r-[3px] border-t-[3px] border-[#fff] rounded-tr-[22px]" />
-    <span className="absolute left-0 bottom-0 w-11 h-11 border-l-[3px] border-b-[3px] border-[#fff] rounded-bl-[22px]" />
-    <span className="absolute right-0 bottom-0 w-11 h-11 border-r-[3px] border-b-[3px] border-[#fff] rounded-br-[22px]" />
+    <span className="absolute left-0 top-0 w-11 h-11 border-l-[3px] border-t-[3px] border-snow rounded-tl-card" />
+    <span className="absolute right-0 top-0 w-11 h-11 border-r-[3px] border-t-[3px] border-snow rounded-tr-card" />
+    <span className="absolute left-0 bottom-0 w-11 h-11 border-l-[3px] border-b-[3px] border-snow rounded-bl-card" />
+    <span className="absolute right-0 bottom-0 w-11 h-11 border-r-[3px] border-b-[3px] border-snow rounded-br-card" />
   </>
 );
 
 const roundButton =
-  'w-[52px] h-[52px] shrink-0 rounded-2xl bg-[#fff]/15 border border-[#fff]/25 backdrop-blur-md text-[#fff] flex items-center justify-center transition-colors hover:bg-[#fff]/25 disabled:opacity-60 disabled:hover:bg-[#fff]/15';
+  'w-[52px] h-[52px] shrink-0 rounded-2xl bg-snow/15 border border-snow/25 backdrop-blur-md text-snow flex items-center justify-center transition-colors hover:bg-snow/25 disabled:opacity-60 disabled:hover:bg-snow/15';
 
 /**
  * Контроль входа: камера на весь экран с рамкой, распознавание QR с фото, фонарик,
@@ -209,15 +210,9 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
     onClose();
   };
 
-  useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape') return;
-      if (scannerRef.current?.isScanning) void scannerRef.current.stop().catch(() => {});
-      onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+  // Esc, ловушка фокуса и inert-фон — как у остальных модальных окон
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, close);
 
   // Камеру отпускаем при любом закрытии окна, в том числе при уходе со страницы
   useEffect(
@@ -236,12 +231,14 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
   // Портал в body: внутри страницы (анимированный контейнер с прокруткой) fixed привязывается к нему,
   // и окно оказывается под шапкой и нижней панелью приложения
   return createPortal(
-    <div className="fixed inset-0 z-[2100] bg-black/70 flex sm:items-center sm:justify-center sm:p-4">
+    <div className="fixed inset-0 z-modal-raised bg-black/70 flex sm:items-center sm:justify-center sm:p-4">
       <div
+        ref={dialogRef}
+        tabIndex={-1}
         role="dialog"
         aria-modal="true"
         aria-labelledby="checkin-title"
-        className="relative w-full h-dvh sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-[440px] sm:rounded-[32px] overflow-hidden bg-[#1c1d20] flex flex-col shadow-2xl"
+        className="outline-none relative w-full h-dvh sm:h-[min(860px,calc(100dvh-2rem))] sm:max-w-[440px] sm:rounded-4xl overflow-hidden bg-[#1c1d20] flex flex-col shadow-2xl"
       >
         {/* Камера на весь экран; без неё — тёмная «шахматка» */}
         <div className="relative flex-1 min-h-0 flex flex-col">
@@ -254,15 +251,15 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           <div aria-hidden="true" className="absolute inset-x-0 top-0 h-48 bg-gradient-to-b from-black/60 to-transparent pointer-events-none" />
 
           <header className="relative px-6 pt-[max(1.75rem,env(safe-area-inset-top))] pr-20">
-            <h2 id="checkin-title" className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-[#fff]">
+            <h2 id="checkin-title" className="text-[32px] font-extrabold leading-[1.08] tracking-[-0.02em] text-snow">
               Контроль входа участников
             </h2>
-            <p className="mt-3 text-sm font-medium text-[#fff]/85 line-clamp-2">{event.title}</p>
+            <p className="mt-3 text-sm font-medium text-snow/85 line-clamp-2">{event.title}</p>
             <button
               type="button"
               onClick={close}
               aria-label="Закрыть"
-              className="absolute right-5 top-[max(1.75rem,env(safe-area-inset-top))] w-11 h-11 rounded-full bg-[#fff]/20 backdrop-blur-md text-[#fff] flex items-center justify-center hover:bg-[#fff]/30 transition-colors"
+              className="absolute right-5 top-[max(1.75rem,env(safe-area-inset-top))] w-11 h-11 rounded-full bg-snow/20 backdrop-blur-md text-snow flex items-center justify-center hover:bg-snow/30 transition-colors"
             >
               <X className="w-5 h-5" strokeWidth={2.4} />
             </button>
@@ -274,10 +271,10 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
               <FrameCorners />
               {!cameraActive && (
                 <>
-                  <span className="w-16 h-16 rounded-2xl bg-[#fff]/15 backdrop-blur-md flex items-center justify-center text-[#fff]">
-                    {cameraStarting ? <Loader2 className="w-7 h-7 animate-spin" /> : <CameraOff className="w-7 h-7" />}
+                  <span className="w-16 h-16 rounded-2xl bg-snow/15 backdrop-blur-md flex items-center justify-center text-snow">
+                    {cameraStarting ? <Spinner size="lg" /> : <CameraOff className="w-7 h-7" />}
                   </span>
-                  <p className="mt-3 text-sm font-semibold text-[#fff]">{frameMessage}</p>
+                  <p className="mt-3 text-sm font-semibold text-snow">{frameMessage}</p>
                 </>
               )}
             </div>
@@ -286,7 +283,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           {(support !== 'ok' || cameraError) && (
             <p
               role={cameraError ? 'alert' : 'status'}
-              className="relative mx-6 mb-3 rounded-xl bg-black/55 backdrop-blur-md px-3.5 py-2.5 text-xs leading-snug text-[#fff]"
+              className="relative mx-6 mb-3 rounded-xl bg-black/55 backdrop-blur-md px-3.5 py-2.5 text-xs leading-snug text-snow"
             >
               {cameraError ?? CAMERA_PROBLEM_MESSAGES[support as Exclude<typeof support, 'ok'>]}
             </p>
@@ -314,7 +311,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
               title="Распознать QR с фото"
               className={roundButton}
             >
-              {photoBusy ? <Loader2 className="w-5 h-5 animate-spin" /> : <ImageIcon className="w-5 h-5" />}
+              {photoBusy ? <Spinner size="md" /> : <ImageIcon className="w-5 h-5" />}
             </button>
 
             {!cameraActive && support === 'ok' ? (
@@ -322,7 +319,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
                 type="button"
                 onClick={() => void startCamera()}
                 disabled={cameraStarting}
-                className="flex-1 h-[52px] rounded-2xl bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors disabled:opacity-70"
+                className="flex-1 h-[52px] rounded-2xl bg-brand text-on-brand text-lead font-bold hover:bg-brand-hover transition-colors disabled:opacity-70"
               >
                 Включить камеру
               </button>
@@ -345,7 +342,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
         </div>
 
         {/* Нижний лист: результат, счётчик, ручной ввод */}
-        <div className="scanner-sheet relative -mt-7 rounded-t-[28px] bg-card px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
+        <div className="scanner-sheet relative -mt-7 rounded-t-sheet bg-card px-6 pt-6 pb-[max(1.5rem,env(safe-area-inset-bottom))]">
           {result && (
             <div
               className={`mb-4 p-3.5 rounded-2xl border ${
@@ -381,7 +378,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
                         )}
                         <b className="font-semibold truncate">{result.participant.fullName}</b>
                       </span>
-                      <code className="font-mono text-[11px] shrink-0">{result.ticketCode}</code>
+                      <code className="font-mono text-caption shrink-0">{result.ticketCode}</code>
                     </div>
                   )}
                 </div>
@@ -390,7 +387,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           )}
 
           <div className="flex items-center justify-between gap-4">
-            <span className="flex items-center gap-3 text-[15px] leading-tight text-muted">
+            <span className="flex items-center gap-3 text-body leading-tight text-muted">
               <Users className="w-7 h-7 shrink-0 text-brand-ink" strokeWidth={1.8} />
               <span className="max-w-[9rem]">Отмечено на мероприятии</span>
             </span>
@@ -402,7 +399,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
           <div className="my-5 border-t border-line" />
 
           <form onSubmit={handleManualSubmit}>
-            <label htmlFor="checkin-code" className="block text-[17px] font-bold text-ink mb-3">
+            <label htmlFor="checkin-code" className="block text-lead font-bold text-ink mb-3">
               Или введите код билета вручную
             </label>
             <div className="flex gap-3">
@@ -422,7 +419,7 @@ export const CheckInScannerModal: React.FC<CheckInScannerModalProps> = ({ event,
                 disabled={busy || !code.trim()}
                 className="shrink-0 h-14 px-6 rounded-2xl bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors disabled:bg-surface-2 disabled:text-muted flex items-center gap-2"
               >
-                {busy && code.trim() ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+                {busy && code.trim() ? <Spinner size="sm" /> : null}
                 Проверить
               </button>
             </div>

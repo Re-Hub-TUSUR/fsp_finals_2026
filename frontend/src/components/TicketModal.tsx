@@ -1,4 +1,5 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import QRCode from 'qrcode';
 import {
   CheckCircle2,
@@ -13,6 +14,7 @@ import {
 } from 'lucide-react';
 import type { SportEvent } from '../types';
 import { formatDateTime } from '../utils/format';
+import { useDialogFocus } from '../hooks/useDialogFocus';
 
 interface TicketModalProps {
   event: SportEvent;
@@ -35,6 +37,8 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 }) => {
   const [qrUrl, setQrUrl] = useState<string>('');
   const [copied, setCopied] = useState(false);
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogFocus(dialogRef, onClose);
 
   useEffect(() => {
     QRCode.toDataURL(ticketCode, {
@@ -58,9 +62,19 @@ export const TicketModal: React.FC<TicketModalProps> = ({
 
   const isPaid = event.price !== undefined && event.price !== null && event.price > 0;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto">
-      <div className="relative w-full max-w-md bg-card rounded-3xl shadow-2xl overflow-hidden border border-line animate-in fade-in zoom-in-95 duration-200">
+  return createPortal(
+    <div
+      className="fixed inset-0 z-modal flex items-center justify-center bg-black/60 backdrop-blur-sm p-4 overflow-y-auto"
+      onMouseDown={(e) => e.target === e.currentTarget && onClose()}
+    >
+      <div
+        ref={dialogRef}
+        tabIndex={-1}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="ticket-title"
+        className="anim-drop outline-none relative w-full max-w-md bg-card rounded-3xl shadow-2xl overflow-hidden border border-line"
+      >
         {/* Верхняя декоративная плашка билета */}
         <div className="bg-brand text-on-brand p-6 relative">
           <button
@@ -72,21 +86,21 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           </button>
 
           <div className="flex items-center gap-2 mb-2">
-            <span className="inline-flex items-center gap-1 text-[11px] font-extrabold uppercase tracking-wider bg-on-brand/15 px-2.5 py-0.5 rounded-full">
+            <span className="inline-flex items-center gap-1 text-caption font-extrabold uppercase tracking-wider bg-on-brand/15 px-2.5 py-0.5 rounded-full">
               <Ticket className="w-3.5 h-3.5" /> Электронный билет
             </span>
             {isPaid ? (
-              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Оплачено: {event.price} ₽
               </span>
             ) : (
-              <span className="text-[11px] font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
+              <span className="text-caption font-bold bg-on-brand text-brand px-2 py-0.5 rounded-full">
                 Бесплатный вход
               </span>
             )}
           </div>
 
-          <h2 className="text-xl font-extrabold leading-snug drop-shadow-sm">{event.title}</h2>
+          <h2 id="ticket-title" className="text-xl font-extrabold leading-snug drop-shadow-sm">{event.title}</h2>
           <p className="text-xs text-on-brand/80 mt-1 flex items-center gap-1.5">
             <span>Организатор:</span>
             <b>{event.organizerName}</b>
@@ -116,12 +130,12 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           {/* QR код */}
           <div className="flex flex-col items-center justify-center p-4 bg-surface rounded-2xl border border-line">
             {qrUrl ? (
-              <div className="relative p-2 bg-[#ffffff] rounded-2xl shadow-sm border border-line">
+              <div className="relative p-2 bg-snow rounded-2xl shadow-sm border border-line">
                 <img src={qrUrl} alt={`QR код билета ${ticketCode}`} className="w-56 h-56 object-contain" />
                 {checkedIn && (
-                  <div className="absolute inset-0 bg-[#ffffff]/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
-                    <CheckCircle2 className="w-14 h-14 text-[#059669] animate-in zoom-in" />
-                    <span className="text-xs font-bold text-[#065f46] mt-2 uppercase tracking-wide">
+                  <div className="absolute inset-0 bg-snow/85 backdrop-blur-[1px] flex flex-col items-center justify-center rounded-2xl">
+                    <CheckCircle2 className="w-14 h-14 text-emerald-600" />
+                    <span className="text-xs font-bold text-emerald-800 mt-2 uppercase tracking-wide">
                       Использован
                     </span>
                   </div>
@@ -139,8 +153,10 @@ export const TicketModal: React.FC<TicketModalProps> = ({
                 {ticketCode}
               </code>
               <button
+                type="button"
                 onClick={handleCopy}
                 title="Скопировать код"
+                aria-label="Скопировать код"
                 className="p-1.5 rounded-lg bg-card border border-line hover:bg-surface text-muted transition"
               >
                 {copied ? <CheckCircle2 className="w-4 h-4 text-brand-ink" /> : <Copy className="w-4 h-4" />}
@@ -195,6 +211,7 @@ export const TicketModal: React.FC<TicketModalProps> = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 };

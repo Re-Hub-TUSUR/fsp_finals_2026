@@ -1,18 +1,25 @@
 package ru.sportikus.achievement;
 
 import lombok.RequiredArgsConstructor;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.namedparam.NamedParameterJdbcTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
 public class AchievementService {
-    private final JdbcTemplate jdbc;
+    private final NamedParameterJdbcTemplate jdbc;
 
-    private record Def(String code, String title, String description, String icon, String metric, long target) {}
+    /** Определение достижения: метрика из METRICS_SQL (или «achievements») и порог. */
+    private record Def(String code, String title, String description, String icon, String metric, long target) {
+        AchievementDto toDto(long progress) {
+            return new AchievementDto(code, title, description, icon, Math.min(progress, target), target, progress >= target);
+        }
+    }
 
     private static final List<Def> DEFS = List.of(
         new Def("first_start","Первый старт","Примите участие в 1 событии","🏁","events",1),
@@ -47,21 +54,46 @@ public class AchievementService {
         new Def("achiever_20","Охотник за наградами","Получите 20 достижений","👑","achievements",20)
     );
 
+    /** Все метрики пользователя одним запросом: участие, виды спорта, созданные события и друзья. */
+    private static final String METRICS_SQL = """
+            WITH mine AS (
+                SELECT e.sport_id, lower(s.name) AS sport, lower(s.slug) AS slug
+                FROM participations p
+                JOIN events e ON e.id = p.event_id
+                JOIN sports s ON s.id = e.sport_id
+                WHERE p.user_id = :u AND p.status = 'CONFIRMED'
+            ), own AS (
+                SELECT e.status
+                FROM events e LEFT JOIN organizations o ON o.id = e.organizer_org_id
+                WHERE e.organizer_user_id = :u OR o.owner_user_id = :u
+            )
+            SELECT (SELECT count(*) FROM mine) AS events,
+                   (SELECT count(*) FROM mine WHERE sport LIKE '%бег%' OR slug LIKE '%run%') AS running,
+                   (SELECT count(*) FROM mine WHERE sport ~ '(футбол|волейбол|баскетбол|хоккей)') AS team,
+                   (SELECT count(DISTINCT sport_id) FROM mine) AS sports,
+                   (SELECT count(*) FROM own) AS created,
+                   (SELECT count(*) FROM own WHERE status = 'ARCHIVED') AS archived,
+                   (SELECT count(*) FROM friendships
+                    WHERE status = 'ACCEPTED' AND (requester_id = :u OR recipient_id = :u)) AS friends
+            """;
+
+    private static final String META_METRIC = "achievements";
+
+    @Transactional(readOnly = true)
     public List<AchievementDto> forUser(Long userId) {
-        long events = count("select count(*) from participations where user_id=? and status='CONFIRMED'", userId);
-        long running = count("select count(*) from participations p join events e on e.id=p.event_id join sports s on s.id=e.sport_id where p.user_id=? and p.status='CONFIRMED' and (lower(s.name) like '%бег%' or lower(s.slug) like '%run%')", userId);
-        long team = count("select count(*) from participations p join events e on e.id=p.event_id join sports s on s.id=e.sport_id where p.user_id=? and p.status='CONFIRMED' and lower(s.name) ~ '(футбол|волейбол|баскетбол|хоккей)'", userId);
-        long friends = count("select count(*) from friendships where status='ACCEPTED' and (requester_id=? or recipient_id=?)", userId, userId);
-        long created = count("select count(*) from events e left join organizations o on o.id=e.organizer_org_id where e.organizer_user_id=? or o.owner_user_id=?", userId, userId);
-        long archived = count("select count(*) from events e left join organizations o on o.id=e.organizer_org_id where e.status='ARCHIVED' and (e.organizer_user_id=? or o.owner_user_id=?)", userId, userId);
-        long sports = count("select count(distinct e.sport_id) from participations p join events e on e.id=p.event_id where p.user_id=? and p.status='CONFIRMED'", userId);
-        var values = java.util.Map.of("events",events,"running",running,"team",team,"friends",friends,"created",created,"archived",archived,"sports",sports);
+        Map<String, Object> row = jdbc.queryForMap(METRICS_SQL, Map.of("u", userId));
         List<AchievementDto> result = new ArrayList<>();
         long completed = 0;
-        for (Def d : DEFS) if (!d.metric.equals("achievements")) { long p=values.get(d.metric); boolean done=p>=d.target; if(done) completed++; result.add(new AchievementDto(d.code,d.title,d.description,d.icon,Math.min(p,d.target),d.target,done)); }
-        for (Def d : DEFS) if (d.metric.equals("achievements")) result.add(new AchievementDto(d.code,d.title,d.description,d.icon,Math.min(completed,d.target),d.target,completed>=d.target));
+        for (Def d : DEFS) {
+            if (d.metric.equals(META_METRIC)) continue;
+            long progress = ((Number) row.get(d.metric)).longValue();
+            if (progress >= d.target) completed++;
+            result.add(d.toDto(progress));
+        }
+        // «Достижения за достижения» считаются по уже полученным остальным
+        for (Def d : DEFS) {
+            if (d.metric.equals(META_METRIC)) result.add(d.toDto(completed));
+        }
         return result;
     }
-
-    private long count(String sql, Object... args) { Long value=jdbc.queryForObject(sql, Long.class, args); return value == null ? 0 : value; }
 }

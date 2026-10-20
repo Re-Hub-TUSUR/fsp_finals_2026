@@ -5,45 +5,7 @@ import { SKILL_LABELS } from '../utils/format';
 import { dayKey, keyToDate, sameWhen, whenLabel, whenPresets, type When } from '../utils/eventView';
 import { Modal } from './Modal';
 import { SectionLabel, Toggle } from './ui';
-
-export type Radius = '1' | '3' | '5' | '10' | 'all';
-
-export const RADIUS_OPTIONS: { value: Radius; label: string }[] = [
-  { value: '1', label: '1 км' },
-  { value: '3', label: '3 км' },
-  { value: '5', label: '5 км' },
-  { value: '10', label: '10 км' },
-  { value: 'all', label: 'Без ограничения' },
-];
-
-export const radiusValue = (r: Radius) => (r === 'all' ? 'Без ограничения' : `${r} км`);
-
-export interface HomeFilterState {
-  sports: string[];
-  radius: Radius;
-  when: When;
-  skill: SkillLevel | '';
-  joinMode: JoinMode | '';
-  freeOnly: boolean;
-  freeCost: boolean;
-}
-
-export const DEFAULT_FILTERS: HomeFilterState = {
-  sports: [],
-  radius: 'all',
-  when: { kind: 'all' },
-  skill: '',
-  joinMode: '',
-  freeOnly: false,
-  freeCost: false,
-};
-
-/** Сколько «дополнительных» фильтров включено (без спорта, радиуса и времени — они видны в баре). */
-export const extraFilterCount = (f: HomeFilterState) =>
-  (f.skill ? 1 : 0) + (f.joinMode ? 1 : 0) + (f.freeOnly ? 1 : 0) + (f.freeCost ? 1 : 0);
-
-export const allFilterCount = (f: HomeFilterState) =>
-  extraFilterCount(f) + (f.when.kind !== 'all' ? 1 : 0);
+import { RADIUS_OPTIONS, extraFilterCount, radiusValue, sportsLabel, type HomeFilterState, type Radius } from '../utils/homeFilters';
 
 /* ---------- Поповер ---------- */
 
@@ -71,7 +33,7 @@ const Popover: React.FC<{
       {trigger}
       {open && (
         <div
-          className="anim-fade absolute top-[calc(100%+8px)] left-0 z-50 bg-card border border-line-2 rounded-xl shadow-[0_4px_16px_rgba(20,30,45,0.14)]"
+          className="anim-fade absolute top-[calc(100%+8px)] left-0 z-50 bg-card border border-line-2 rounded-xl shadow-pop"
           style={{ width }}
         >
           {children}
@@ -83,9 +45,9 @@ const Popover: React.FC<{
 
 // Изменённый фильтр выделяется рамкой цвета бренда с подсветкой-тенью
 const barButton = (open: boolean, active = false) =>
-  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] rounded-[10px] text-[15px] text-ink whitespace-nowrap transition-all ${
+  `h-10 pl-3 pr-2.5 flex items-center gap-[7px] rounded-control text-body text-ink whitespace-nowrap transition-all ${
     active
-      ? 'border-2 border-brand bg-surface shadow-[0_0_12px_rgba(4,215,147,0.35)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)]'
+      ? 'border-2 border-brand bg-surface shadow-glow-ring'
       : 'border border-line-2'
   } ${open && !active ? 'bg-surface' : !active ? 'bg-card hover:bg-surface' : ''}`;
 
@@ -97,7 +59,7 @@ const PresetChip: React.FC<{ active: boolean; onClick: () => void; children: Rea
     onClick={onClick}
     className={`h-9 px-3 rounded-lg border text-sm font-semibold whitespace-nowrap transition-all ${
       active
-        ? 'bg-brand text-on-brand border-brand shadow-[0_2px_12px_rgba(4,215,147,0.4)] dark:shadow-[0_2px_12px_rgba(213,244,91,0.3)] font-bold'
+        ? 'bg-brand text-on-brand border-brand shadow-glow font-bold'
         : 'bg-card border-line-2 text-ink hover:bg-surface'
     }`}
   >
@@ -118,7 +80,7 @@ function Seg<T extends string>({
   label: string;
 }) {
   return (
-    <div role="radiogroup" aria-label={label} className="flex gap-[3px] p-[3px] bg-surface rounded-[10px]">
+    <div role="radiogroup" aria-label={label} className="flex gap-[3px] p-[3px] bg-surface rounded-control">
       {options.map((o) => {
         const on = o.value === value;
         return (
@@ -128,9 +90,9 @@ function Seg<T extends string>({
             role="radio"
             aria-checked={on}
             onClick={() => onChange(o.value)}
-            className={`flex-1 min-w-0 h-[42px] px-1 rounded-lg text-sm sm:text-[15px] font-semibold truncate transition-all ${
+            className={`flex-1 min-w-0 h-[42px] px-1 rounded-lg text-sm sm:text-body font-semibold truncate transition-all ${
               on
-                ? 'bg-card text-ink border border-brand/60 shadow-[0_0_12px_rgba(4,215,147,0.3)] dark:shadow-[0_0_12px_rgba(213,244,91,0.25)] font-bold'
+                ? 'bg-card text-ink border border-brand/60 shadow-glow-ring font-bold'
                 : 'text-muted hover:text-ink'
             }`}
           >
@@ -175,12 +137,6 @@ export const RadiusList: React.FC<{
 
 /* ---------- Вид спорта: один компактный фильтр вместо ряда чипов ---------- */
 
-export const sportsLabel = (selected: string[], sports: Sport[]) => {
-  if (selected.length === 0) return 'Все виды';
-  if (selected.length === 1) return sports.find((s) => s.slug === selected[0])?.name ?? '1 вид';
-  return `${selected.length} вида`;
-};
-
 export const SportList: React.FC<{
   selected: string[];
   sports: Sport[];
@@ -199,9 +155,9 @@ export const SportList: React.FC<{
               type="button"
               aria-pressed={on}
               onClick={() => toggle(s.slug)}
-              className={`h-[42px] px-3 flex items-center gap-1.5 rounded-lg text-[15px] font-semibold text-left transition-all ${
+              className={`h-[42px] px-3 flex items-center gap-1.5 rounded-lg text-body font-semibold text-left transition-all ${
                 on
-                  ? 'bg-brand text-on-brand shadow-[0_2px_10px_rgba(4,215,147,0.35)] dark:shadow-[0_2px_10px_rgba(213,244,91,0.25)] font-bold'
+                  ? 'bg-brand text-on-brand shadow-glow font-bold'
                   : 'text-ink hover:bg-surface'
               }`}
             >
@@ -215,7 +171,7 @@ export const SportList: React.FC<{
         <button
           type="button"
           onClick={() => onChange([])}
-          className="h-10 rounded-lg text-[15px] font-bold text-brand-ink underline underline-offset-[3px] hover:bg-surface transition-colors"
+          className="h-10 rounded-lg text-body font-bold text-brand-ink underline underline-offset-[3px] hover:bg-surface transition-colors"
         >
           Сбросить выбор
         </button>
@@ -259,8 +215,8 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
   };
 
   return (
-    <div className="flex flex-col gap-2 p-2.5 rounded-[10px] bg-surface">
-      <div role="group" aria-label="Режим выбора даты" className="grid grid-cols-2 gap-1 p-1 rounded-[10px] bg-card">
+    <div className="flex flex-col gap-2 p-2.5 rounded-control bg-surface">
+      <div role="group" aria-label="Режим выбора даты" className="grid grid-cols-2 gap-1 p-1 rounded-control bg-card">
         {(['day', 'range'] as const).map((m) => (
           <button
             key={m}
@@ -302,7 +258,7 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
           <ChevronRight className="w-[18px] h-[18px]" />
         </button>
       </div>
-      <div className="grid grid-cols-7 text-[13px] font-semibold text-muted text-center">
+      <div className="grid grid-cols-7 text-label font-semibold text-muted text-center">
         {WEEKDAYS.map((d) => (
           <span key={d}>{d}</span>
         ))}
@@ -316,7 +272,7 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
           const past = k < today;
           const end = k === a || k === b;
           const inRange = a != null && b != null && k > a && k < b;
-          const radius = end && a !== b ? (k === a ? 'rounded-l-[10px]' : 'rounded-r-[10px]') : end ? 'rounded-[10px]' : '';
+          const radius = end && a !== b ? (k === a ? 'rounded-l-control' : 'rounded-r-control') : end ? 'rounded-control' : '';
           return (
             <button
               key={k}
@@ -325,9 +281,9 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
               onClick={() => pick(k)}
               aria-pressed={end || inRange}
               aria-label={keyToDate(k).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}
-              className={`relative h-10 text-[15px] ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} transition-all ${
+              className={`relative h-10 text-body ${k === today ? 'font-extrabold' : 'font-semibold'} ${radius} transition-all ${
                 end
-                  ? 'bg-brand text-on-brand shadow-[0_2px_10px_rgba(4,215,147,0.4)] dark:shadow-[0_2px_10px_rgba(213,244,91,0.3)] font-bold'
+                  ? 'bg-brand text-on-brand shadow-glow font-bold'
                   : inRange
                     ? 'bg-surface-2 text-ink'
                     : past
@@ -345,7 +301,7 @@ const Calendar: React.FC<{ when: When; eventDays: Set<number>; onChange: (w: Whe
           );
         })}
       </div>
-      <span className="text-[13px] leading-snug font-medium text-muted">
+      <span className="text-label leading-snug font-medium text-muted">
         {a == null
           ? mode === 'day'
             ? 'Нажмите на день, чтобы показать события этой даты'
@@ -383,10 +339,10 @@ export const FilterIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-export const CountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
+export const FilterCountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
   n > 0 ? (
     <span
-      className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-brand text-on-brand shadow-[0_1px_6px_rgba(4,215,147,0.35)] dark:shadow-[0_1px_6px_rgba(213,244,91,0.25)] text-[13px] font-bold leading-[22px] text-center ${className}`}
+      className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-brand text-on-brand shadow-glow-sm text-label font-bold leading-[22px] text-center ${className}`}
     >
       {n}
     </span>
@@ -426,7 +382,7 @@ export const FilterBar: React.FC<{
         }
       >
         {!canUseRadius && (
-          <p className="px-4 pt-3 text-[13px] text-muted leading-snug">
+          <p className="px-4 pt-3 text-label text-muted leading-snug">
             Радиус считается от вашей геопозиции или от домашнего города из профиля.
           </p>
         )}
@@ -458,7 +414,7 @@ export const FilterBar: React.FC<{
           <button
             type="button"
             onClick={close}
-            className="h-[46px] rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover"
+            className="h-[46px] rounded-control bg-brand text-on-brand text-base font-bold hover:bg-brand-hover"
           >
             {resultCount ? `Показать ${resultCount}` : 'Нет подходящих событий'}
           </button>
@@ -488,7 +444,7 @@ export const FilterBar: React.FC<{
         <button
           type="button"
           onClick={onResetAll}
-          className="h-10 px-2.5 text-[15px] font-bold text-brand-ink underline underline-offset-[3px] hover:text-ink"
+          className="h-10 px-2.5 text-body font-bold text-brand-ink underline underline-offset-[3px] hover:text-ink"
         >
           Сбросить всё
         </button>
@@ -497,7 +453,7 @@ export const FilterBar: React.FC<{
       <button type="button" onClick={onOpenFilters} className={`${barButton(false, extraFilterCount(filters) > 0)} gap-2 font-semibold`}>
         <FilterIcon size={18} />
         Фильтры
-        <CountBadge n={extraFilterCount(filters)} />
+        <FilterCountBadge n={extraFilterCount(filters)} />
       </button>
     </div>
   );
@@ -586,7 +542,7 @@ export const FiltersSheet: React.FC<{
         <button
           type="button"
           onClick={onClose}
-          className="h-[52px] rounded-xl bg-brand text-on-brand text-[17px] font-bold hover:bg-brand-hover transition-colors"
+          className="h-[52px] rounded-xl bg-brand text-on-brand text-lead font-bold hover:bg-brand-hover transition-colors"
         >
           {resultCount ? `Показать ${resultCount}` : 'Нет подходящих событий'}
         </button>

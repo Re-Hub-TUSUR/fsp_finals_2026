@@ -333,7 +333,8 @@ describe('capacityText', () => {
 
 describe('время в поясе места проведения', () => {
   const KRSK = 'Asia/Krasnoyarsk'; // UTC+7
-  const ev = { startTime: '2026-10-20T12:30:00Z', endTime: '2026-10-20T14:00:00Z', timeZone: KRSK };
+  // Дата в будущем: в день фикстуры, пока событие идёт, ряд показывает «Сейчас» вместо времени
+  const ev = { startTime: '2099-06-01T12:30:00Z', endTime: '2099-06-01T14:00:00Z', timeZone: KRSK };
 
   it('карточка, ряд и диапазон показывают одно и то же местное время', () => {
     expect(formatCardDate(ev.startTime, KRSK)).toContain('19:30');

@@ -25,7 +25,7 @@ import { NotificationBell } from './NotificationBell';
 
 const Logo: React.FC = () => (
   <Link to="/" className="flex items-center gap-2.5 shrink-0" aria-label="Sportikus — на главную">
-    <span className="w-[38px] h-[38px] rounded-[10px] bg-brand text-on-brand flex items-center justify-center">
+    <span className="w-[38px] h-[38px] rounded-control bg-brand text-on-brand flex items-center justify-center">
       <img src="/logo-s.png" alt="" className="h-[22px] w-auto" />
     </span>
     {/* Пока рядом вкладки и поиск не помещаются целиком (md–xl), оставляем только знак */}
@@ -77,7 +77,7 @@ export const Navbar: React.FC = () => {
   const linkClass = (active: boolean) =>
     `h-full -mb-px px-2.5 xl:px-3 2xl:px-3.5 flex items-center gap-2 border-b-[3px] text-base whitespace-nowrap transition-all ${
       active
-        ? 'border-brand text-ink font-bold shadow-[inset_0_-3px_10px_rgba(4,215,147,0.35)] dark:shadow-[inset_0_-3px_10px_rgba(213,244,91,0.25)]'
+        ? 'border-brand text-ink font-bold shadow-[inset_0_-3px_10px_var(--color-brand-glow)]'
         : 'border-transparent text-muted font-semibold hover:text-ink'
     }`;
   // Ссылка на режим главной с сохранением поиска
@@ -118,14 +118,14 @@ export const Navbar: React.FC = () => {
             aria-label={`Город: ${cityName}. Выбрать другой`}
             title={cityName}
             data-tour="city-selector"
-            className="flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-[10px] text-ink hover:bg-surface"
+            className="flex shrink-0 h-[42px] px-2 items-center gap-1 rounded-control text-ink hover:bg-surface"
           >
             <MapPin className="w-[18px] h-[18px]" />
             <ChevronDown className="w-4 h-4 text-muted" />
           </button>
 
           {onHome && (
-            <label data-tour="search-bar" className="hidden lg:flex flex-[3] min-w-[140px] max-w-[640px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-[10px] bg-surface border border-line-2 text-muted focus-within:border-ink">
+            <label data-tour="search-bar" className="hidden lg:flex flex-[3] min-w-[140px] max-w-[640px] h-[42px] items-center gap-2.5 pl-3 pr-1.5 rounded-control bg-surface border border-line-2 text-muted focus-within:border-ink">
               <Search className="w-[19px] h-[19px] shrink-0" />
               <input
                 type="search"
@@ -186,7 +186,7 @@ export const Navbar: React.FC = () => {
             type="button"
             onClick={toggleTheme}
             aria-label={theme === 'dark' ? 'Светлая тема' : 'Тёмная тема'}
-            className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-[10px] border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
+            className="w-9 h-9 sm:w-[42px] sm:h-[42px] rounded-control border border-line-2 bg-card flex items-center justify-center text-ink hover:bg-surface transition-colors shrink-0"
           >
             {theme === 'dark' ? <Sun className="w-4 h-4 sm:w-5 sm:h-5" /> : <Moon className="w-4 h-4 sm:w-5 sm:h-5" />}
           </button>
@@ -199,7 +199,7 @@ export const Navbar: React.FC = () => {
               data-tour="create-event"
               aria-label="Создать мероприятие"
               title="Создать мероприятие"
-              className="hidden md:flex items-center gap-1.5 h-[42px] px-[11px] xl:px-4 rounded-[10px] bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors shrink-0"
+              className="hidden md:flex items-center gap-1.5 h-[42px] px-[11px] xl:px-4 rounded-control bg-brand text-on-brand text-base font-bold hover:bg-brand-hover transition-colors shrink-0"
             >
               <Plus className="w-5 h-5" />
               <span className="hidden xl:inline">Создать</span>
@@ -215,7 +215,7 @@ export const Navbar: React.FC = () => {
                 <span className="text-sm font-semibold text-ink max-w-[180px] truncate">
                   {currentUser.organizationName ?? currentUser.fullName}
                 </span>
-                {orgStatus && <span className={`text-[11px] font-medium ${orgStatus.cls}`}>{orgStatus.text}</span>}
+                {orgStatus && <span className={`text-caption font-medium ${orgStatus.cls}`}>{orgStatus.text}</span>}
               </span>
               </Link>
             </div>
@@ -223,7 +223,7 @@ export const Navbar: React.FC = () => {
           {!currentUser && (
             <Link
               to="/auth"
-              className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-[42px] px-3 sm:px-4 rounded-[10px] border border-line-2 bg-card text-ink hover:bg-surface transition-colors font-semibold text-sm sm:text-base shrink-0"
+              className="flex items-center gap-1.5 sm:gap-2 h-9 sm:h-[42px] px-3 sm:px-4 rounded-control border border-line-2 bg-card text-ink hover:bg-surface transition-colors font-semibold text-sm sm:text-base shrink-0"
             >
               <LogIn className="w-4 h-4 sm:w-5 sm:h-5" />
               <span className="hidden sm:inline">Войти</span>

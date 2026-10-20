@@ -114,21 +114,21 @@ const DisplayTitle: React.FC<{ first: string; second: React.ReactNode; id?: stri
 
 /** Слово-плашка внутри заголовка, как «who value» в референсе. */
 const Pill: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-  <span className="rounded-[14px] bg-ink px-3 text-page [box-decoration-break:clone]">{children}</span>
+  <span className="rounded-tile bg-ink px-3 text-page [box-decoration-break:clone]">{children}</span>
 );
 
 /** Маркер пункта списка: один, два или три квадратика. */
 const Squares: React.FC<{ n: number }> = ({ n }) => (
   <span className="flex gap-1" aria-hidden="true">
     {Array.from({ length: n }, (_, i) => (
-      <span key={i} className="h-2 w-2 rounded-[2px] bg-brand" />
+      <span key={i} className="h-2 w-2 rounded-xs bg-brand" />
     ))}
   </span>
 );
 
 const Eyebrow: React.FC<{ children: React.ReactNode; className?: string }> = ({ children, className = '' }) => (
   <p className={`flex items-center gap-2 text-sm font-semibold uppercase tracking-[0.08em] ${className}`}>
-    <span className="h-2 w-2 rounded-[2px] bg-brand" aria-hidden="true" />
+    <span className="h-2 w-2 rounded-xs bg-brand" aria-hidden="true" />
     {children}
   </p>
 );
@@ -171,7 +171,7 @@ const Hero: React.FC<{ stats: PublicStats | null }> = ({ stats }) => {
             <div className="hidden sm:block">
               <HeroEventCard />
             </div>
-            <p className="max-w-sm text-base leading-relaxed text-snow/85 sm:text-[17px] lg:text-right">
+            <p className="max-w-sm text-base leading-relaxed text-snow/85 sm:text-lead lg:text-right">
               Футбол во дворе, пробежки по набережной, йога в парке и турниры клубов. Найдите встречу на карте,
               запишитесь и приходите.
             </p>
@@ -211,12 +211,12 @@ const StatsRow: React.FC<{ stats: PublicStats | null }> = ({ stats }) => {
 
   return (
     <dl
-      className="mt-8 grid grid-cols-4 gap-px overflow-hidden rounded-[18px] border border-snow/15 bg-snow/15 sm:mt-12 sm:rounded-[22px] sm:backdrop-blur-md"
+      className="mt-8 grid grid-cols-4 gap-px overflow-hidden rounded-panel border border-snow/15 bg-snow/15 sm:mt-12 sm:rounded-card sm:backdrop-blur-md"
       aria-busy={!items}
     >
       {(items ?? Array.from({ length: 4 }, () => null)).map((it, i) => (
         <div key={i} className="flex flex-col-reverse bg-night/80 px-2.5 py-3 sm:bg-night/40 sm:px-5 sm:py-4">
-          <dt className="text-xs leading-tight text-snow/75 sm:text-[15px]">{it ? it.label : ' '}</dt>
+          <dt className="text-xs leading-tight text-snow/75 sm:text-body">{it ? it.label : ' '}</dt>
           <dd className="text-xl font-light tabular-nums tracking-[-0.02em] sm:text-3xl">{it ? it.value.toLocaleString('ru-RU') : '—'}</dd>
         </div>
       ))}
@@ -242,14 +242,14 @@ const CitySection: React.FC = () => (
             <li key={p.title} className="sp-reveal max-w-sm">
               <Squares n={p.n} />
               <h3 className="mt-2.5 text-xl font-medium">{p.title}</h3>
-              <p className="mt-1 text-[17px] leading-relaxed text-muted">{p.text}</p>
+              <p className="mt-1 text-lead leading-relaxed text-muted">{p.text}</p>
             </li>
           ))}
         </ul>
       </div>
       <figure className="sp-reveal relative">
         {/* Рендер на светлой «сцене»: в светлой теме сливается с фоном, в тёмной — светлая карточка */}
-        <div className="overflow-hidden rounded-[32px] bg-stage">
+        <div className="overflow-hidden rounded-4xl bg-stage">
           <img
             src={IMG('iso-district')}
             srcSet={srcSet('iso-district', 800, 1536)}
@@ -265,7 +265,7 @@ const CitySection: React.FC = () => (
           {['Футбол · 19:00 · 7/10', 'Пробежка · 07:30', 'Стритбол · сб 12:00'].map((t, i) => (
             <span
               key={t}
-              className={`rounded-full bg-night/85 px-3 py-1 text-[13px] font-medium text-snow sm:px-3.5 sm:py-1.5 sm:text-sm ${i === 2 ? 'hidden sm:inline' : ''}`}
+              className={`rounded-full bg-night/85 px-3 py-1 text-label font-medium text-snow sm:px-3.5 sm:py-1.5 sm:text-sm ${i === 2 ? 'hidden sm:inline' : ''}`}
             >
               {t}
             </span>
@@ -302,7 +302,7 @@ const BalanceSection: React.FC = () => (
       </h2>
       <ul className="mt-6 max-w-lg sm:mt-10">
         {BALANCE.map((b) => (
-          <li key={b.text} className="sp-reveal flex items-center justify-between gap-4 border-b border-snow/15 py-4 text-[17px] sm:py-5 sm:text-lg">
+          <li key={b.text} className="sp-reveal flex items-center justify-between gap-4 border-b border-snow/15 py-4 text-lead sm:py-5 sm:text-lg">
             {b.text}
             <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-snow/10">
               <b.icon className="h-5 w-5" aria-hidden="true" />
@@ -343,7 +343,7 @@ const WhoSection: React.FC = () => (
         {WHO.map((w) => (
           <li
             key={w.img}
-            className="relative aspect-[3/4] w-[72%] shrink-0 snap-start overflow-hidden rounded-[22px] bg-surface-2 sm:w-auto"
+            className="relative aspect-[3/4] w-[72%] shrink-0 snap-start overflow-hidden rounded-card bg-surface-2 sm:w-auto"
           >
             <img
               src={IMG(w.img)}
@@ -412,7 +412,7 @@ const FeaturesSection: React.FC = () => (
           width={900}
           height={1350}
           loading="lazy"
-          className="sp-reveal aspect-[16/10] w-full rounded-[22px] object-cover sm:aspect-[4/5]"
+          className="sp-reveal aspect-[16/10] w-full rounded-card object-cover sm:aspect-[4/5]"
         />
         <img
           src={IMG('feat-gym')}
@@ -422,7 +422,7 @@ const FeaturesSection: React.FC = () => (
           width={900}
           height={1350}
           loading="lazy"
-          className="sp-reveal hidden aspect-[4/5] w-full rounded-[22px] object-cover sm:block"
+          className="sp-reveal hidden aspect-[4/5] w-full rounded-card object-cover sm:block"
         />
         <div className="sp-reveal sm:col-span-2 lg:col-span-1">
           <p className="text-lg font-medium leading-snug sm:text-xl">В приложении есть всё, чтобы найти компанию и дойти до тренировки:</p>
@@ -433,7 +433,7 @@ const FeaturesSection: React.FC = () => (
                   <f.icon className="h-5 w-5" aria-hidden="true" />
                 </span>
                 <h3 className="mt-3 font-semibold leading-tight">{f.title}</h3>
-                <p className="mt-1 text-[15px] leading-snug text-muted">{f.text}</p>
+                <p className="mt-1 text-body leading-snug text-muted">{f.text}</p>
               </li>
             ))}
           </ul>
@@ -454,7 +454,7 @@ const STEPS = [
 const AppSection: React.FC = () => (
   <section aria-labelledby="app-title" className="border-y border-line bg-card">
     <Container className="grid items-center gap-8 py-12 sm:gap-10 sm:py-24 lg:grid-cols-2">
-      <div className="sp-reveal overflow-hidden rounded-[32px] bg-stage">
+      <div className="sp-reveal overflow-hidden rounded-4xl bg-stage">
         <img
           src={IMG('phone-3d')}
           srcSet={srcSet('phone-3d', 800, 1536)}
@@ -477,7 +477,7 @@ const AppSection: React.FC = () => (
               <span className="text-3xl font-light tabular-nums text-muted">0{i + 1}</span>
               <div>
                 <h3 className="text-xl font-medium">{s.title}</h3>
-                <p className="mt-1 text-[17px] leading-relaxed text-muted">{s.text}</p>
+                <p className="mt-1 text-lead leading-relaxed text-muted">{s.text}</p>
               </div>
             </li>
           ))}
@@ -496,7 +496,7 @@ const Upcoming: React.FC<{ events: SportEvent[] | null }> = ({ events }) => {
       <Container className="py-12 sm:py-24">
         <div className="grid gap-4 lg:grid-cols-[1fr_20rem] lg:items-end">
           <DisplayTitle id="upcoming-title" first="Уже собираются" second="ближайшие встречи" />
-          <p className="sp-reveal max-w-xs text-[17px] text-muted">Зарегистрируйтесь, чтобы записаться и увидеть все встречи на карте.</p>
+          <p className="sp-reveal max-w-xs text-lead text-muted">Зарегистрируйтесь, чтобы записаться и увидеть все встречи на карте.</p>
         </div>
         <ul className="mt-8 grid gap-3 sm:mt-12 sm:gap-4 md:grid-cols-3" aria-busy={!events}>
           {events
@@ -506,7 +506,7 @@ const Upcoming: React.FC<{ events: SportEvent[] | null }> = ({ events }) => {
                   <li key={e.id} className="sp-reveal">
                     <Link
                       to={authLink('user', `/events/${e.id}`)}
-                      className="group flex h-full flex-col rounded-[22px] border border-line bg-card p-5 hover:border-line-2 sm:p-6"
+                      className="group flex h-full flex-col rounded-card border border-line bg-card p-5 hover:border-line-2 sm:p-6"
                     >
                       <div className="flex items-center justify-between">
                         <span className="flex items-center gap-3 text-muted">
@@ -518,8 +518,8 @@ const Upcoming: React.FC<{ events: SportEvent[] | null }> = ({ events }) => {
                         <ArrowUpRight className="h-5 w-5 text-muted transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" aria-hidden="true" />
                       </div>
                       <h3 className="mt-4 text-lg font-medium leading-snug sm:mt-6 sm:text-xl">{e.title}</h3>
-                      <p className="mt-2 text-[15px] text-muted">{formatShortDateTime(e.startTime, e.timeZone)}</p>
-                      <p className="mt-1 line-clamp-2 text-[15px] text-muted">{e.address}</p>
+                      <p className="mt-2 text-body text-muted">{formatShortDateTime(e.startTime, e.timeZone)}</p>
+                      <p className="mt-1 line-clamp-2 text-body text-muted">{e.address}</p>
                       <p className="mt-auto pt-4 font-semibold sm:pt-6">
                         {left === 0 ? 'Мест нет, есть лист ожидания' : `${left} ${plural(left, 'место', 'места', 'мест')} свободно`}
                       </p>
@@ -527,7 +527,7 @@ const Upcoming: React.FC<{ events: SportEvent[] | null }> = ({ events }) => {
                   </li>
                 );
               })
-            : Array.from({ length: 3 }, (_, i) => <li key={i} aria-hidden="true" className="h-60 rounded-[22px] bg-surface-2" />)}
+            : Array.from({ length: 3 }, (_, i) => <li key={i} aria-hidden="true" className="h-60 rounded-card bg-surface-2" />)}
         </ul>
       </Container>
     </section>
@@ -560,9 +560,9 @@ const ForOrganizations: React.FC = () => {
       <Container className="py-12 sm:py-24">
         <Eyebrow className="text-snow/70">Для клубов и организаций</Eyebrow>
         <h2 id="orgs-title" className="sp-reveal mt-4 max-w-2xl text-[28px] font-light leading-[1.1] tracking-[-0.03em] sm:text-[52px]">
-          Соберите <span className="rounded-[14px] bg-snow px-3 text-night">свою группу</span> из тех, кто живёт рядом
+          Соберите <span className="rounded-tile bg-snow px-3 text-night">свою группу</span> из тех, кто живёт рядом
         </h2>
-        <p className="sp-reveal mt-5 max-w-xl text-[17px] leading-relaxed text-snow/75">
+        <p className="sp-reveal mt-5 max-w-xl text-lead leading-relaxed text-snow/75">
           После проверки администратором вы сможете публиковать события от имени организации.
         </p>
         {/* Телефон: компактный список без карточек и размытия; с md — стеклянные карточки */}
@@ -570,12 +570,12 @@ const ForOrganizations: React.FC = () => {
           {ORG_POINTS.map((p) => (
             <li
               key={p.title}
-              className="sp-reveal flex gap-3 border-b border-snow/15 py-4 md:block md:rounded-[22px] md:border md:bg-snow/10 md:p-5 md:backdrop-blur-md"
+              className="sp-reveal flex gap-3 border-b border-snow/15 py-4 md:block md:rounded-card md:border md:bg-snow/10 md:p-5 md:backdrop-blur-md"
             >
               <p.icon className="mt-0.5 h-6 w-6 shrink-0 text-brand" aria-hidden="true" />
               <div>
                 <h3 className="text-lg font-medium md:mt-6">{p.title}</h3>
-                <p className="mt-1 text-[15px] text-snow/75">{p.text}</p>
+                <p className="mt-1 text-body text-snow/75">{p.text}</p>
               </div>
             </li>
           ))}

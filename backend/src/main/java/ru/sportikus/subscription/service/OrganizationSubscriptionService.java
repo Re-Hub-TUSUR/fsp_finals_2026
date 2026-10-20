@@ -5,14 +5,18 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
 import ru.sportikus.subscription.dto.OrganizationSubscriptionResponse;
 import ru.sportikus.subscription.model.OrganizationSubscription;
 import ru.sportikus.subscription.repository.OrganizationSubscriptionRepository;
+import ru.sportikus.subscription.repository.OrganizationSubscriptionRepository.SubscriberCount;
 import ru.sportikus.user.repository.UserRepository;
 
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -46,11 +50,18 @@ public class OrganizationSubscriptionService {
     @Transactional(readOnly = true)
     public List<OrganizationSubscriptionResponse> mine(AuthUser auth) {
         rejectNonUser(auth);
-        return repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
-                .filter(item -> "APPROVED".equals(item.getOrganization().getStatus()))
+        List<OrganizationSubscription> items = repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
+                .filter(item -> OrganizationStatus.APPROVED.equals(item.getOrganization().getStatus()))
+                .toList();
+        if (items.isEmpty()) return List.of();
+        // Счётчики подписчиков всех организаций — одним сгруппированным запросом
+        Map<Long, Long> counts = repository.countByOrganizations(
+                        items.stream().map(item -> item.getOrganization().getId()).toList()).stream()
+                .collect(Collectors.toMap(SubscriberCount::getOrganizationId, SubscriberCount::getCnt));
+        return items.stream()
                 .map(item -> new OrganizationSubscriptionResponse(
                         item.getOrganization().getId(), item.getOrganization().getName(), item.getOrganization().getLogoUrl(),
-                        repository.countByOrganizationId(item.getOrganization().getId()), item.getCreatedAt()))
+                        counts.getOrDefault(item.getOrganization().getId(), 0L), item.getCreatedAt()))
                 .toList();
     }
 
@@ -66,7 +77,7 @@ public class OrganizationSubscriptionService {
 
     private Organization approved(Long id) {
         return organizationRepository.findById(id)
-                .filter(org -> "APPROVED".equals(org.getStatus()))
+                .filter(org -> OrganizationStatus.APPROVED.equals(org.getStatus()))
                 .orElseThrow(() -> ApiException.notFound("Организация не найдена"));
     }
 

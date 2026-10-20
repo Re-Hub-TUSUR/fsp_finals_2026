@@ -1,26 +1,23 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Archive, Calendar, CheckCircle2, Loader2, MapPin, PlusCircle, QrCode } from 'lucide-react';
+import { Archive, Calendar, CheckCircle2, MapPin, PlusCircle, QrCode } from 'lucide-react';
 import { meApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import type { Participation, SportEvent } from '../types';
 import { ParticipationBadge } from '../components/ParticipationBadge';
 import { TicketModal } from '../components/TicketModal';
 import { CancelParticipationDialog } from '../components/CancelParticipationDialog';
-import { ErrorNotice } from '../components/ui';
+import { CountBadge, ErrorNotice, LoadingBlock, Tab, Tabs } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { autoRejectReason, isAutoRejected } from '../utils/moderation';
 
-type Tab = 'participating' | 'organizing' | 'archive';
+type TabKey = 'participating' | 'organizing' | 'archive';
 
 export const MyEventsPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
-  const [tab, setTab] = useState<Tab>('participating');
-  const [participations, setParticipations] = useState<Participation[]>([]);
-  const [managed, setManaged] = useState<SportEvent[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<TabKey>('participating');
   const [cancelTarget, setCancelTarget] = useState<Participation | null>(null);
   const [cancelBusy, setCancelBusy] = useState(false);
   const [cancelError, setCancelError] = useState<string | null>(null);
@@ -28,24 +25,12 @@ export const MyEventsPage: React.FC = () => {
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
-  const load = useCallback(async () => {
-    try {
-      const [mine, own] = await Promise.all([meApi.participations(), meApi.events()]);
-      setParticipations(mine);
-      setManaged(own);
-      setError(null);
-    } catch (e) {
-      setError(errorMessage(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (!ready || !currentUser) return;
-    setLoading(true);
-    void load();
-  }, [load, ready, currentUser]);
+  const { data, loading, error, reload } = useApi(
+    () => Promise.all([meApi.participations(), meApi.events()]),
+    [currentUser?.id],
+    { enabled: ready && !!currentUser },
+  );
+  const [participations, managed] = data ?? [[] as Participation[], [] as SportEvent[]];
 
   const cancel = async () => {
     if (!cancelTarget?.event) return;
@@ -54,17 +39,12 @@ export const MyEventsPage: React.FC = () => {
     try {
       await participationApi.cancel(cancelTarget.event.id);
       setCancelTarget(null);
-      await load();
+      reload();
     } catch (e) {
       setCancelError(errorMessage(e));
     } finally {
       setCancelBusy(false);
     }
-  };
-
-  const reload = () => {
-    setLoading(true);
-    void load();
   };
 
   if (!ready) return null;
@@ -95,27 +75,25 @@ export const MyEventsPage: React.FC = () => {
         </Link>
       </div>
 
-      <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0" role="tablist">
-        <TabButton active={tab === 'participating'} onClick={() => setTab('participating')}>
+      <Tabs label="Мои мероприятия">
+        <Tab active={tab === 'participating'} onClick={() => setTab('participating')}>
           Я участвую ({activeParticipations.length})
-        </TabButton>
-        <TabButton active={tab === 'organizing'} onClick={() => setTab('organizing')}>
+        </Tab>
+        <Tab active={tab === 'organizing'} onClick={() => setTab('organizing')}>
           Я организую ({activeManaged.length})
           {pendingTotal > 0 && (
-            <span className="ml-2 bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pendingTotal}</span>
+            <CountBadge>{pendingTotal}</CountBadge>
           )}
-        </TabButton>
-        <TabButton active={tab === 'archive'} onClick={() => setTab('archive')}>
-          <span className="inline-flex items-center gap-1.5"><Archive className="h-4 w-4" /> Архив ({archiveTotal})</span>
-        </TabButton>
-      </div>
+        </Tab>
+        <Tab active={tab === 'archive'} onClick={() => setTab('archive')}>
+          <Archive className="h-4 w-4" /> Архив ({archiveTotal})
+        </Tab>
+      </Tabs>
 
       {error && <ErrorNotice message={error} onRetry={reload} className="mb-4" />}
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
+        <LoadingBlock className="py-16" />
       ) : tab === 'participating' ? (
         activeParticipations.length === 0 ? (
           <Empty text="Вы пока никуда не записались." linkTo="/" linkText="Найти мероприятие" />
@@ -260,23 +238,6 @@ export const MyEventsPage: React.FC = () => {
     </div>
   );
 };
-
-const TabButton: React.FC<{ active: boolean; onClick: () => void; children: React.ReactNode }> = ({
-  active,
-  onClick,
-  children,
-}) => (
-  <button
-    role="tab"
-    aria-selected={active}
-    onClick={onClick}
-    className={`pb-3 text-sm sm:text-base font-semibold border-b-2 transition-colors shrink-0 whitespace-nowrap ${
-      active ? 'border-brand text-brand-ink' : 'border-transparent text-slate-500 hover:text-slate-800'
-    }`}
-  >
-    {children}
-  </button>
-);
 
 const ArchiveList: React.FC<{ events: SportEvent[] }> = ({ events }) => (
   <ul className="space-y-3">

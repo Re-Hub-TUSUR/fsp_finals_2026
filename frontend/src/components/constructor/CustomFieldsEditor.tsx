@@ -1,7 +1,7 @@
 import React from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 import type { CustomField } from '../../types';
-import { inputClass } from '../FieldInput';
+import { inputClass } from '../ui';
 
 interface CustomFieldsEditorProps {
   fields: CustomField[];

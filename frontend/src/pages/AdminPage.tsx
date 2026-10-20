@@ -1,12 +1,13 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Ban, Building2, CheckCircle, EyeOff, Loader2, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
+import { Ban, Building2, CheckCircle, EyeOff, MessageSquare, RotateCcw, Search, ShieldAlert, XCircle } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
+import { useApi } from '../hooks/useApi';
 import { adminApi, commentsApi } from '../api';
 import { errorMessage } from '../api/client';
 import type { AdminOrganization, EventComment, SportEvent } from '../types';
 import { Modal } from '../components/Modal';
-import { inputClass, labelClass } from '../components/FieldInput';
+import { CountBadge, inputClass, labelClass, LoadingBlock, Tab, Tabs } from '../components/ui';
 import { formatShortDateTime } from '../utils/format';
 import { ATTENTION_SYMBOL, MODERATION_CATEGORY_LABELS, needsAdminAttention } from '../utils/moderation';
 
@@ -41,11 +42,6 @@ const ORG_STATUS: Record<AdminOrganization['status'], { label: string; cls: stri
 export const AdminPage: React.FC = () => {
   const { currentUser, ready } = useAuth();
   const [tab, setTab] = useState<'orgs' | 'events' | 'comments'>('orgs');
-  const [orgs, setOrgs] = useState<AdminOrganization[]>([]);
-  const [events, setEvents] = useState<SportEvent[]>([]);
-  const [comments, setComments] = useState<EventComment[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   const [target, setTarget] = useState<Target | null>(null);
   const [reason, setReason] = useState('');
   const [busy, setBusy] = useState(false);
@@ -54,28 +50,17 @@ export const AdminPage: React.FC = () => {
 
   const isAdmin = currentUser?.role === 'ROLE_ADMIN';
 
-  const load = useCallback(async () => {
-    try {
-      const [o, e, c] = await Promise.all([
+  const { data, loading, error, reload, setError } = useApi(
+    () =>
+      Promise.all([
         adminApi.organizations(),
         adminApi.events(),
-        commentsApi.adminList().catch(() => []),
-      ]);
-      setOrgs(o);
-      setEvents(e);
-      setComments(c);
-      setError(null);
-    } catch (err) {
-      setError(errorMessage(err));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    if (ready && isAdmin) void load();
-    else if (ready) setLoading(false);
-  }, [ready, isAdmin, load]);
+        commentsApi.adminList().catch((): EventComment[] => []),
+      ]),
+    [currentUser?.id],
+    { enabled: ready && isAdmin },
+  );
+  const [orgs, events, comments] = data ?? [[] as AdminOrganization[], [] as SportEvent[], [] as EventComment[]];
 
   const run = async (action: () => Promise<unknown>) => {
     setBusy(true);
@@ -84,7 +69,7 @@ export const AdminPage: React.FC = () => {
       await action();
       setTarget(null);
       setReason('');
-      await load();
+      reload();
     } catch (err) {
       setError(errorMessage(err));
     } finally {
@@ -131,10 +116,6 @@ export const AdminPage: React.FC = () => {
     setTab(next);
     setSearch('');
   };
-  const tabClass = (active: boolean) =>
-    `pb-3 text-base font-semibold transition-all border-b-2 flex items-center gap-2 ${
-      active ? 'border-brand text-brand' : 'border-transparent text-slate-500 hover:text-slate-800'
-    }`;
 
   return (
     <div className="max-w-5xl mx-auto px-3 sm:px-4 py-6 sm:py-8 w-full min-w-0 overflow-x-hidden">
@@ -148,25 +129,25 @@ export const AdminPage: React.FC = () => {
         </div>
       </div>
 
-      <div className="flex border-b border-slate-200 gap-3 sm:gap-6 mb-6 overflow-x-auto no-scrollbar -mx-3 px-3 sm:mx-0 sm:px-0">
-        <button onClick={() => switchTab('orgs')} className={`${tabClass(tab === 'orgs')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+      <Tabs label="Разделы модерации">
+        <Tab active={tab === 'orgs'} onClick={() => switchTab('orgs')}>
           <Building2 className="w-4 h-4" />
-          Организации {pending > 0 && <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full">{pending}</span>}
-        </button>
-        <button onClick={() => switchTab('events')} className={`${tabClass(tab === 'events')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+          Организации {pending > 0 && <CountBadge>{pending}</CountBadge>}
+        </Tab>
+        <Tab active={tab === 'events'} onClick={() => switchTab('events')}>
           <Ban className="w-4 h-4" />
           Мероприятия ({events.length})
           {attention > 0 && (
-            <span className="bg-amber-500 text-snow text-xs font-bold px-2 py-0.5 rounded-full" title="Требуют внимания после автопроверки">
+            <CountBadge title="Требуют внимания после автопроверки">
               {ATTENTION_SYMBOL} {attention}
-            </span>
+            </CountBadge>
           )}
-        </button>
-        <button onClick={() => switchTab('comments')} className={`${tabClass(tab === 'comments')} shrink-0 whitespace-nowrap text-sm sm:text-base`}>
+        </Tab>
+        <Tab active={tab === 'comments'} onClick={() => switchTab('comments')}>
           <MessageSquare className="w-4 h-4" />
           Комментарии ({comments.length})
-        </button>
-      </div>
+        </Tab>
+      </Tabs>
 
       {error && (
         <div role="alert" className="mb-4 p-3 bg-red-50 border border-red-200 rounded-xl text-red-800 text-sm">
@@ -187,9 +168,7 @@ export const AdminPage: React.FC = () => {
       </label>
 
       {loading ? (
-        <div className="flex justify-center py-16 text-slate-400">
-          <Loader2 className="w-8 h-8 animate-spin" />
-        </div>
+        <LoadingBlock className="py-16" />
       ) : tab === 'orgs' ? (
         <div className="space-y-4">
           {shownOrgs.length === 0 && (
@@ -209,7 +188,7 @@ export const AdminPage: React.FC = () => {
                       {org.name}
                     </Link>
                   </h3>
-                  <span className={`text-[11px] font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
+                  <span className={`text-caption font-bold px-2 py-0.5 rounded-full uppercase shrink-0 ${ORG_STATUS[org.status].cls}`}>
                     {ORG_STATUS[org.status].label}
                   </span>
                 </div>
@@ -375,12 +354,12 @@ export const AdminPage: React.FC = () => {
                     </Link>
                     <span className="text-xs font-semibold text-slate-800 break-words">{cm.authorName}</span>
                     {cm.organizer && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
+                      <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 shrink-0">
                         Организатор
                       </span>
                     )}
                     {cm.hidden && (
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
+                      <span className="text-caption font-bold px-2 py-0.5 rounded-full bg-red-100 text-red-700 shrink-0">
                         Скрыто
                       </span>
                     )}

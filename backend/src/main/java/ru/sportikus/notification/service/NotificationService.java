@@ -1,6 +1,7 @@
 package ru.sportikus.notification.service;
 
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.event.model.Event;
@@ -19,12 +20,15 @@ import java.util.List;
 @RequiredArgsConstructor
 public class NotificationService {
 
+    /** Сколько последних уведомлений отдаём в колокольчик и на страницу уведомлений. */
+    static final int RECENT_LIMIT = 100;
+
     private final NotificationRepository notificationRepository;
 
     @Transactional(readOnly = true)
     public NotificationListResponse getNotifications(AuthUser auth) {
         long unread = notificationRepository.countByUserIdAndReadFalse(auth.id());
-        List<NotificationResponse> items = notificationRepository.findRecentByUserId(auth.id())
+        List<NotificationResponse> items = notificationRepository.findRecentByUserId(auth.id(), PageRequest.of(0, RECENT_LIMIT))
                 .stream()
                 .map(NotificationResponse::from)
                 .toList();

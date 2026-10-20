@@ -3,6 +3,7 @@ package ru.sportikus.notification;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.Answers;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.mockito.junit.jupiter.MockitoSettings;
@@ -53,12 +54,14 @@ class EventInviteServiceTest {
     private static final User ALEXEY = User.builder().id(3L).fullName("Алексей Профи").role("ROLE_USER").build();
     private static final User DMITRY = User.builder().id(8L).fullName("Дмитрий Бегунов").role("ROLE_USER").build();
 
-    @Mock EventRepository events;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) EventRepository events;
     @Mock FriendshipRepository friendships;
     @Mock ParticipationRepository participations;
     @Mock NotificationRepository notifications;
     @Mock NotificationService notificationService;
-    @Mock UserRepository users;
+    // default-методы репозитория (require*) работают по-настоящему поверх застабленных find*
+    @Mock(answer = Answers.CALLS_REAL_METHODS) UserRepository users;
     EventInviteService service;
     Event event;
 

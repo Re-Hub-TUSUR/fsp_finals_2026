@@ -1,5 +1,5 @@
 import React from 'react';
-import { Loader2, X } from 'lucide-react';
+import { X } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
 import type { SportEvent } from '../types';
 import {
@@ -12,7 +12,8 @@ import {
   startLabelLong,
   type LatLng,
 } from '../utils/eventView';
-import { useEventJoin } from './useEventJoin';
+import { useEventJoin } from '../hooks/useEventJoin';
+import { Spinner } from './ui';
 import { isDemoEvent } from '../utils/tourDemo';
 
 interface MapSheetProps {
@@ -67,7 +68,7 @@ const SelectedPeek: React.FC<{
           type="button"
           onClick={onClose}
           aria-label="Закрыть"
-          className="shrink-0 w-11 h-11 rounded-[10px] bg-surface text-ink flex items-center justify-center"
+          className="shrink-0 w-11 h-11 rounded-control bg-surface text-ink flex items-center justify-center"
         >
           <X className="w-4 h-4" strokeWidth={2.4} />
         </button>
@@ -76,7 +77,7 @@ const SelectedPeek: React.FC<{
         <button
           type="button"
           onClick={onMore}
-          className="flex-1 h-[50px] rounded-[10px] border border-line-2 bg-card text-ink text-base font-semibold"
+          className="flex-1 h-[50px] rounded-control border border-line-2 bg-card text-ink text-base font-semibold"
         >
           Подробнее
         </button>
@@ -85,9 +86,9 @@ const SelectedPeek: React.FC<{
           // Записаться — сразу запись; остальным (гость, организация, статус «вы записаны») — подробности
           onClick={canJoin ? () => void join.start() : onMore}
           disabled={join.busy}
-          className={`flex-[1.4] h-[50px] rounded-[10px] text-base font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 ${action.cls}`}
+          className={`flex-[1.4] h-[50px] rounded-control text-base font-bold transition-colors flex items-center justify-center gap-2 disabled:opacity-70 ${action.cls}`}
         >
-          {join.busy && <Loader2 className="w-4 h-4 animate-spin" />}
+          {join.busy && <Spinner size="sm" />}
           {action.label}
         </button>
       </div>

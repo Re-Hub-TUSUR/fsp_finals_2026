@@ -5,7 +5,8 @@ import { AuthProvider, useAuth } from './context/AuthContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { AuthPage } from './pages/AuthPage';
 import { AchievementToast } from './components/AchievementToast';
-import { OfflineBanner } from './components/PwaBanners';
+// Модуль баннеров крошечный и нужен на каждом экране — отдельный чанк для InstallAppBanner не окупается
+import { InstallAppBanner, OfflineBanner } from './components/PwaBanners';
 import { LandingPage } from './pages/LandingPage';
 import { GuestHeader } from './components/landing/GuestHeader';
 import { getToken } from './api/client';
@@ -32,7 +33,6 @@ const ProfilePage = page(() => import('./pages/ProfilePage'), 'ProfilePage');
 // Оболочка вошедшего пользователя тоже не нужна гостю
 const Navbar = page(() => import('./components/Navbar'), 'Navbar');
 const MobileTabBar = page(() => import('./components/MobileTabBar'), 'MobileTabBar');
-const InstallAppBanner = page(() => import('./components/PwaBanners'), 'InstallAppBanner');
 const OnboardingTour = page(() => import('./components/OnboardingTour'), 'OnboardingTour');
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */

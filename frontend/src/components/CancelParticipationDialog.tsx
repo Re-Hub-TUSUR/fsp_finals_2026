@@ -31,7 +31,7 @@ export const CancelParticipationDialog: React.FC<{
         <button
           onClick={onConfirm}
           disabled={busy}
-          className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-[#fff] font-semibold disabled:opacity-60"
+          className="px-5 py-3 rounded-xl bg-red-600 hover:bg-red-700 text-snow font-semibold disabled:opacity-60"
         >
           {pending ? 'Отозвать' : waitlisted ? 'Выйти из очереди' : 'Отменить участие'}
         </button>

@@ -4,10 +4,10 @@ package ru.sportikus.security;
 public record AuthUser(Long id, String email, String role) {
 
     public boolean isAdmin() {
-        return "ROLE_ADMIN".equals(role);
+        return Roles.ADMIN.equals(role);
     }
 
     public boolean isOrganizer() {
-        return "ROLE_ORGANIZER".equals(role);
+        return Roles.ORGANIZER.equals(role);
     }
 }

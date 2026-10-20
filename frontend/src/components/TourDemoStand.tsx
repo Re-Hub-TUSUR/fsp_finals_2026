@@ -36,7 +36,7 @@ const StandFrame: React.FC<{ children: React.ReactNode }> = ({ children }) => (
     aria-label="Демонстрационный пример, ничего не отправляется"
     className="relative mb-3 rounded-2xl border border-dashed border-brand-line bg-surface p-2.5 sm:p-3"
   >
-    <span className="absolute -top-2.5 left-3 rounded-full bg-brand px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wider text-on-brand">
+    <span className="absolute -top-2.5 left-3 rounded-full bg-brand px-2 py-0.5 text-micro font-extrabold uppercase tracking-wider text-on-brand">
       Пример
     </span>
     {children}
@@ -59,15 +59,15 @@ const FakeButton: React.FC<{ children: React.ReactNode; pulse?: boolean }> = ({ 
 const EventDemo: React.FC = () => (
   <StandFrame>
     <div className="rounded-xl border border-line bg-card p-3">
-      <span className="rounded bg-brand-tint px-2 py-0.5 text-[11px] font-bold text-brand-ink">{DEMO_EVENT.sport}</span>
+      <span className="rounded bg-brand-tint px-2 py-0.5 text-caption font-bold text-brand-ink">{DEMO_EVENT.sport}</span>
       <p className="mt-1.5 text-sm sm:text-base font-extrabold leading-snug text-ink">{DEMO_EVENT.title}</p>
-      <p className="text-[11px] sm:text-xs text-muted">{DEMO_EVENT.organizer}</p>
-      <ul className="mt-2 space-y-1 text-[11px] sm:text-xs text-ink">
+      <p className="text-caption sm:text-xs text-muted">{DEMO_EVENT.organizer}</p>
+      <ul className="mt-2 space-y-1 text-caption sm:text-xs text-ink">
         <li className="flex items-center gap-1.5"><CalendarDays className="h-3.5 w-3.5 shrink-0 text-muted" />{DEMO_EVENT.when}</li>
         <li className="flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 shrink-0 text-muted" />{DEMO_EVENT.place}</li>
         <li className="flex items-center gap-1.5"><Users className="h-3.5 w-3.5 shrink-0 text-muted" />Свободно 5 мест из 12 · идёт Ольга из ваших друзей</li>
       </ul>
-      <div className="mt-2 flex flex-wrap gap-1.5 text-[10px] sm:text-[11px] font-semibold">
+      <div className="mt-2 flex flex-wrap gap-1.5 text-micro sm:text-caption font-semibold">
         <span className="rounded-full bg-surface px-2 py-0.5 text-ink">Уровень: новичок</span>
         <span className="rounded-full bg-surface px-2 py-0.5 text-ink">Бесплатно</span>
         <span className="rounded-full bg-surface px-2 py-0.5 text-ink">С собой: кроссовки, вода</span>
@@ -96,9 +96,9 @@ const FormDemo: React.FC = () => {
         <div className="mt-2 space-y-2">
           {DEMO_FIELDS.map((field, i) => (
             <div key={field.label}>
-              <span className="block text-[10px] sm:text-[11px] font-semibold text-muted">{field.label}</span>
+              <span className="block text-micro sm:text-caption font-semibold text-muted">{field.label}</span>
               <span
-                className={`mt-0.5 flex min-h-8 items-center rounded-lg border px-2.5 py-1 text-[11px] sm:text-xs transition-colors ${
+                className={`mt-0.5 flex min-h-8 items-center rounded-lg border px-2.5 py-1 text-caption sm:text-xs transition-colors ${
                   i < filled ? 'border-brand bg-brand-tint/40 text-ink' : 'border-line-2 bg-surface text-muted'
                 }`}
               >
@@ -106,7 +106,7 @@ const FormDemo: React.FC = () => {
               </span>
             </div>
           ))}
-          <span className="flex items-center gap-2 text-[11px] sm:text-xs text-ink">
+          <span className="flex items-center gap-2 text-caption sm:text-xs text-ink">
             <span
               className={`flex h-4 w-4 shrink-0 items-center justify-center rounded border ${
                 agreed ? 'border-brand bg-brand text-on-brand' : 'border-line-2 bg-card'
@@ -118,7 +118,7 @@ const FormDemo: React.FC = () => {
           </span>
         </div>
         <FakeButton pulse={agreed}>Отправить заявку</FakeButton>
-        <p className="mt-2 flex items-center justify-center gap-1.5 text-[11px] sm:text-xs font-semibold text-muted">
+        <p className="mt-2 flex items-center justify-center gap-1.5 text-caption sm:text-xs font-semibold text-muted">
           <Clock className="h-3.5 w-3.5" /> Дальше: «Заявка на рассмотрении» → «Вы участвуете»
         </p>
       </div>
@@ -139,7 +139,7 @@ const TicketDemo: React.FC<{ participantName: string }> = ({ participantName }) 
     <StandFrame>
       <div className="overflow-hidden rounded-xl border border-line bg-card">
         <div className="bg-brand px-3 py-2 text-on-brand">
-          <span className="inline-flex items-center gap-1 text-[10px] font-extrabold uppercase tracking-wider">
+          <span className="inline-flex items-center gap-1 text-micro font-extrabold uppercase tracking-wider">
             <Ticket className="h-3 w-3" /> Электронный билет · бесплатный вход
           </span>
           <p className="text-xs sm:text-sm font-extrabold leading-snug">{DEMO_EVENT.title}</p>
@@ -152,7 +152,7 @@ const TicketDemo: React.FC<{ participantName: string }> = ({ participantName }) 
               <span className="flex h-full w-full items-center justify-center text-[#98a0a9]"><QrCode className="h-8 w-8" /></span>
             )}
           </div>
-          <div className="min-w-0 space-y-1 text-[11px] sm:text-xs">
+          <div className="min-w-0 space-y-1 text-caption sm:text-xs">
             <code className="inline-block rounded-md border border-line bg-surface px-1.5 py-0.5 font-mono font-extrabold tracking-wider text-ink">
               {DEMO_TICKET_CODE}
             </code>
