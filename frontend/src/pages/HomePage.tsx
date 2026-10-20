@@ -467,7 +467,7 @@ export const HomePage: React.FC = () => {
           {/* Правый нижний угол; на мобильном — над свёрнутой шторкой, в раскрытой не нужен */}
           {view === 'map' && (
             <label
-              className={`absolute left-3 ${selectedEvent ? 'bottom-[218px]' : 'bottom-2'} lg:left-auto lg:right-4 lg:bottom-4 z-20 flex items-center gap-1.5 h-8 px-2.5 rounded-lg border border-line-2 bg-card text-ink text-xs font-semibold shadow-[0_2px_8px_rgba(20,30,45,0.12)] cursor-pointer select-none`}
+              className={`hidden lg:flex absolute lg:right-4 lg:bottom-4 z-20 items-center gap-1.5 h-8 px-2.5 rounded-lg border border-line-2 bg-card text-ink text-xs font-semibold shadow-[0_2px_8px_rgba(20,30,45,0.12)] cursor-pointer select-none`}
             >
               <input
                 type="checkbox"
