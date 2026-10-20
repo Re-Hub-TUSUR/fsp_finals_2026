@@ -100,14 +100,20 @@ src/
 ├── lib/
 │   ├── mapgl.ts             # загрузка 2GIS SDK, хук useMapgl (пересоздание карты при смене темы)
 │   └── mapPins.ts           # DOM-элементы меток, кластеров и точки пользователя
+├── hooks/                   # useApi (загрузка с отменой и тихим обновлением), usePolling (пауза в фоне), useDialogFocus, useDebouncedValue, useNow, useEventJoin
 ├── pages/                   # страницы-маршруты (см. таблицу выше), в том числе LandingPage
+│   ├── event/               # части страницы мероприятия: шапка, факты, панель записи (EventPhase)
+│   ├── create/              # конструктор: модель формы (reducer, валидация, payload), точка на карте, разделы
+│   └── profile/             # шапка профиля и вкладки: друзья, подписки, достижения
 ├── components/
+│   ├── ui/                  # дизайн-система: Button, Spinner/LoadingBlock, Card, Badge, Alert, Tabs, Chip, Toggle, ErrorNotice, стили полей
 │   ├── constructor/         # редакторы конструктора: свои поля, вопросы участнику, сведения организации, теги
 │   ├── BlinkMap.tsx, MapSheet.tsx, MapEventCard.tsx   # карта мероприятий: метки, кластеры, карточка выбранного события
-│   ├── HomeCards.tsx, HomeFilters.tsx, EventCard.tsx, EventDetailPanel.tsx   # лента, фильтры, панели
+│   ├── EventCard.tsx        # единая карточка мероприятия с обложкой (лента, рекомендации, профиль)
+│   ├── HomeCards.tsx, HomeFilters.tsx, EventDetailPanel.tsx   # ряд списка у карты, фильтры, панель деталей
 │   ├── LocationPicker.tsx, MiniMap.tsx, RouteButton.tsx   # выбор точки, мини-карта, маршрут в 2GIS/Яндекс/Google
 │   ├── FieldInput.tsx       # рендер поля формы по его описанию (основа конструктора)
-│   ├── JoinDialog.tsx, useEventJoin.tsx   # запись: анкета, требования, сообщение; отклик на освободившееся место очереди
+│   ├── JoinDialog.tsx       # запись: анкета, требования, сообщение; отклик на освободившееся место очереди
 │   ├── TicketModal.tsx, CheckInScannerModal.tsx   # QR-билет участника и сканер организатора (камера, фото, ручной ввод)
 │   ├── InterestQuiz.tsx, PreferencesForm.tsx, InterestsPanel.tsx   # тест «Компас интересов» (6 шагов), форма и блок интересов в профиле
 │   ├── OnboardingTour.tsx   # обучающий тур по сайту с подсветкой элементов (data-tour), адаптация под телефон
@@ -117,7 +123,7 @@ src/
 │   ├── NotificationBell.tsx, NotificationItem.tsx, AchievementToast.tsx   # уведомления (опрос раз в 20 с), всплывающее достижение
 │   ├── InviteFriendsModal.tsx, ShareEventModal.tsx, EventWeather.tsx   # приглашения, «Поделиться», погода
 │   ├── PwaBanners.tsx       # баннер установки приложения и плашка «Нет сети»
-│   └── Navbar.tsx, MobileTabBar.tsx, DemoRoleBar.tsx, ui.tsx (в том числе ErrorNotice — ошибка с «Повторить»), Modal.tsx, …   # каркас и общие элементы
+│   └── Navbar.tsx, MobileTabBar.tsx, Modal.tsx, …   # каркас и общие элементы
 ├── utils/
 │   ├── format.ts            # даты в часовом поясе площадки, цены, подписи
 │   ├── eventView.ts         # производные состояния события (идёт сейчас, мало мест, очередь, расстояние, фильтр «Когда»)
@@ -127,6 +133,9 @@ src/
 │   ├── exportCsv.ts         # выгрузка участников в CSV с защитой от формульных инъекций
 │   ├── weather.ts           # прогноз Open-Meteo на время мероприятия
 │   ├── moderation.ts        # автопроверка: символ ⚠, категории фильтра, текст отказа
+│   ├── homeFilters.ts       # состояние фильтров ленты и карты, значения по умолчанию, счётчики
+│   ├── geolocation.ts       # позиция пользователя промисом; без запроса разрешения, если оно уже выдано
+│   ├── cn.ts                # склейка классов с разрешением конфликтов Tailwind (clsx + tailwind-merge)
 │   └── sportIcons.ts, eventCoverImages.ts   # значки видов спорта и обложки карточек
 ├── pwa.ts                   # регистрация service worker, установка, очистка офлайн-данных
 └── types/index.ts           # типы, соответствующие DTO бэкенда
