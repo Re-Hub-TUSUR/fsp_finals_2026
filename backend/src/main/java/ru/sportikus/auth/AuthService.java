@@ -6,8 +6,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.JwtService;
+import ru.sportikus.security.Roles;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
 
@@ -36,7 +38,7 @@ public class AuthService {
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .fullName(request.firstName().trim() + " " + request.lastName().trim())
-                .role("ROLE_USER")
+                .role(Roles.USER)
                 .build());
         return new AuthResponse(jwtService.generate(user), toDto(user));
     }
@@ -52,7 +54,7 @@ public class AuthService {
                 .email(email)
                 .passwordHash(passwordEncoder.encode(request.password()))
                 .fullName(request.name().trim())
-                .role("ROLE_ORGANIZER")
+                .role(Roles.ORGANIZER)
                 .build());
         organizationRepository.save(Organization.builder()
                 .name(request.name().trim())
@@ -60,7 +62,7 @@ public class AuthService {
                 .ogrn(request.ogrn())
                 .kpp(request.kpp())
                 .owner(owner)
-                .status("PENDING")
+                .status(OrganizationStatus.PENDING)
                 .build());
         return new AuthResponse(jwtService.generate(owner), toDto(owner));
     }
@@ -83,7 +85,7 @@ public class AuthService {
     }
 
     private UserDto toDto(User user) {
-        Organization org = "ROLE_ORGANIZER".equals(user.getRole())
+        Organization org = Roles.ORGANIZER.equals(user.getRole())
                 ? organizationRepository.findFirstByOwnerIdOrderByIdAsc(user.getId()).orElse(null)
                 : null;
         return new UserDto(user.getId(), user.getEmail(), user.getFullName(), user.getRole(), user.getAvatarUrl(),

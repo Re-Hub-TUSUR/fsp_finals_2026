@@ -5,6 +5,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
 import ru.sportikus.subscription.dto.OrganizationSubscriptionResponse;
@@ -50,7 +51,7 @@ public class OrganizationSubscriptionService {
     public List<OrganizationSubscriptionResponse> mine(AuthUser auth) {
         rejectNonUser(auth);
         List<OrganizationSubscription> items = repository.findByUserIdOrderByCreatedAtDesc(auth.id()).stream()
-                .filter(item -> "APPROVED".equals(item.getOrganization().getStatus()))
+                .filter(item -> OrganizationStatus.APPROVED.equals(item.getOrganization().getStatus()))
                 .toList();
         if (items.isEmpty()) return List.of();
         // Счётчики подписчиков всех организаций — одним сгруппированным запросом
@@ -76,7 +77,7 @@ public class OrganizationSubscriptionService {
 
     private Organization approved(Long id) {
         return organizationRepository.findById(id)
-                .filter(org -> "APPROVED".equals(org.getStatus()))
+                .filter(org -> OrganizationStatus.APPROVED.equals(org.getStatus()))
                 .orElseThrow(() -> ApiException.notFound("Организация не найдена"));
     }
 

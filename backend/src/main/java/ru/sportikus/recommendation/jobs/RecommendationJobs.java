@@ -80,7 +80,8 @@ public class RecommendationJobs {
                 }
             });
         } catch (RuntimeException e) {
-            log.warn("Recommendation job {} failed: {}", name, e.getMessage());
+            // Сбой пересчёта неожиданный (SQL, блокировки) — нужен полный стек
+            log.warn("Recommendation job {} failed", name, e);
         }
     }
 }

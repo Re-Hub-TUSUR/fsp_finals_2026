@@ -12,8 +12,10 @@ import ru.sportikus.friendship.dto.FriendshipState;
 import ru.sportikus.friendship.model.Friendship;
 import ru.sportikus.friendship.model.FriendshipStatus;
 import ru.sportikus.friendship.repository.FriendshipRepository;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
+import ru.sportikus.security.Roles;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
 
@@ -103,12 +105,12 @@ public class FriendshipService {
         if (normalized.isBlank()) throw ApiException.badRequest("Введите электронную почту");
         User user = userRepository.findByEmailIgnoreCase(normalized)
                 .filter(candidate -> !candidate.getId().equals(auth.id()))
-                .filter(candidate -> !"ROLE_ADMIN".equals(candidate.getRole()))
+                .filter(candidate -> !Roles.ADMIN.equals(candidate.getRole()))
                 .orElseThrow(() -> ApiException.notFound("Пользователь с такой почтой не найден"));
         // Организация — не друг: отдаём id для подписки, состояния дружбы нет
-        Long organizationId = "ROLE_ORGANIZER".equals(user.getRole())
+        Long organizationId = Roles.ORGANIZER.equals(user.getRole())
                 ? organizationRepository.findFirstByOwnerIdOrderByIdAsc(user.getId())
-                        .filter(org -> "APPROVED".equals(org.getStatus()))
+                        .filter(org -> OrganizationStatus.APPROVED.equals(org.getStatus()))
                         .map(org -> org.getId()).orElse(null)
                 : null;
         return new FriendSearchResponse(user.getId(), user.getFullName(), user.getEmail(), user.getAvatarUrl(),
@@ -135,8 +137,8 @@ public class FriendshipService {
     private User target(AuthUser auth, Long userId) {
         if (auth.id().equals(userId)) throw ApiException.badRequest("Нельзя добавить себя в друзья");
         User target = userRepository.require(userId);
-        if ("ROLE_ADMIN".equals(target.getRole())) throw ApiException.forbidden("Администратор не участвует в дружбе");
-        if ("ROLE_ORGANIZER".equals(target.getRole())) {
+        if (Roles.ADMIN.equals(target.getRole())) throw ApiException.forbidden("Администратор не участвует в дружбе");
+        if (Roles.ORGANIZER.equals(target.getRole())) {
             throw ApiException.forbidden("Дружба доступна только между пользователями — на организацию можно подписаться");
         }
         return target;

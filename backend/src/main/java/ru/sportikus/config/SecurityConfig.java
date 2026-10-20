@@ -1,5 +1,6 @@
 package ru.sportikus.config;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -18,7 +19,10 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+import ru.sportikus.common.GlobalExceptionHandler.ErrorDetails;
+import ru.sportikus.common.GlobalExceptionHandler.ErrorResponseWrapper;
 import ru.sportikus.security.JwtAuthFilter;
+import ru.sportikus.security.Roles;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;
@@ -29,6 +33,8 @@ import java.util.List;
 @EnableMethodSecurity
 @RequiredArgsConstructor
 public class SecurityConfig {
+
+    private static final ObjectMapper JSON = new ObjectMapper();
 
     private final JwtAuthFilter jwtAuthFilter;
 
@@ -57,7 +63,7 @@ public class SecurityConfig {
                     "/api/v1/public/stats", "/api/v1/sports", "/api/v1/templates", "/api/v1/cities", "/api/v1/cities/nearest",
                     "/api/v1/events", "/api/v1/events/{id}", "/api/v1/events/{id}/ics", "/api/v1/events/{id}/comments",
                     "/api/v1/profiles/users/{id}", "/api/v1/profiles/users/{id}/achievements", "/api/v1/profiles/organizations/{id}").permitAll()
-                .requestMatchers("/api/v1/admin/**").hasAuthority("ROLE_ADMIN")
+                .requestMatchers("/api/v1/admin/**").hasAuthority(Roles.ADMIN)
                 .anyRequest().authenticated()
             );
 
@@ -68,7 +74,8 @@ public class SecurityConfig {
         res.setStatus(status);
         res.setContentType(MediaType.APPLICATION_JSON_VALUE);
         res.setCharacterEncoding(StandardCharsets.UTF_8.name());
-        res.getWriter().write("{\"error\":{\"code\":\"" + code + "\",\"message\":\"" + message + "\"}}");
+        // Тот же формат, что у GlobalExceptionHandler, — с экранированием через Jackson
+        JSON.writeValue(res.getWriter(), new ErrorResponseWrapper(new ErrorDetails(code, message)));
     }
 
     @Bean

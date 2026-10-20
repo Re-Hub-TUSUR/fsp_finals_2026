@@ -13,6 +13,7 @@ import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventMapper;
 import ru.sportikus.moderation.ModerationStatus;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 
 import java.time.Instant;
@@ -39,7 +40,7 @@ public class AdminService {
     @Transactional
     public AdminOrgDto approve(Long id) {
         Organization org = findOrg(id);
-        org.setStatus("APPROVED");
+        org.setStatus(OrganizationStatus.APPROVED);
         org.setRejectReason(null);
         return AdminOrgDto.from(org);
     }
@@ -47,7 +48,7 @@ public class AdminService {
     @Transactional
     public AdminOrgDto reject(Long id, String reason) {
         Organization org = findOrg(id);
-        org.setStatus("REJECTED");
+        org.setStatus(OrganizationStatus.REJECTED);
         org.setRejectReason(reason.trim());
         return AdminOrgDto.from(org);
     }

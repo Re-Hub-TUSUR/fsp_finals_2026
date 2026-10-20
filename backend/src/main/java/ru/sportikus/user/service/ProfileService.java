@@ -6,13 +6,16 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.multipart.MultipartFile;
 import ru.sportikus.common.ApiException;
+import ru.sportikus.common.Strings;
 import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventMapper;
 import ru.sportikus.friendship.service.FriendshipService;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
+import ru.sportikus.security.Roles;
 import ru.sportikus.subscription.service.OrganizationSubscriptionService;
 import ru.sportikus.user.dto.ProfileResponse;
 import ru.sportikus.user.dto.ProfileUpdateRequest;
@@ -57,8 +60,8 @@ public class ProfileService {
         Organization org = organizationRepository.findById(id)
                 .orElseThrow(() -> ApiException.notFound("Организация не найдена"));
         boolean owner = viewer != null && org.getOwner().getId().equals(viewer.id());
-        boolean admin = viewer != null && "ROLE_ADMIN".equals(viewer.role());
-        if (!"APPROVED".equals(org.getStatus()) && !owner && !admin) {
+        boolean admin = viewer != null && Roles.ADMIN.equals(viewer.role());
+        if (!OrganizationStatus.APPROVED.equals(org.getStatus()) && !owner && !admin) {
             throw ApiException.notFound("Организация не найдена");
         }
         var events = eventRepository.findByOrganizerOrgIdAndStatusOrderByStartTimeAsc(id, EventStatus.PUBLISHED);
@@ -73,7 +76,7 @@ public class ProfileService {
         if (!id.equals(viewer.id())) throw ApiException.forbidden("Редактировать профиль может только его владелец");
         User user = userRepository.require(id);
         user.setFullName(request.name().trim());
-        user.setAvatarUrl(blankToNull(request.imageUrl()));
+        user.setAvatarUrl(Strings.blankToNull(request.imageUrl()));
         return user(id, viewer);
     }
 
@@ -83,8 +86,8 @@ public class ProfileService {
                 .orElseThrow(() -> ApiException.notFound("Организация не найдена"));
         if (!org.getOwner().getId().equals(viewer.id())) throw ApiException.forbidden("Редактировать профиль может только его владелец");
         org.setName(request.name().trim());
-        org.setDescription(blankToNull(request.description()));
-        org.setLogoUrl(blankToNull(request.imageUrl()));
+        org.setDescription(Strings.blankToNull(request.description()));
+        org.setLogoUrl(Strings.blankToNull(request.imageUrl()));
         return organization(id, viewer);
     }
 
@@ -121,7 +124,4 @@ public class ProfileService {
         }
     }
 
-    private String blankToNull(String value) {
-        return value == null || value.isBlank() ? null : value.trim();
-    }
 }

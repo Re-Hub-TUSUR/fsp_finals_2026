@@ -380,42 +380,4 @@ class ParticipationServiceTest {
         assertThat(service.cancel(PARTICIPANT, EVENT_ID).status()).isEqualTo(ParticipationStatus.CANCELLED);
         assertThatThrownBy(() -> service.cancel(PARTICIPANT, EVENT_ID)).isInstanceOf(ApiException.class);
     }
-
-    @Test
-    void organizerExportsCsvSuccessfully() {
-        Participation p1 = Participation.builder()
-                .id(1L)
-                .event(event)
-                .user(User.builder().id(2L).fullName("Ольга").email("olga@sport.ru").build())
-                .status(ParticipationStatus.CONFIRMED)
-                .ticketCode("SPT-12345678")
-                .checkedIn(true)
-                .checkedInAt(Instant.parse("2026-10-20T12:30:00Z"))
-                .message("Буду вовремя")
-                .decisionComment("Добро пожаловать")
-                .createdAt(Instant.parse("2026-10-20T10:00:00Z"))
-                .build();
-
-        when(eventRepository.findDetailedById(EVENT_ID)).thenReturn(Optional.of(event));
-        when(participationRepository.findByEventIdOrderByCreatedAtAsc(EVENT_ID)).thenReturn(List.of(p1));
-
-        byte[] csvBytes = service.exportCsv(ORGANIZER, EVENT_ID);
-        assertThat(csvBytes).isNotEmpty();
-
-        String csvString = new String(csvBytes, java.nio.charset.StandardCharsets.UTF_8);
-        assertThat(csvString).startsWith("\uFEFF");
-        assertThat(csvString).contains("№;ФИО;Email;Статус;Дата заявки;Код билета;Отметка о входе;Время входа;Сообщение участника;Комментарий организатора");
-        assertThat(csvString).contains("Ольга;olga@sport.ru;Подтверждён");
-        assertThat(csvString).contains("SPT-12345678;Явился");
-        assertThat(csvString).contains("Буду вовремя");
-        assertThat(csvString).contains("Добро пожаловать");
-    }
-
-    @Test
-    void nonOrganizerCannotExportCsv() {
-        when(eventRepository.findDetailedById(EVENT_ID)).thenReturn(Optional.of(event));
-        assertThatThrownBy(() -> service.exportCsv(PARTICIPANT, EVENT_ID))
-                .isInstanceOf(ApiException.class)
-                .hasMessageContaining("только организатору");
-    }
 }

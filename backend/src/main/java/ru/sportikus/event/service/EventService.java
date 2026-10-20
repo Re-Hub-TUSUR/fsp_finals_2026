@@ -4,11 +4,11 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.data.jpa.domain.Specification;
-import ru.sportikus.city.repository.CityRepository;
-import ru.sportikus.event.repository.EventGeoRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import ru.sportikus.city.repository.CityRepository;
 import ru.sportikus.common.ApiException;
+import ru.sportikus.common.Strings;
 import ru.sportikus.event.cache.MapCache;
 import ru.sportikus.event.cache.MapCacheInvalidator;
 import ru.sportikus.event.cache.MapCacheKey;
@@ -16,11 +16,13 @@ import ru.sportikus.event.dto.CreateEventRequest;
 import ru.sportikus.event.dto.EventFilter;
 import ru.sportikus.event.dto.EventResponse;
 import ru.sportikus.event.model.Event;
+import ru.sportikus.event.model.EventStatus;
 import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.model.OrgDetails;
 import ru.sportikus.event.model.ProgramItem;
 import ru.sportikus.event.model.RecurrenceRule;
 import ru.sportikus.event.model.SkillLevel;
+import ru.sportikus.event.repository.EventGeoRepository;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.repository.EventSpecs;
 import ru.sportikus.form.CustomField;
@@ -28,8 +30,10 @@ import ru.sportikus.form.FieldDef;
 import ru.sportikus.form.FieldValidator;
 import ru.sportikus.moderation.EventModerationService;
 import ru.sportikus.organization.model.Organization;
+import ru.sportikus.organization.model.OrganizationStatus;
 import ru.sportikus.organization.repository.OrganizationRepository;
 import ru.sportikus.security.AuthUser;
+import ru.sportikus.security.Roles;
 import ru.sportikus.sport.model.Sport;
 import ru.sportikus.sport.service.SportService;
 import ru.sportikus.template.model.EventTemplate;
@@ -39,10 +43,6 @@ import ru.sportikus.user.repository.UserRepository;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.ZoneId;
-import java.time.ZoneOffset;
-import java.time.ZonedDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -55,7 +55,6 @@ public class EventService {
 
     private static final Duration MAX_DURATION = Duration.ofDays(30);
     private static final Duration MAX_ADVANCE = Duration.ofDays(730);
-    private static final DateTimeFormatter ICS_TIME = DateTimeFormatter.ofPattern("yyyyMMdd'T'HHmmss'Z'").withZone(ZoneOffset.UTC);
 
     private final EventRepository eventRepository;
     private final UserRepository userRepository;
@@ -168,7 +167,7 @@ public class EventService {
 
         Event event = Event.builder()
                 .title(req.title().trim())
-                .description(blankToNull(req.description()))
+                .description(Strings.blankToNull(req.description()))
                 .sport(sport)
                 .template(template)
                 .organizerUser(org == null ? author : null)
@@ -186,7 +185,7 @@ public class EventService {
                         : template != null ? template.getDefaultJoinMode() : JoinMode.APPROVAL)
                 .skillLevel(req.skillLevel() != null ? req.skillLevel()
                         : template != null ? template.getDefaultSkillLevel() : SkillLevel.ANY)
-                .requiredEquipment(blankToNull(req.requiredEquipment()))
+                .requiredEquipment(Strings.blankToNull(req.requiredEquipment()))
                 .price(req.price() == null || req.price().signum() == 0 ? null : req.price())
                 .registrationDeadline(req.registrationDeadline())
                 .minAge(req.minAge())
@@ -220,15 +219,15 @@ public class EventService {
         if (Instant.now().isBefore(event.getEndTime())) {
             throw ApiException.conflict("Завершить мероприятие можно только после времени окончания");
         }
-        if (event.getStatus() == ru.sportikus.event.model.EventStatus.ARCHIVED) {
+        if (event.getStatus() == EventStatus.ARCHIVED) {
             throw ApiException.conflict("Мероприятие уже находится в архиве");
         }
-        if (event.getStatus() != ru.sportikus.event.model.EventStatus.PUBLISHED) {
+        if (event.getStatus() != EventStatus.PUBLISHED) {
             throw ApiException.conflict("Снятое или отменённое мероприятие нельзя завершить");
         }
-        event.setStatus(ru.sportikus.event.model.EventStatus.ARCHIVED);
+        event.setStatus(EventStatus.ARCHIVED);
         if (event.getRecurrenceRule() != RecurrenceRule.NONE) {
-            Event next = eventRepository.save(nextOccurrence(event));
+            Event next = eventRepository.save(Recurrence.nextOccurrence(event, Instant.now()));
             event.setNextOccurrenceId(next.getId());
         }
         mapCacheInvalidator.mapDataChanged();
@@ -236,79 +235,21 @@ public class EventService {
     }
 
     /**
-     * Следующее занятие повторяющегося мероприятия — копия завершённого со сдвинутым началом.
-     * Сдвиг считается по местному времени площадки, а не фиксированными сутками в UTC: иначе при переходе на
-     * летнее или зимнее время встреча «в 19:00» уехала бы на час. Если сдвинутое начало всё ещё в прошлом
-     * (завершили с большим опозданием), прибавляем интервал, пока оно не окажется в будущем.
-     * Участники и заявки не копируются — на новое занятие записываются заново.
-     */
-    private Event nextOccurrence(Event source) {
-        int intervalDays = source.getRecurrenceIntervalDays() == null ? 7 : source.getRecurrenceIntervalDays();
-        ZoneId zone = source.getTimeZone() == null ? ZoneOffset.UTC : ZoneId.of(source.getTimeZone());
-        ZonedDateTime nextLocalStart = source.getStartTime().atZone(zone).plusDays(intervalDays);
-        Instant nextStart = nextLocalStart.toInstant();
-        while (!nextStart.isAfter(Instant.now())) {
-            nextLocalStart = nextLocalStart.plusDays(intervalDays);
-            nextStart = nextLocalStart.toInstant();
-        }
-        Duration shift = Duration.between(source.getStartTime(), nextStart);
-        return Event.builder()
-                .title(source.getTitle())
-                .description(source.getDescription())
-                .sport(source.getSport())
-                .template(source.getTemplate())
-                .organizerUser(source.getOrganizerUser())
-                .organizerOrg(source.getOrganizerOrg())
-                .startTime(nextStart)
-                .endTime(source.getEndTime().plus(shift))
-                .recurrenceRule(RecurrenceRule.CUSTOM)
-                .recurrenceIntervalDays(intervalDays)
-                .recurrenceSeriesId(source.getRecurrenceSeriesId() != null
-                        ? source.getRecurrenceSeriesId() : UUID.randomUUID())
-                .lat(source.getLat())
-                .lng(source.getLng())
-                .address(source.getAddress())
-                .city(source.getCity())
-                .timeZone(source.getTimeZone())
-                .capacity(source.getCapacity())
-                .joinMode(source.getJoinMode())
-                .skillLevel(source.getSkillLevel())
-                .requiredEquipment(source.getRequiredEquipment())
-                .price(source.getPrice())
-                .registrationDeadline(source.getRegistrationDeadline() == null
-                        ? null : source.getRegistrationDeadline().plus(shift))
-                .minAge(source.getMinAge())
-                .maxAge(source.getMaxAge())
-                .fields(new ArrayList<>(source.getFields()))
-                .details(new java.util.LinkedHashMap<>(source.getDetails()))
-                .customFields(new ArrayList<>(source.getCustomFields()))
-                .registrationFields(new ArrayList<>(source.getRegistrationFields()))
-                .orgDetails(source.getOrgDetails())
-                .status(ru.sportikus.event.model.EventStatus.PUBLISHED)
-                .moderationStatus(source.getModerationStatus())
-                .moderationReason(source.getModerationReason())
-                .moderationHits(new ArrayList<>(source.getModerationHits()))
-                .moderationModel(source.getModerationModel())
-                .moderatedAt(source.getModeratedAt())
-                .build();
-    }
-
-    /**
      * От чьего имени публикуется мероприятие. Обычный пользователь — от своего имени,
      * организатор — от имени организации, но только после одобрения администратором.
      */
     private Organization resolveOrganization(User author) {
-        if ("ROLE_ADMIN".equals(author.getRole())) {
+        if (Roles.ADMIN.equals(author.getRole())) {
             throw ApiException.forbidden("Администратор модерирует площадку и не создаёт мероприятия");
         }
-        if (!"ROLE_ORGANIZER".equals(author.getRole())) {
+        if (!Roles.ORGANIZER.equals(author.getRole())) {
             return null;
         }
         Organization org = organizationRepository.findFirstByOwnerIdOrderByIdAsc(author.getId())
                 .orElseThrow(() -> ApiException.forbidden("За вашим аккаунтом не закреплена организация"));
         return switch (org.getStatus()) {
-            case "APPROVED" -> org;
-            case "REJECTED" -> throw ApiException.forbidden("Заявка организации отклонена"
+            case OrganizationStatus.APPROVED -> org;
+            case OrganizationStatus.REJECTED -> throw ApiException.forbidden("Заявка организации отклонена"
                     + (org.getRejectReason() == null ? "" : ": " + org.getRejectReason()));
             default -> throw ApiException.forbidden(
                     "Организация ожидает одобрения администратора — публиковать мероприятия пока нельзя");
@@ -346,23 +287,23 @@ public class EventService {
         if (d == null || isBlank(d.contactName()) || (isBlank(d.contactPhone()) && isBlank(d.contactEmail()))) {
             throw ApiException.badRequest("Для мероприятия организации укажите контактное лицо и телефон или e-mail");
         }
-        String website = blankToNull(d.website());
+        String website = Strings.blankToNull(d.website());
         if (website != null && !website.matches("(?i)^https?://\\S+$")) {
             throw ApiException.badRequest("Ссылка на регламент/сайт должна начинаться с http:// или https://");
         }
-        String email = blankToNull(d.contactEmail());
+        String email = Strings.blankToNull(d.contactEmail());
         if (email != null && !email.matches("^[^@\\s]+@[^@\\s]+\\.[^@\\s]+$")) {
             throw ApiException.badRequest("Некорректный e-mail организатора");
         }
         List<ProgramItem> program = d.program() == null ? null : d.program().stream()
-                .map(i -> new ProgramItem(blankToNull(i.time()), i.title().trim()))
+                .map(i -> new ProgramItem(Strings.blankToNull(i.time()), i.title().trim()))
                 .toList();
         return new OrgDetails(
-                d.contactName().trim(), blankToNull(d.contactPhone()), email, website, blankToNull(d.venueName()),
+                d.contactName().trim(), Strings.blankToNull(d.contactPhone()), email, website, Strings.blankToNull(d.venueName()),
                 cleanStrings(d.requiredDocuments()),
                 Boolean.TRUE.equals(d.medicalCertificateRequired()), Boolean.TRUE.equals(d.insuranceRequired()),
-                blankToNull(d.prizes()), program == null || program.isEmpty() ? null : program,
-                cleanStrings(d.facilities()), blankToNull(d.cancellationPolicy()), blankToNull(d.sponsors()));
+                Strings.blankToNull(d.prizes()), program == null || program.isEmpty() ? null : program,
+                cleanStrings(d.facilities()), Strings.blankToNull(d.cancellationPolicy()), Strings.blankToNull(d.sponsors()));
     }
 
     private List<CustomField> normalizeCustomFields(List<CustomField> fields) {
@@ -384,50 +325,9 @@ public class EventService {
         return s == null || s.isBlank();
     }
 
-    private static String blankToNull(String s) {
-        return isBlank(s) ? null : s.trim();
-    }
-
-    // --------------------------------------------------------------- календарь
-
     /** Событие в формате iCalendar для добавления в календарь телефона одним нажатием. */
     @Transactional(readOnly = true)
     public String ics(Long id) {
-        Event e = eventRepository.requireDetailed(id);
-        StringBuilder sb = new StringBuilder();
-        line(sb, "BEGIN:VCALENDAR");
-        line(sb, "VERSION:2.0");
-        line(sb, "PRODID:-//Sportikus//Event Calendar 1.0//RU");
-        line(sb, "CALSCALE:GREGORIAN");
-        line(sb, "BEGIN:VEVENT");
-        line(sb, "UID:event-" + e.getId() + "@sportikus");
-        line(sb, "DTSTAMP:" + ICS_TIME.format(Instant.now()));
-        line(sb, "DTSTART:" + ICS_TIME.format(e.getStartTime()));
-        line(sb, "DTEND:" + ICS_TIME.format(e.getEndTime()));
-        line(sb, "SUMMARY:" + icsEscape(e.getTitle()));
-        if (e.getDescription() != null) {
-            line(sb, "DESCRIPTION:" + icsEscape(e.getDescription()));
-        }
-        line(sb, "LOCATION:" + icsEscape(e.getAddress()));
-        line(sb, "GEO:" + e.getLat() + ";" + e.getLng());
-        line(sb, "END:VEVENT");
-        line(sb, "END:VCALENDAR");
-        return sb.toString();
-    }
-
-    private static String icsEscape(String s) {
-        return s.replace("\\", "\\\\").replace(";", "\\;").replace(",", "\\,")
-                .replace("\r\n", "\\n").replace("\n", "\\n");
-    }
-
-    /** Строки iCalendar завершаются CRLF и по спецификации «складываются» на 75 символах. */
-    private static void line(StringBuilder sb, String text) {
-        int limit = 70;
-        String rest = text;
-        while (rest.length() > limit) {
-            sb.append(rest, 0, limit).append("\r\n ");
-            rest = rest.substring(limit);
-        }
-        sb.append(rest).append("\r\n");
+        return IcsWriter.write(eventRepository.requireDetailed(id), Instant.now());
     }
 }

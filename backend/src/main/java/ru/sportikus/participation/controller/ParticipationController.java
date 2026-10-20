@@ -5,9 +5,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
-import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,9 +16,13 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import ru.sportikus.participation.dto.CheckInRequest;
+import ru.sportikus.participation.dto.CheckInResponse;
 import ru.sportikus.participation.dto.DecisionRequest;
 import ru.sportikus.participation.dto.JoinRequest;
 import ru.sportikus.participation.dto.ParticipationResponse;
+import ru.sportikus.participation.service.CheckInService;
+import ru.sportikus.participation.service.ParticipantCsvExporter;
 import ru.sportikus.participation.service.ParticipationService;
 import ru.sportikus.security.CurrentUser;
 
@@ -31,6 +35,8 @@ import java.util.List;
 public class ParticipationController {
 
     private final ParticipationService participationService;
+    private final ParticipantCsvExporter csvExporter;
+    private final CheckInService checkInService;
 
     @PostMapping("/join")
     @ResponseStatus(HttpStatus.CREATED)
@@ -67,7 +73,7 @@ public class ParticipationController {
     @Operation(summary = "Экспорт списка участников мероприятия в CSV (только организатор)",
             description = "Формирует файл CSV со списком всех участников, их статусами, билетами, отметками явки и ответами на вопросы.")
     public ResponseEntity<byte[]> exportCsv(@PathVariable Long eventId) {
-        byte[] csvBytes = participationService.exportCsv(CurrentUser.require(), eventId);
+        byte[] csvBytes = csvExporter.export(CurrentUser.require(), eventId);
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"event_" + eventId + "_participants.csv\"")
                 .header(HttpHeaders.CONTENT_TYPE, "text/csv; charset=UTF-8")
@@ -95,8 +101,8 @@ public class ParticipationController {
                     + "* `NOT_FOUND` — такого билета нет.\n\n"
                     + "Код билета постоянный, а вход по нему одноразовый. В ответе есть участник (имя и аватар для сверки), "
                     + "`isPaid` и `price`. Доступно организатору мероприятия и администратору.")
-    public ru.sportikus.participation.dto.CheckInResponse checkIn(@PathVariable Long eventId,
-                                                                   @Valid @RequestBody ru.sportikus.participation.dto.CheckInRequest request) {
-        return participationService.checkIn(CurrentUser.require(), eventId, request.ticketCode());
+    public CheckInResponse checkIn(@PathVariable Long eventId,
+                                                                   @Valid @RequestBody CheckInRequest request) {
+        return checkInService.checkIn(CurrentUser.require(), eventId, request.ticketCode());
     }
 }

@@ -5,6 +5,7 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import ru.sportikus.common.ApiException;
+import ru.sportikus.common.Strings;
 import ru.sportikus.event.dto.EventResponse;
 import ru.sportikus.event.model.Event;
 import ru.sportikus.event.model.EventStatus;
@@ -12,12 +13,8 @@ import ru.sportikus.event.model.JoinMode;
 import ru.sportikus.event.repository.EventRepository;
 import ru.sportikus.event.service.EventAccess;
 import ru.sportikus.event.service.EventMapper;
-import ru.sportikus.form.FieldDef;
-import java.nio.charset.StandardCharsets;
-import java.time.format.DateTimeFormatter;
 import ru.sportikus.form.FieldValidator;
 import ru.sportikus.participation.ParticipationChangedEvent;
-import ru.sportikus.participation.dto.CheckInResponse;
 import ru.sportikus.participation.dto.DecisionRequest;
 import ru.sportikus.participation.dto.JoinRequest;
 import ru.sportikus.participation.dto.ParticipationResponse;
@@ -26,6 +23,7 @@ import ru.sportikus.participation.model.ParticipationStatus;
 import ru.sportikus.participation.repository.ParticipationRepository;
 import ru.sportikus.preference.repository.UserPreferencesRepository;
 import ru.sportikus.security.AuthUser;
+import ru.sportikus.security.Roles;
 import ru.sportikus.user.model.User;
 import ru.sportikus.user.repository.UserRepository;
 
@@ -75,7 +73,7 @@ public class ParticipationService {
         if (auth.isAdmin()) {
             throw ApiException.forbidden("Администратор не участвует в мероприятиях");
         }
-        if (auth.isOrganizer() || "ROLE_ORGANIZER".equals(user.getRole())) {
+        if (auth.isOrganizer() || Roles.ORGANIZER.equals(user.getRole())) {
             throw ApiException.forbidden("Организация не участвует в мероприятиях — записаться может только пользователь");
         }
         if (EventAccess.isManager(event, user.getId())) {
@@ -107,8 +105,7 @@ public class ParticipationService {
 
         long confirmed = participationRepository.countByEventIdAndStatus(eventId, ParticipationStatus.CONFIRMED);
         boolean full = confirmed >= event.getCapacity();
-        boolean claim = existing != null && existing.getStatus() == ParticipationStatus.WAITLISTED;
-        if (claim) {
+        if (claimingQueue) {
             return claimSpot(event, user, existing, full, now);
         }
 
@@ -129,7 +126,7 @@ public class ParticipationService {
         if (instant && p.getTicketCode() == null) {
             p.setTicketCode(generateTicketCode());
         }
-        p.setMessage(blankToNull(req.message()));
+        p.setMessage(Strings.blankToNull(req.message()));
         p.setAnswers(new LinkedHashMap<>(answers));
         p.setDecisionComment(null);
         p.setDecidedBy(null);
@@ -235,83 +232,6 @@ public class ParticipationService {
                 .toList();
     }
 
-    /** Экспорт участников мероприятия в формате CSV (Excel-совместимый UTF-8 с BOM). */
-    @Transactional(readOnly = true)
-    public byte[] exportCsv(AuthUser auth, Long eventId) {
-        Event event = eventRepository.requireDetailed(eventId);
-        if (!EventAccess.isManager(event, auth.id())) {
-            throw ApiException.forbidden("Экспорт участников доступен только организатору мероприятия");
-        }
-        List<Participation> list = participationRepository.findByEventIdOrderByCreatedAtAsc(eventId);
-
-        List<FieldDef> questions = event.getRegistrationFields() != null ? event.getRegistrationFields() : List.of();
-
-        StringBuilder sb = new StringBuilder();
-        // UTF-8 BOM для корректного открытия в Excel
-        sb.append('\uFEFF');
-
-        // Шапка таблицы
-        sb.append("№;ФИО;Email;Статус;Дата заявки;Код билета;Отметка о входе;Время входа;Сообщение участника");
-        for (FieldDef q : questions) {
-            sb.append(';').append(escapeCsv(q.label()));
-        }
-        sb.append(";Комментарий организатора\r\n");
-
-        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("dd.MM.yyyy HH:mm")
-                .withZone(event.getTimeZone() != null ? ZoneId.of(event.getTimeZone()) : ZoneId.systemDefault());
-
-        int num = 1;
-        for (Participation p : list) {
-            sb.append(num++).append(';');
-            sb.append(escapeCsv(p.getUser() != null ? p.getUser().getFullName() : "")).append(';');
-            sb.append(escapeCsv(p.getUser() != null ? p.getUser().getEmail() : "")).append(';');
-            sb.append(escapeCsv(statusLabel(p.getStatus()))).append(';');
-            sb.append(escapeCsv(p.getCreatedAt() != null ? dtf.format(p.getCreatedAt()) : "")).append(';');
-            sb.append(escapeCsv(p.getTicketCode() != null ? p.getTicketCode() : "")).append(';');
-            sb.append(p.isCheckedIn() ? "Явился" : "Не явился").append(';');
-            sb.append(p.getCheckedInAt() != null ? escapeCsv(dtf.format(p.getCheckedInAt())) : "").append(';');
-            sb.append(escapeCsv(p.getMessage() != null ? p.getMessage() : ""));
-
-            Map<String, Object> answers = p.getAnswers() != null ? p.getAnswers() : Map.of();
-            for (FieldDef q : questions) {
-                Object val = answers.get(q.key());
-                sb.append(';').append(escapeCsv(formatAnswer(val)));
-            }
-            sb.append(';').append(escapeCsv(p.getDecisionComment() != null ? p.getDecisionComment() : ""));
-            sb.append("\r\n");
-        }
-
-        return sb.toString().getBytes(StandardCharsets.UTF_8);
-    }
-
-    private static String statusLabel(ParticipationStatus s) {
-        if (s == null) return "";
-        return switch (s) {
-            case CONFIRMED -> "Подтверждён";
-            case PENDING -> "Ожидает решения";
-            case WAITLISTED -> "В очереди";
-            case REJECTED -> "Отклонён";
-            case CANCELLED -> "Отменён";
-        };
-    }
-
-    private static String escapeCsv(String val) {
-        if (val == null) return "";
-        if (val.contains(";") || val.contains("\"") || val.contains("\n") || val.contains("\r")) {
-            return "\"" + val.replace("\"", "\"\"") + "\"";
-        }
-        return val;
-    }
-
-    private static String formatAnswer(Object val) {
-        if (val == null) return "";
-        if (val instanceof Boolean b) return b ? "Да" : "Нет";
-        if (val instanceof List<?> l) {
-            return String.join(", ", l.stream().map(Object::toString).toList());
-        }
-        return val.toString();
-    }
-
     @Transactional
     public ParticipationResponse decide(AuthUser auth, Long eventId, Long participationId, DecisionRequest req) {
         Event event = lockEvent(eventId);
@@ -358,7 +278,7 @@ public class ParticipationService {
         if (req.decision() == ParticipationStatus.CONFIRMED && p.getTicketCode() == null) {
             p.setTicketCode(generateTicketCode());
         }
-        p.setDecisionComment(blankToNull(req.comment()));
+        p.setDecisionComment(Strings.blankToNull(req.comment()));
         p.setDecidedAt(Instant.now());
         p.setDecidedBy(manager);
         Participation saved = participationRepository.save(p);
@@ -368,61 +288,6 @@ public class ParticipationService {
             offerFreedSeat(event);
         }
         return ParticipationResponse.withUser(saved);
-    }
-
-    /** Контроль входа на мероприятие организатором по коду билета (из QR-кода). */
-    @Transactional
-    public CheckInResponse checkIn(AuthUser auth, Long eventId, String rawTicketCode) {
-        Event event = eventRepository.requireDetailed(eventId);
-        if (!EventAccess.isManager(event, auth.id()) && !auth.isAdmin()) {
-            throw ApiException.forbidden("Отмечать билеты может только организатор мероприятия");
-        }
-
-        boolean isPaid = event.getPrice() != null && event.getPrice().compareTo(java.math.BigDecimal.ZERO) > 0;
-
-        if (rawTicketCode == null || rawTicketCode.isBlank()) {
-            return new CheckInResponse(false, "NOT_FOUND", "Код билета не указан",
-                    null, null, null, event.getTitle(), isPaid, event.getPrice());
-        }
-        String code = rawTicketCode.trim().toUpperCase();
-
-        Participation p = participationRepository.findByTicketCode(code).orElse(null);
-        if (p == null) {
-            return new CheckInResponse(false, "NOT_FOUND",
-                    "Билет с кодом «" + code + "» не найден в системе",
-                    code, null, null, event.getTitle(), isPaid, event.getPrice());
-        }
-
-        ParticipationResponse.Participant participant = new ParticipationResponse.Participant(
-                p.getUser().getId(), p.getUser().getFullName(), p.getUser().getAvatarUrl());
-
-        if (!p.getEvent().getId().equals(eventId)) {
-            return new CheckInResponse(false, "WRONG_EVENT",
-                    "Билет от другого события: «" + p.getEvent().getTitle() + "»!",
-                    code, null, participant, event.getTitle(), isPaid, event.getPrice());
-        }
-
-        if (p.getStatus() != ParticipationStatus.CONFIRMED) {
-            return new CheckInResponse(false, "NOT_CONFIRMED",
-                    "Заявка участника не подтверждена (статус: " + p.getStatus() + ")",
-                    code, null, participant, event.getTitle(), isPaid, event.getPrice());
-        }
-
-        if (p.isCheckedIn()) {
-            return new CheckInResponse(false, "ALREADY_CHECKED_IN",
-                    "Внимание! Билет уже был использован ранее (" + p.getCheckedInAt() + ")!",
-                    code, p.getCheckedInAt(), participant, event.getTitle(), isPaid, event.getPrice());
-        }
-
-        User manager = userRepository.getReferenceById(auth.id());
-        p.setCheckedIn(true);
-        p.setCheckedInAt(Instant.now());
-        p.setCheckedInBy(manager);
-        Participation saved = participationRepository.save(p);
-
-        return new CheckInResponse(true, "SUCCESS",
-                "Участник подтверждён и допущен на мероприятие!",
-                code, saved.getCheckedInAt(), participant, event.getTitle(), isPaid, event.getPrice());
     }
 
     /** Заявки и участия текущего пользователя вместе с мероприятиями. */
@@ -442,9 +307,5 @@ public class ParticipationService {
 
     private static String generateTicketCode() {
         return "SPT-" + java.util.UUID.randomUUID().toString().replace("-", "").substring(0, 8).toUpperCase();
-    }
-
-    private static String blankToNull(String s) {
-        return s == null || s.isBlank() ? null : s.trim();
     }
 }
