@@ -382,6 +382,7 @@ export const HomePage: React.FC = () => {
         )}
         <button
           type="button"
+          data-tour="filter-button-mobile"
           onClick={() => setFiltersOpen(true)}
           aria-label="Фильтры"
           className={`relative w-[50px] h-[50px] shrink-0 flex items-center justify-center rounded-xl bg-card border border-line-2 text-ink ${
@@ -437,7 +438,7 @@ export const HomePage: React.FC = () => {
 
   return (
     <div className="h-full flex flex-col">
-      <div className="hidden lg:block">
+      <div className="hidden lg:block" data-tour="filter-bar">
         <FilterBar
           filters={filters}
           onChange={changeFilters}

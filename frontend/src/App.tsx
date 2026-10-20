@@ -16,6 +16,7 @@ import { AuthPage } from './pages/AuthPage';
 import { OwnProfilePage, ProfilePage } from './pages/ProfilePage';
 import { AchievementToast } from './components/AchievementToast';
 import { InstallAppBanner, OfflineBanner } from './components/PwaBanners';
+import { OnboardingTour } from './components/OnboardingTour';
 
 /** Плавное появление страницы при смене маршрута. «/» и «/events» — одна и та же страница. */
 function PageFade({ children }: { children: ReactNode }) {
@@ -34,6 +35,7 @@ function App() {
         <BrowserRouter>
           {/* Каркас на всю высоту: шапка и нижняя навигация фиксированы, прокручивается только контент */}
           <div className="h-dvh flex flex-col bg-page text-ink font-sans max-w-full overflow-x-hidden">
+            <OnboardingTour />
             <AchievementToast />
             <OfflineBanner />
             <Navbar />

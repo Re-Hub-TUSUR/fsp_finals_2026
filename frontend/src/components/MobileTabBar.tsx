@@ -20,9 +20,10 @@ export const MobileTabBar: React.FC = () => {
     return qs ? `/?${qs}` : '/';
   };
 
-  const tab = (to: string, label: string, icon: React.ReactNode, active: boolean) => (
+  const tab = (to: string, label: string, icon: React.ReactNode, active: boolean, dataTour?: string) => (
     <Link
       to={to}
+      data-tour={dataTour}
       aria-current={active ? 'page' : undefined}
       className={`flex-1 h-[58px] flex flex-col items-center justify-center gap-[3px] text-xs font-bold ${
         active ? 'text-ink' : 'text-muted'
@@ -38,12 +39,13 @@ export const MobileTabBar: React.FC = () => {
       aria-label="Основная навигация"
       className="md:hidden shrink-0 bg-card border-t border-line-2 flex items-start px-1.5 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] relative z-40 max-w-full overflow-hidden"
     >
-      {tab(homeLink('map'), 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList)}
-      {tab(homeLink('list'), 'Лента', <List className="w-6 h-6" />, isList)}
+      {tab(homeLink('map'), 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList, 'nav-map-feed-mobile')}
+      {tab(homeLink('list'), 'Лента', <List className="w-6 h-6" />, isList, 'nav-map-feed-mobile')}
       {!isAdmin && (
         <div className="flex-1 flex justify-center pt-1">
           <Link
             to="/events/new"
+            data-tour="create-event-mobile"
             aria-label="Создать событие"
             className="w-[54px] h-[46px] rounded-xl bg-brand text-on-brand flex items-center justify-center"
           >
@@ -54,7 +56,7 @@ export const MobileTabBar: React.FC = () => {
       {currentUser &&
         !isAdmin &&
         !isOrganizer &&
-        tab('/recommended', 'Для вас', <Sparkles className="w-6 h-6" />, location.pathname === '/recommended')}
+        tab('/recommended', 'Для вас', <Sparkles className="w-6 h-6" />, location.pathname === '/recommended', 'nav-recommended-mobile')}
       {currentUser &&
         !isAdmin &&
         tab('/my', 'Мои события', <CalendarDays className="w-6 h-6" />, location.pathname === '/my')}
