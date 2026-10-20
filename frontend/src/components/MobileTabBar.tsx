@@ -39,13 +39,14 @@ export const MobileTabBar: React.FC = () => {
       aria-label="Основная навигация"
       className="md:hidden shrink-0 bg-card border-t border-line-2 flex items-start px-1.5 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] relative z-40 max-w-full overflow-hidden"
     >
-      {tab(homeLink('map'), 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList, 'nav-map-feed-mobile')}
-      {tab(homeLink('list'), 'Лента', <List className="w-6 h-6" />, isList, 'nav-map-feed-mobile')}
+      <div data-tour="nav-map-feed-mobile" className="flex flex-1 items-center">
+        {tab(homeLink('map'), 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList)}
+        {tab(homeLink('list'), 'Лента', <List className="w-6 h-6" />, isList)}
+      </div>
       {!isAdmin && (
-        <div className="flex-1 flex justify-center pt-1">
+        <div className="flex-1 flex justify-center pt-1" data-tour="create-event-mobile">
           <Link
             to="/events/new"
-            data-tour="create-event-mobile"
             aria-label="Создать событие"
             className="w-[54px] h-[46px] rounded-xl bg-brand text-on-brand flex items-center justify-center"
           >
