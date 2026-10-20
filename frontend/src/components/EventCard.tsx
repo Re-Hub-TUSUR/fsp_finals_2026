@@ -25,6 +25,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
       <div className="relative h-[180px] sm:h-[190px] w-full bg-slate-800 overflow-hidden shrink-0">
         <img
           src={getEventCoverImage(event)}
+          onError={(ev) => (ev.currentTarget.style.visibility = 'hidden')}
           alt={event.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
@@ -85,7 +86,7 @@ export const EventCard: React.FC<EventCardProps> = ({ event }) => {
           {/* Дата и время */}
           <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
             <Calendar className="w-4 h-4 text-ink shrink-0" />
-            <span>{formatCardDate(event.startTime)}</span>
+            <span>{formatCardDate(event.startTime, event.timeZone)}</span>
           </div>
 
           {/* Место */}

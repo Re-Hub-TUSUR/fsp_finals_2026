@@ -11,6 +11,14 @@ export const MobileTabBar: React.FC = () => {
   const isOrganizer = currentUser?.role === 'ROLE_ORGANIZER';
   const onHome = location.pathname === '/' || location.pathname === '/events';
   const isList = onHome && new URLSearchParams(location.search).get('view') === 'list';
+  // Переключение карта/лента сохраняет поиск и город
+  const homeLink = (view: 'map' | 'list') => {
+    const p = new URLSearchParams(onHome ? location.search : undefined);
+    if (view === 'list') p.set('view', 'list');
+    else p.delete('view');
+    const qs = p.toString();
+    return qs ? `/?${qs}` : '/';
+  };
 
   const tab = (to: string, label: string, icon: React.ReactNode, active: boolean) => (
     <Link
@@ -30,8 +38,8 @@ export const MobileTabBar: React.FC = () => {
       aria-label="Основная навигация"
       className="md:hidden shrink-0 bg-card border-t border-line-2 flex items-start px-1.5 pt-1.5 pb-[max(8px,env(safe-area-inset-bottom))] relative z-40 max-w-full overflow-hidden"
     >
-      {tab('/', 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList)}
-      {tab('/?view=list', 'Лента', <List className="w-6 h-6" />, isList)}
+      {tab(homeLink('map'), 'Карта', <MapIcon className="w-6 h-6" />, onHome && !isList)}
+      {tab(homeLink('list'), 'Лента', <List className="w-6 h-6" />, isList)}
       {!isAdmin && (
         <div className="flex-1 flex justify-center pt-1">
           <Link

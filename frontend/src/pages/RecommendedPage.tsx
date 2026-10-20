@@ -320,6 +320,7 @@ const RecommendationCard: React.FC<{ item: RecommendationItem; onOpen: () => voi
       <div className="relative h-[180px] sm:h-[190px] w-full bg-slate-800 overflow-hidden shrink-0">
         <img
           src={getEventCoverImage(e)}
+          onError={(ev) => (ev.currentTarget.style.visibility = 'hidden')}
           alt={e.title}
           className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
           loading="lazy"
@@ -393,7 +394,7 @@ const RecommendationCard: React.FC<{ item: RecommendationItem; onOpen: () => voi
           {/* Дата и время */}
           <div className="flex items-center gap-2 text-xs sm:text-sm font-semibold text-ink">
             <Calendar className="w-4 h-4 text-ink shrink-0" />
-            <span>{formatCardDate(e.startTime)}</span>
+            <span>{formatCardDate(e.startTime, e.timeZone)}</span>
           </div>
 
           {/* Место */}

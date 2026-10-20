@@ -1,5 +1,5 @@
 import type { SportEvent } from '../types';
-import { spotsLeft } from './format';
+import { isForeignZone, spotsLeft, utcLabel } from './format';
 
 /** Общая «витрина» мероприятия для списка, карточки на карте и меток (по референсу редизайна). */
 
@@ -138,43 +138,65 @@ export const DISTANCE_BANDS: { from: number; to: number; title: string; sub: str
   { from: 10, to: Infinity, title: 'Дальше 10 км', sub: '' },
 ];
 
-const time = (d: Date) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+// Время события показываем в поясе места проведения (event.timeZone) — так же, как страница события;
+// без пояса (старые данные, тесты) — в поясе браузера.
+const time = (d: Date, timeZone?: string) =>
+  d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', timeZone });
+const dateIn = (d: Date, opts: Intl.DateTimeFormatOptions, timeZone?: string) =>
+  d.toLocaleDateString('ru-RU', { ...opts, timeZone });
 
-export function dayDiff(d: Date, now = new Date()): number {
-  const a = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
-  const b = new Date(now.getFullYear(), now.getMonth(), now.getDate()).getTime();
-  return Math.round((a - b) / 86400000);
+/** « (UTC+7)» для события в чужом поясе, иначе пусто. */
+export const zoneSuffix = (timeZone?: string) => (timeZone && isForeignZone(timeZone) ? ` (${utcLabel(timeZone)})` : '');
+
+/** Ключ дня yyyymmdd в заданном поясе (без пояса — локальный, как dayKey). */
+export function dayKeyIn(d: Date, timeZone?: string): number {
+  if (!timeZone) return dayKey(d);
+  const parts = new Intl.DateTimeFormat('en-CA', { timeZone, year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(d);
+  const get = (type: string) => Number(parts.find((p) => p.type === type)?.value);
+  return get('year') * 10000 + get('month') * 100 + get('day');
+}
+
+const keyToUtcDays = (k: number) => Date.UTC(Math.floor(k / 10000), (Math.floor(k / 100) % 100) - 1, k % 100) / 86400000;
+
+/** Разница в календарных днях между d и «сегодня» (в поясе timeZone). */
+export function dayDiff(d: Date, now = new Date(), timeZone?: string): number {
+  return Math.round(keyToUtcDays(dayKeyIn(d, timeZone)) - keyToUtcDays(dayKeyIn(now, timeZone)));
 }
 
 /** «Сейчас», «19:00», «Завтра, 19:00», «24 окт, 19:00». */
-export function startLabel(event: Pick<SportEvent, 'startTime' | 'endTime'>): string {
+export function startLabel(event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>): string {
   if (isLive(event)) return 'Сейчас';
+  const tz = event.timeZone;
   const d = new Date(event.startTime);
-  const diff = dayDiff(d);
-  if (diff === 0) return time(d);
-  if (diff === 1) return `Завтра, ${time(d)}`;
-  return `${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '')}, ${time(d)}`;
+  const diff = dayDiff(d, new Date(), tz);
+  if (diff === 0) return time(d, tz);
+  if (diff === 1) return `Завтра, ${time(d, tz)}`;
+  return `${dateIn(d, { day: 'numeric', month: 'short' }, tz).replace('.', '')}, ${time(d, tz)}`;
 }
 
 /** Колонка времени в ряду списка: «Сейчас / до 20:00», «19:30 / сегодня», «11:00 / сб, 24 окт». */
-export function rowTime(event: Pick<SportEvent, 'startTime' | 'endTime'>): { big: string; small: string } {
-  if (isLive(event)) return { big: 'Сейчас', small: `до ${time(new Date(event.endTime))}` };
+export function rowTime(event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>): { big: string; small: string } {
+  const tz = event.timeZone;
+  const zone = zoneSuffix(tz);
+  if (isLive(event)) return { big: 'Сейчас', small: `до ${time(new Date(event.endTime), tz)}${zone}` };
   const d = new Date(event.startTime);
-  const diff = dayDiff(d);
-  if (diff === 0) return { big: time(d), small: 'сегодня' };
-  if (diff === 1) return { big: time(d), small: 'завтра' };
-  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', '');
-  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' }).replace('.', '');
-  return { big: time(d), small: `${wd}, ${day}` };
+  const diff = dayDiff(d, new Date(), tz);
+  if (diff === 0) return { big: time(d, tz), small: `сегодня${zone}` };
+  if (diff === 1) return { big: time(d, tz), small: `завтра${zone}` };
+  const wd = dateIn(d, { weekday: 'short' }, tz).replace('.', '');
+  const day = dateIn(d, { day: 'numeric', month: 'short' }, tz).replace('.', '');
+  return { big: time(d, tz), small: `${wd}, ${day}${zone}` };
 }
 
 /** «Сегодня, 19:00» / «Завтра, 19:00» / «24 октября, 19:00». */
-export function startLabelLong(event: Pick<SportEvent, 'startTime' | 'endTime'>): string {
+export function startLabelLong(event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>): string {
+  const tz = event.timeZone;
   const d = new Date(event.startTime);
-  const diff = dayDiff(d);
-  if (diff === 0) return `Сегодня, ${time(d)}`;
-  if (diff === 1) return `Завтра, ${time(d)}`;
-  return `${d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}, ${time(d)}`;
+  const diff = dayDiff(d, new Date(), tz);
+  const zone = zoneSuffix(tz);
+  if (diff === 0) return `Сегодня, ${time(d, tz)}${zone}`;
+  if (diff === 1) return `Завтра, ${time(d, tz)}${zone}`;
+  return `${dateIn(d, { day: 'numeric', month: 'long' }, tz)}, ${time(d, tz)}${zone}`;
 }
 
 /** Расстояние по прямой, км (гаверсинус). */
@@ -193,22 +215,23 @@ export function formatDistance(km: number): string {
 }
 
 /** «20 октября, вт · 07:30» / «Идёт сейчас · до 19:00». */
-export function dateFull(event: Pick<SportEvent, 'startTime' | 'endTime'>): string {
-  if (isLive(event)) return `Идёт сейчас · до ${time(new Date(event.endTime))}`;
+export function dateFull(event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>): string {
+  const tz = event.timeZone;
+  const zone = zoneSuffix(tz);
+  if (isLive(event)) return `Идёт сейчас · до ${time(new Date(event.endTime), tz)}${zone}`;
   const d = new Date(event.startTime);
-  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' });
-  return `${day}, ${wd} · ${time(d)}`;
+  const day = dateIn(d, { day: 'numeric', month: 'long' }, tz);
+  const wd = dateIn(d, { weekday: 'short' }, tz);
+  return `${day}, ${wd} · ${time(d, tz)}${zone}`;
 }
 
 /** Формат даты для карточек мероприятий из макета: «20 октября, вт 07:30». */
-export function formatCardDate(startTime: string | Date): string {
+export function formatCardDate(startTime: string | Date, timeZone?: string): string {
   const d = typeof startTime === 'string' ? new Date(startTime) : startTime;
   if (isNaN(d.getTime())) return '';
-  const day = d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' });
-  const wd = d.toLocaleDateString('ru-RU', { weekday: 'short' }).replace('.', '');
-  const timeStr = time(d);
-  return `${day}, ${wd} ${timeStr}`;
+  const day = dateIn(d, { day: 'numeric', month: 'long' }, timeZone);
+  const wd = dateIn(d, { weekday: 'short' }, timeZone).replace('.', '');
+  return `${day}, ${wd} ${time(d, timeZone)}${zoneSuffix(timeZone)}`;
 }
 
 /** «13 свободных мест» / «2 свободных места» / «1 свободное место» / «Мест нет». */
@@ -234,8 +257,8 @@ export function capacityText(capacity: number): string {
 }
 
 /** «19:00–20:30». */
-export const timeRange = (event: Pick<SportEvent, 'startTime' | 'endTime'>) =>
-  `${time(new Date(event.startTime))}–${time(new Date(event.endTime))}`;
+export const timeRange = (event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>) =>
+  `${time(new Date(event.startTime), event.timeZone)}–${time(new Date(event.endTime), event.timeZone)}${zoneSuffix(event.timeZone)}`;
 
 /** Ключ дня yyyymmdd в локальном времени — для календаря и фильтра «Когда». */
 export const dayKey = (d: Date) => d.getFullYear() * 10000 + (d.getMonth() + 1) * 100 + d.getDate();
@@ -244,14 +267,14 @@ export const keyToDate = (k: number) => new Date(Math.floor(k / 10000), (Math.fl
 /** Фильтр «Когда»: любое время, «сейчас» или интервал дней (from..to включительно). */
 export type When = { kind: 'all' } | { kind: 'now' } | { kind: 'range'; from: number; to: number | null };
 
-export function matchesWhen(event: SportEvent, when: When): boolean {
+export function matchesWhen(event: Pick<SportEvent, 'startTime' | 'endTime' | 'timeZone'>, when: When): boolean {
   if (when.kind === 'all') return true;
   if (when.kind === 'now') return isLive(event);
   const from = when.from;
   const to = when.to ?? when.from;
   // Идущее сейчас событие попадает в «сегодня»
-  const start = dayKey(new Date(event.startTime));
-  const end = dayKey(new Date(event.endTime));
+  const start = dayKeyIn(new Date(event.startTime), event.timeZone);
+  const end = dayKeyIn(new Date(event.endTime), event.timeZone);
   return start <= to && end >= from;
 }
 

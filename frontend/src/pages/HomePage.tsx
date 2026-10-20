@@ -31,7 +31,7 @@ import { spotsLeft } from '../utils/format';
 import {
   DISTANCE_BANDS,
   dayDiff,
-  dayKey,
+  dayKeyIn,
   distanceKm,
   isLive,
   matchesWhen,
@@ -239,7 +239,7 @@ export const HomePage: React.FC = () => {
     return counts;
   }, [base, origin, radiusOn]);
 
-  const eventDays = useMemo(() => new Set(events.map((e) => dayKey(new Date(e.startTime)))), [events]);
+  const eventDays = useMemo(() => new Set(events.map((e) => dayKeyIn(new Date(e.startTime), e.timeZone))), [events]);
 
   const visibleEvents = useMemo(() => visible.map((v) => v.e), [visible]);
   const selectedEvent = visibleEvents.find((e) => e.id === selectedId) ?? null;
@@ -257,7 +257,7 @@ export const HomePage: React.FC = () => {
       }
     } else {
       // Без геопозиции группируем по дате
-      const byDay = (pred: (d: number) => boolean) => rest.filter(({ e }) => pred(dayDiff(new Date(e.startTime))));
+      const byDay = (pred: (d: number) => boolean) => rest.filter(({ e }) => pred(dayDiff(new Date(e.startTime), new Date(), e.timeZone)));
       const groups: [string, Item[]][] = [
         ['Сегодня', byDay((d) => d <= 0)],
         ['Завтра', byDay((d) => d === 1)],

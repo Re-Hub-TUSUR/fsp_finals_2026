@@ -20,6 +20,7 @@ import {
   UserRound,
   X,
 } from 'lucide-react';
+import { Modal } from './Modal';
 import { NotificationBell } from './NotificationBell';
 
 const Logo: React.FC = () => (
@@ -228,7 +229,39 @@ export const Navbar: React.FC = () => {
           )}
         </div>
       </div>
-      {cityOpen && <div className="fixed inset-0 z-[2100] bg-black/40 flex items-start justify-center p-4 pt-24" onMouseDown={() => setCityOpen(false)}><div className="w-full max-w-md rounded-2xl bg-white p-5 shadow-xl" onMouseDown={(e) => e.stopPropagation()}><h2 className="text-xl font-bold text-ink">Выберите город</h2><input autoFocus value={cityQuery} onChange={(e) => setCityQuery(e.target.value)} placeholder="Введите название города" className="mt-4 w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:ring-2 focus:ring-brand"/><div className="mt-3 max-h-72 overflow-auto">{cities.filter((c) => c.name.toLowerCase().includes(cityQuery.trim().toLowerCase())).map((city) => <button key={city.id} type="button" onClick={() => { const p=new URLSearchParams(params); p.set('city', String(city.id)); setParams(p); setCityOpen(false); setCityQuery(''); }} className="block w-full rounded-xl px-3 py-3 text-left hover:bg-surface"><b>{city.name}</b>{city.region && <span className="ml-2 text-sm text-muted">{city.region}</span>}</button>)}</div></div></div>}
+      {cityOpen && (
+        <Modal title="Выберите город" onClose={() => setCityOpen(false)}>
+          <input
+            autoFocus
+            value={cityQuery}
+            onChange={(e) => setCityQuery(e.target.value)}
+            placeholder="Введите название города"
+            aria-label="Название города"
+            className="w-full rounded-xl border border-line bg-surface px-4 py-3 outline-none focus:ring-2 focus:ring-brand"
+          />
+          <div className="mt-3 max-h-72 overflow-auto">
+            {cities
+              .filter((c) => c.name.toLowerCase().includes(cityQuery.trim().toLowerCase()))
+              .map((city) => (
+                <button
+                  key={city.id}
+                  type="button"
+                  onClick={() => {
+                    const p = new URLSearchParams(params);
+                    p.set('city', String(city.id));
+                    setParams(p);
+                    setCityOpen(false);
+                    setCityQuery('');
+                  }}
+                  className="block w-full rounded-xl px-3 py-3 text-left hover:bg-surface"
+                >
+                  <b>{city.name}</b>
+                  {city.region && <span className="ml-2 text-sm text-muted">{city.region}</span>}
+                </button>
+              ))}
+          </div>
+        </Modal>
+      )}
     </nav>
   );
 };

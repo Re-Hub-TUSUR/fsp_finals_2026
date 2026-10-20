@@ -3,6 +3,9 @@ import type { SportEvent } from '../types';
 import {
   capacityText,
   dayKey,
+  dayKeyIn,
+  startLabelLong,
+  timeRange,
   distanceKm,
   eventAction,
   eventStatus,
@@ -324,5 +327,29 @@ describe('capacityText', () => {
     expect(capacityText(5)).toBe('5 мест');
     expect(capacityText(10)).toBe('10 мест');
     expect(capacityText(17)).toBe('17 мест');
+  });
+});
+
+describe('время в поясе места проведения', () => {
+  const KRSK = 'Asia/Krasnoyarsk'; // UTC+7
+  const ev = { startTime: '2026-10-20T12:30:00Z', endTime: '2026-10-20T14:00:00Z', timeZone: KRSK };
+
+  it('карточка, ряд и диапазон показывают одно и то же местное время', () => {
+    expect(formatCardDate(ev.startTime, KRSK)).toContain('19:30');
+    expect(rowTime(ev).big).toBe('19:30');
+    expect(timeRange(ev)).toContain('19:30–21:00');
+    expect(startLabelLong(ev)).toContain('19:30');
+  });
+
+  it('день события считается в его поясе (около полуночи)', () => {
+    // 20:00 UTC = 03:00 следующего дня в Красноярске
+    expect(dayKeyIn(new Date('2026-10-20T20:00:00Z'), KRSK)).toBe(20261021);
+    expect(dayKeyIn(new Date('2026-10-20T20:00:00Z'), 'UTC')).toBe(20261020);
+  });
+
+  it('matchesWhen сопоставляет локальный день события', () => {
+    const late = { startTime: '2026-10-20T20:00:00Z', endTime: '2026-10-20T21:00:00Z', timeZone: KRSK };
+    expect(matchesWhen(late, { kind: 'range', from: 20261021, to: null })).toBe(true);
+    expect(matchesWhen(late, { kind: 'range', from: 20261020, to: null })).toBe(false);
   });
 });

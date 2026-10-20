@@ -9,7 +9,7 @@ const SPORT_PHOTOS: Record<string, string[]> = {
   ],
   futbol: [
     'https://images.unsplash.com/photo-1579952363873-27f3bade9f55?w=800&auto=format&fit=crop&q=80',
-    'https://images.unsplash.com/photo-1508098682722-e99c43a406b2?w=800&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1522778119026-d647f0596c20?w=800&auto=format&fit=crop&q=80',
   ],
   basketbol: [
     'https://images.unsplash.com/photo-1546519638-68e109498ffc?w=800&auto=format&fit=crop&q=80',
@@ -32,7 +32,7 @@ const SPORT_PHOTOS: Record<string, string[]> = {
     'https://images.unsplash.com/photo-1560090995-01632a28895b?w=800&auto=format&fit=crop&q=80',
   ],
   velosport: [
-    'https://images.unsplash.com/photo-1544197150-b99a580bb7a8?w=800&auto=format&fit=crop&q=80',
+    'https://images.unsplash.com/photo-1541625602330-2277a4c46182?w=800&auto=format&fit=crop&q=80',
     'https://images.unsplash.com/photo-1485965120184-e220f721d03e?w=800&auto=format&fit=crop&q=80',
   ],
   lyzhi: [
