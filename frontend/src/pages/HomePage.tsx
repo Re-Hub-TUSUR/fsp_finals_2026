@@ -7,18 +7,8 @@ import { EventRow } from '../components/HomeCards';
 import { EventCard } from '../components/EventCard';
 import { MapSheet } from '../components/MapSheet';
 import { EventDetailPanel } from '../components/EventDetailPanel';
-import {
-  CountBadge,
-  DEFAULT_FILTERS,
-  FilterBar,
-  FilterIcon,
-  FiltersSheet,
-  extraFilterCount,
-  RADIUS_OPTIONS,
-  allFilterCount,
-  type HomeFilterState,
-  type Radius,
-} from '../components/HomeFilters';
+import { FilterBar, FilterCountBadge, FilterIcon, FiltersSheet } from '../components/HomeFilters';
+import { DEFAULT_FILTERS, RADIUS_OPTIONS, allFilterCount, extraFilterCount, type HomeFilterState, type Radius } from '../utils/homeFilters';
 import {
   readEventsSnapshot,
   snapshotKey,
@@ -396,7 +386,7 @@ export const HomePage: React.FC = () => {
           }`}
         >
           <FilterIcon size={22} />
-          <CountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
+          <FilterCountBadge n={allFilterCount(filters)} className="absolute -top-1.5 -right-1.5 border-2 border-page" />
         </button>
       </div>
       <div className="h-2.5" />

@@ -5,7 +5,7 @@ import type { SportEvent } from '../types';
 import { useAuth } from '../context/AuthContext';
 import { distanceKm, eventAction, formatDistance, routeUrl, startLabelLong, type LatLng } from '../utils/eventView';
 import { SeatLine } from './EventBits';
-import { useEventJoin } from './useEventJoin';
+import { useEventJoin } from '../hooks/useEventJoin';
 import { Spinner } from './ui';
 
 interface MapEventCardProps {

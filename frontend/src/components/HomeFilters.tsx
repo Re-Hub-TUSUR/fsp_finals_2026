@@ -5,45 +5,7 @@ import { SKILL_LABELS } from '../utils/format';
 import { dayKey, keyToDate, sameWhen, whenLabel, whenPresets, type When } from '../utils/eventView';
 import { Modal } from './Modal';
 import { SectionLabel, Toggle } from './ui';
-
-export type Radius = '1' | '3' | '5' | '10' | 'all';
-
-export const RADIUS_OPTIONS: { value: Radius; label: string }[] = [
-  { value: '1', label: '1 км' },
-  { value: '3', label: '3 км' },
-  { value: '5', label: '5 км' },
-  { value: '10', label: '10 км' },
-  { value: 'all', label: 'Без ограничения' },
-];
-
-export const radiusValue = (r: Radius) => (r === 'all' ? 'Без ограничения' : `${r} км`);
-
-export interface HomeFilterState {
-  sports: string[];
-  radius: Radius;
-  when: When;
-  skill: SkillLevel | '';
-  joinMode: JoinMode | '';
-  freeOnly: boolean;
-  freeCost: boolean;
-}
-
-export const DEFAULT_FILTERS: HomeFilterState = {
-  sports: [],
-  radius: 'all',
-  when: { kind: 'all' },
-  skill: '',
-  joinMode: '',
-  freeOnly: false,
-  freeCost: false,
-};
-
-/** Сколько «дополнительных» фильтров включено (без спорта, радиуса и времени — они видны в баре). */
-export const extraFilterCount = (f: HomeFilterState) =>
-  (f.skill ? 1 : 0) + (f.joinMode ? 1 : 0) + (f.freeOnly ? 1 : 0) + (f.freeCost ? 1 : 0);
-
-export const allFilterCount = (f: HomeFilterState) =>
-  extraFilterCount(f) + (f.when.kind !== 'all' ? 1 : 0);
+import { RADIUS_OPTIONS, extraFilterCount, radiusValue, sportsLabel, type HomeFilterState, type Radius } from '../utils/homeFilters';
 
 /* ---------- Поповер ---------- */
 
@@ -174,12 +136,6 @@ export const RadiusList: React.FC<{
 );
 
 /* ---------- Вид спорта: один компактный фильтр вместо ряда чипов ---------- */
-
-export const sportsLabel = (selected: string[], sports: Sport[]) => {
-  if (selected.length === 0) return 'Все виды';
-  if (selected.length === 1) return sports.find((s) => s.slug === selected[0])?.name ?? '1 вид';
-  return `${selected.length} вида`;
-};
 
 export const SportList: React.FC<{
   selected: string[];
@@ -383,7 +339,7 @@ export const FilterIcon: React.FC<{ size?: number }> = ({ size = 20 }) => (
   </svg>
 );
 
-export const CountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
+export const FilterCountBadge: React.FC<{ n: number; className?: string }> = ({ n, className = '' }) =>
   n > 0 ? (
     <span
       className={`min-w-[22px] h-[22px] px-1.5 rounded-md bg-brand text-on-brand shadow-glow-sm text-label font-bold leading-[22px] text-center ${className}`}
@@ -497,7 +453,7 @@ export const FilterBar: React.FC<{
       <button type="button" onClick={onOpenFilters} className={`${barButton(false, extraFilterCount(filters) > 0)} gap-2 font-semibold`}>
         <FilterIcon size={18} />
         Фильтры
-        <CountBadge n={extraFilterCount(filters)} />
+        <FilterCountBadge n={extraFilterCount(filters)} />
       </button>
     </div>
   );

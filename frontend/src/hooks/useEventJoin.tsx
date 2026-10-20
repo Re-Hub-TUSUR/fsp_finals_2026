@@ -3,7 +3,7 @@ import type { SportEvent } from '../types';
 import { eventsApi, participationApi } from '../api';
 import { errorMessage } from '../api/client';
 import { isFull, isWaitlisted } from '../utils/eventView';
-import { JoinDialog } from './JoinDialog';
+import { JoinDialog } from '../components/JoinDialog';
 
 /**
  * Запись на событие из карточек и панели: анкета организатора (JoinDialog) или, если человек стоит

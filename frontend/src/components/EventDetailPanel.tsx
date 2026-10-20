@@ -18,7 +18,7 @@ import {
   type LatLng,
 } from '../utils/eventView';
 import { CoverBadge, EventCover, OrgAvatar, SeatMeter, SportIcon } from './EventBits';
-import { useEventJoin } from './useEventJoin';
+import { useEventJoin } from '../hooks/useEventJoin';
 import { RouteButton } from './RouteButton';
 import { useEventWeather } from './EventWeather';
 import { Spinner } from './ui';

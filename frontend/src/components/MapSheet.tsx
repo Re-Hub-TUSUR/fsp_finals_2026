@@ -12,7 +12,7 @@ import {
   startLabelLong,
   type LatLng,
 } from '../utils/eventView';
-import { useEventJoin } from './useEventJoin';
+import { useEventJoin } from '../hooks/useEventJoin';
 import { Spinner } from './ui';
 
 interface MapSheetProps {
